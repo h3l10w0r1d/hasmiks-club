@@ -19,6 +19,7 @@ export default function LoginPage({ lang }) {
     noAcc:    lang === 'hy' ? 'Հաշիվ չունե՞ք։' : "Don't have an account?",
     register: lang === 'hy' ? 'Գրանցվել' : 'Join the Circle',
     errDef:   lang === 'hy' ? 'Սխալ էլ. հասցե կամ գաղտնաբառ' : 'Invalid email or password',
+    forgot:   lang === 'hy' ? 'Մոռացե՞լ եք գաղտնաբառը' : 'Forgot password?',
   }
 
   const handleSubmit = async (e) => {
@@ -55,6 +56,9 @@ export default function LoginPage({ lang }) {
         </form>
         <p className="auth-footer">
           {t.noAcc} <Link to="/register" className="auth-link">{t.register}</Link>
+        </p>
+        <p className="auth-footer">
+          <Link to="/forgot-password" className="auth-link">{t.forgot}</Link>
         </p>
       </div>
     </div>

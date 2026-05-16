@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, members, events, content, admin
+from app.routers import auth, members, events, content, admin, payments, settings as settings_router
 from app.core.config import settings
 from app.database import SessionLocal
 from app.models.user import User
@@ -51,6 +51,8 @@ app.include_router(members.router)
 app.include_router(events.router)
 app.include_router(content.router)
 app.include_router(admin.router)
+app.include_router(payments.router)
+app.include_router(settings_router.router)
 
 
 @app.get("/health")

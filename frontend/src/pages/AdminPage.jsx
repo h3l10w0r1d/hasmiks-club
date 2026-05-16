@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   adminGetMembers, adminUpdateMember, adminDeleteMember,
-  adminGetEvents, adminCreateEvent, adminUpdateEvent, adminDeleteEvent,
+  adminGetEvents, adminGetEventAttendees, adminCreateEvent, adminUpdateEvent, adminDeleteEvent,
   adminGetContent, adminCreateContent, adminUpdateContent, adminDeleteContent,
-  adminUnlockContent,
+  adminUnlockContent, adminUnlockContentForAll, adminGetStats,
 } from '../api/admin'
 
-const TABS = ['members', 'events', 'content']
+const TABS = ['members', 'events', 'content', 'stats']
 
 const EMPTY_EVENT = { title: '', title_hy: '', description: '', description_hy: '', location: '', event_date: '', max_seats: 20 }
 const EMPTY_CONTENT = { type: 'recipe', title: '', title_hy: '', description: '', description_hy: '', file_url: '', cover_url: '' }
@@ -21,6 +21,8 @@ export default function AdminPage() {
   const [members, setMembers] = useState([])
   const [events, setEvents] = useState([])
   const [content, setContent] = useState([])
+  const [stats, setStats] = useState(null)
+  const [attendees, setAttendees] = useState({}) // eventId -> [user]
 
   const [eventForm, setEventForm] = useState(EMPTY_EVENT)
   const [editingEvent, setEditingEvent] = useState(null)
@@ -39,12 +41,14 @@ export default function AdminPage() {
   useEffect(() => { if (tab === 'members') load('members') }, [tab])
   useEffect(() => { if (tab === 'events') load('events') }, [tab])
   useEffect(() => { if (tab === 'content') load('content') }, [tab])
+  useEffect(() => { if (tab === 'stats') load('stats') }, [tab])
 
   const load = async (t) => {
     try {
       if (t === 'members') setMembers(await adminGetMembers())
       if (t === 'events') setEvents(await adminGetEvents())
       if (t === 'content') setContent(await adminGetContent())
+      if (t === 'stats') setStats(await adminGetStats())
     } catch { flash('Failed to load', true) }
   }
 
@@ -103,6 +107,16 @@ export default function AdminPage() {
     setEvents(es => es.filter(x => x.id !== ev.id))
     flash('Event deleted')
   }
+  const toggleAttendees = async (evId) => {
+    if (attendees[evId]) {
+      setAttendees(a => { const n = { ...a }; delete n[evId]; return n })
+      return
+    }
+    try {
+      const list = await adminGetEventAttendees(evId)
+      setAttendees(a => ({ ...a, [evId]: list }))
+    } catch { flash('Failed to load attendees', true) }
+  }
 
   // ── content ──
   const setCF = k => e => setContentForm(f => ({ ...f, [k]: e.target.value }))
@@ -143,6 +157,13 @@ export default function AdminPage() {
       await adminUnlockContent(unlockTarget.contentId, unlockTarget.userId)
       flash(`Content unlocked for user #${unlockTarget.userId}`)
       setUnlockTarget({ contentId: '', userId: '' })
+    } catch { flash('Failed to unlock', true) }
+  }
+  const handleUnlockAll = async (item) => {
+    if (!confirm(`Unlock "${item.title}" for ALL active members?`)) return
+    try {
+      await adminUnlockContentForAll(item.id)
+      flash(`"${item.title}" unlocked for all active members`)
     } catch { flash('Failed to unlock', true) }
   }
 
@@ -243,13 +264,37 @@ export default function AdminPage() {
                   <div className="event-card-top">
                     <div>
                       <div className="event-title">{ev.title}</div>
-                      <div className="event-meta">📍 {ev.location} · 🗓 {new Date(ev.event_date).toLocaleString()} · 👥 {ev.seats_taken}/{ev.max_seats}</div>
+                      <div className="event-meta">📍 {ev.location} · 🗓 {new Date(ev.event_date).toLocaleString()} · 👥 {ev.seats_taken}/{ev.max_seats} RSVPs</div>
                     </div>
                     <div className="admin-actions">
+                      <button className="admin-btn-sm" onClick={() => toggleAttendees(ev.id)}>
+                        {attendees[ev.id] ? 'Hide' : 'Attendees'}
+                      </button>
                       <button className="admin-btn-sm toggle" onClick={() => startEditEvent(ev)}>Edit</button>
                       <button className="admin-btn-sm danger" onClick={() => deleteEvent(ev)}>Delete</button>
                     </div>
                   </div>
+                  {attendees[ev.id] && (
+                    <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #f0e0e5' }}>
+                      {attendees[ev.id].length === 0
+                        ? <p style={{ color: '#888', fontSize: '13px' }}>No RSVPs yet.</p>
+                        : (
+                          <table className="admin-table" style={{ fontSize: '13px' }}>
+                            <thead><tr><th>Name</th><th>Email</th><th>Status</th></tr></thead>
+                            <tbody>
+                              {attendees[ev.id].map(a => (
+                                <tr key={a.id}>
+                                  <td>{a.full_name}</td>
+                                  <td className="admin-td-muted">{a.email}</td>
+                                  <td><span className={`status-pill ${a.membership_status}`}>{a.membership_status}</span></td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        )
+                      }
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -286,7 +331,7 @@ export default function AdminPage() {
                 </div>
               </form>
 
-              <h2 className="dash-section-title" style={{ marginTop: 48 }}>Unlock Content for Member</h2>
+              <h2 className="dash-section-title" style={{ marginTop: 48 }}>Unlock for Specific Member</h2>
               <form onSubmit={handleUnlock} className="admin-form" style={{ flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
                 <label className="auth-label" style={{ flex: 1 }}>Content ID
                   <input className="auth-input" type="number" value={unlockTarget.contentId} onChange={e => setUnlockTarget(u => ({ ...u, contentId: e.target.value }))} required />
@@ -306,13 +351,67 @@ export default function AdminPage() {
                       <div className="library-type">{item.type} · #{item.id}</div>
                       <div className="library-title">{item.title}</div>
                       {item.description && <p className="library-desc">{item.description}</p>}
-                      <div className="admin-actions" style={{ marginTop: 'auto' }}>
+                      <div className="admin-actions" style={{ marginTop: 'auto', flexWrap: 'wrap' }}>
                         <button className="admin-btn-sm toggle" onClick={() => startEditContent(item)}>Edit</button>
+                        <button className="admin-btn-sm" onClick={() => handleUnlockAll(item)} title="Unlock for all active members">Unlock All</button>
                         <button className="admin-btn-sm danger" onClick={() => deleteContent(item)}>Delete</button>
                       </div>
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
+          )}
+
+          {/* ── STATS ── */}
+          {tab === 'stats' && (
+            <div className="dash-section">
+              <h2 className="dash-section-title">Overview</h2>
+              {!stats ? <p className="dash-empty">Loading...</p> : (
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px', marginBottom: '40px' }}>
+                    {[
+                      { label: 'Total Members', value: stats.total_members },
+                      { label: 'Active Members', value: stats.active_members, color: '#2ecc71' },
+                      { label: 'Inactive Members', value: stats.inactive_members, color: '#e74c3c' },
+                      { label: 'Total Events', value: stats.total_events },
+                      { label: 'Total RSVPs', value: stats.total_rsvps },
+                      { label: 'Content Items', value: stats.total_content },
+                    ].map(({ label, value, color }) => (
+                      <div key={label} style={{ background: '#fff', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', textAlign: 'center' }}>
+                        <div style={{ fontSize: '32px', fontWeight: 700, color: color || 'var(--deep)' }}>{value}</div>
+                        <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>{label}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <h2 className="dash-section-title">Events & RSVPs</h2>
+                  <div className="admin-table-wrap">
+                    <table className="admin-table">
+                      <thead>
+                        <tr><th>Event</th><th>Date</th><th>Seats</th><th>RSVPs</th><th>Fill %</th></tr>
+                      </thead>
+                      <tbody>
+                        {stats.events.map(ev => (
+                          <tr key={ev.id}>
+                            <td>{ev.title}</td>
+                            <td className="admin-td-muted">{new Date(ev.event_date).toLocaleDateString()}</td>
+                            <td>{ev.max_seats}</td>
+                            <td>{ev.rsvp_count}</td>
+                            <td>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div style={{ flex: 1, background: '#f0e0e5', borderRadius: '4px', height: '6px' }}>
+                                  <div style={{ width: `${Math.round(ev.rsvp_count / ev.max_seats * 100)}%`, background: 'var(--rose)', borderRadius: '4px', height: '6px' }} />
+                                </div>
+                                <span style={{ fontSize: '12px', color: '#666' }}>{Math.round(ev.rsvp_count / ev.max_seats * 100)}%</span>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
           )}

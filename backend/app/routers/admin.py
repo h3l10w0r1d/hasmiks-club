@@ -10,8 +10,10 @@ from app.schemas.user import UserOut, AdminUserUpdate
 from app.schemas.event import EventCreate, EventOut
 from app.schemas.content import ContentCreate, ContentOut
 from app.core.deps import get_current_admin
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/admin", tags=["admin"])
+
 
 # ── helpers ──────────────────────────────────────────────
 
@@ -88,6 +90,15 @@ def delete_member(user_id: int, db: Session = Depends(get_db), _: User = Depends
 @router.get("/events", response_model=List[EventOut])
 def list_events(db: Session = Depends(get_db), _: User = Depends(get_current_admin)):
     return [_event_out(e) for e in db.query(Event).order_by(Event.event_date.desc()).all()]
+
+
+@router.get("/events/{event_id}/attendees", response_model=List[UserOut])
+def event_attendees(event_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_admin)):
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    user_ids = [r.user_id for r in event.rsvps]
+    return db.query(User).filter(User.id.in_(user_ids)).all()
 
 
 @router.post("/events", response_model=EventOut, status_code=status.HTTP_201_CREATED)
@@ -185,3 +196,59 @@ def unlock_content(
         db.add(MemberContent(user_id=user_id, content_id=content_id))
         db.commit()
     return _content_out(item, True)
+
+
+@router.post("/content/{content_id}/unlock-all", response_model=ContentOut)
+def unlock_content_for_all_active(
+    content_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(get_current_admin),
+):
+    """Unlock a content item for every active member."""
+    item = db.query(ContentItem).filter(ContentItem.id == content_id).first()
+    if not item:
+        raise HTTPException(status_code=404, detail="Content not found")
+    active_users = db.query(User).filter(User.membership_status == "active").all()
+    for user in active_users:
+        exists = db.query(MemberContent).filter(
+            MemberContent.user_id == user.id, MemberContent.content_id == content_id
+        ).first()
+        if not exists:
+            db.add(MemberContent(user_id=user.id, content_id=content_id))
+    db.commit()
+    return _content_out(item, True)
+
+
+# ── stats ────────────────────────────────────────────────
+
+
+@router.get("/stats")
+def get_stats(db: Session = Depends(get_db), _: User = Depends(get_current_admin)):
+    total_members = db.query(User).count()
+    active_members = db.query(User).filter(User.membership_status == "active").count()
+    inactive_members = db.query(User).filter(User.membership_status == "inactive").count()
+    total_events = db.query(Event).count()
+    total_rsvps = db.query(RSVP).count()
+    total_content = db.query(ContentItem).count()
+
+    events = db.query(Event).order_by(Event.event_date.desc()).all()
+    event_stats = [
+        {
+            "id": e.id,
+            "title": e.title,
+            "event_date": e.event_date.isoformat(),
+            "max_seats": e.max_seats,
+            "rsvp_count": len(e.rsvps),
+        }
+        for e in events
+    ]
+
+    return {
+        "total_members": total_members,
+        "active_members": active_members,
+        "inactive_members": inactive_members,
+        "total_events": total_events,
+        "total_rsvps": total_rsvps,
+        "total_content": total_content,
+        "events": event_stats,
+    }

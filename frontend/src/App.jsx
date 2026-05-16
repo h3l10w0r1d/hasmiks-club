@@ -15,6 +15,8 @@ import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import AdminPage from './pages/AdminPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
+import ResetPasswordPage from './pages/ResetPasswordPage'
 
 function LandingPage({ lang, setLang }) {
   return (
@@ -63,6 +65,8 @@ function AppRoutes() {
           <AdminPage />
         </AdminRoute>
       } />
+      <Route path="/forgot-password" element={<ForgotPasswordPage lang={lang} />} />
+      <Route path="/reset-password" element={<ResetPasswordPage lang={lang} />} />
     </Routes>
   )
 }

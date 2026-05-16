@@ -6,7 +6,8 @@ from app.models.event import Event
 from app.models.rsvp import RSVP
 from app.models.user import User
 from app.schemas.event import EventCreate, EventOut, RSVPOut
-from app.core.deps import get_current_user, get_current_active_member
+from app.core.deps import get_current_user
+from app.core import email as mailer
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -53,7 +54,7 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db), _: User = 
 
 
 @router.post("/{event_id}/rsvp", response_model=RSVPOut, status_code=status.HTTP_201_CREATED)
-def rsvp(event_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_active_member)):
+def rsvp(event_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -66,6 +67,13 @@ def rsvp(event_id: int, db: Session = Depends(get_db), current_user: User = Depe
     db.add(rsvp_obj)
     db.commit()
     db.refresh(rsvp_obj)
+    mailer.send_rsvp_confirmation(
+        current_user.email,
+        current_user.full_name,
+        event.title,
+        event.event_date.strftime("%B %d, %Y at %H:%M"),
+        event.location,
+    )
     return rsvp_obj
 
 
@@ -74,5 +82,8 @@ def cancel_rsvp(event_id: int, db: Session = Depends(get_db), current_user: User
     rsvp_obj = db.query(RSVP).filter(RSVP.user_id == current_user.id, RSVP.event_id == event_id).first()
     if not rsvp_obj:
         raise HTTPException(status_code=404, detail="RSVP not found")
+    event = db.query(Event).filter(Event.id == event_id).first()
     db.delete(rsvp_obj)
     db.commit()
+    if event:
+        mailer.send_rsvp_cancelled(current_user.email, current_user.full_name, event.title)
