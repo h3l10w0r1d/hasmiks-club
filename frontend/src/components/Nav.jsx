@@ -16,9 +16,14 @@ export default function Nav({ lang, setLang }) {
           <button className={`lang-btn${lang === 'hy' ? ' active' : ''}`} onClick={() => setLang('hy')}>ՀԱՅ</button>
         </div>
         {user ? (
-          <Link to="/dashboard" className="nav-btn">
-            {lang === 'en' ? 'My Account' : 'Իմ հաշիվը'}
-          </Link>
+          <div style={{ display: 'flex', gap: 10 }}>
+            {user.is_admin && (
+              <Link to="/admin" className="nav-btn" style={{ background: 'var(--deep)' }}>Admin</Link>
+            )}
+            <Link to="/dashboard" className="nav-btn">
+              {lang === 'en' ? 'My Account' : 'Իմ հաշիվը'}
+            </Link>
+          </div>
         ) : (
           <Link to="/register" className="nav-btn">
             {lang === 'en' ? t.nav.joinEn : t.nav.joinHy}

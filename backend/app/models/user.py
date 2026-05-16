@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, DateTime, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Enum, Boolean
+import sqlalchemy as sa
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from app.database import Base
@@ -22,6 +23,7 @@ class User(Base):
     lang_pref = Column(String, default="en")
     membership_status = Column(String, default=MembershipStatus.inactive)
     stripe_customer_id = Column(String, nullable=True)
+    is_admin = Column(Boolean, default=False, nullable=False, server_default='false')
     joined_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

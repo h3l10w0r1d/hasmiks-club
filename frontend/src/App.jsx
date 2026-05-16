@@ -14,6 +14,7 @@ import Footer from './components/Footer'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
+import AdminPage from './pages/AdminPage'
 
 function LandingPage({ lang, setLang }) {
   return (
@@ -37,6 +38,14 @@ function ProtectedRoute({ children }) {
   return user ? children : <Navigate to="/login" replace />
 }
 
+function AdminRoute({ children }) {
+  const { user, loading } = useAuth()
+  if (loading) return null
+  if (!user) return <Navigate to="/login" replace />
+  if (!user.is_admin) return <Navigate to="/dashboard" replace />
+  return children
+}
+
 function AppRoutes() {
   const [lang, setLang] = useLang()
   return (
@@ -48,6 +57,11 @@ function AppRoutes() {
         <ProtectedRoute>
           <DashboardPage lang={lang} />
         </ProtectedRoute>
+      } />
+      <Route path="/admin" element={
+        <AdminRoute>
+          <AdminPage />
+        </AdminRoute>
       } />
     </Routes>
   )

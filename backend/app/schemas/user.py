@@ -28,9 +28,16 @@ class UserOut(BaseModel):
     photo_url: Optional[str]
     lang_pref: str
     membership_status: str
+    is_admin: bool = False
     joined_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class AdminUserUpdate(BaseModel):
+    membership_status: Optional[str] = None
+    is_admin: Optional[bool] = None
+    full_name: Optional[str] = None
 
 
 class TokenOut(BaseModel):

@@ -734,3 +734,61 @@ footer{
   .dash-main{padding:28px 20px}
   .dash-nav{padding:14px 20px}
 }
+
+/* ═══════════════════════════════════════
+   ADMIN PANEL
+═══════════════════════════════════════ */
+.admin-badge{
+  font-size:10px;font-weight:500;letter-spacing:0.15em;text-transform:uppercase;
+  background:var(--rose);color:var(--cream);
+  padding:3px 8px;margin-left:10px;vertical-align:middle;
+}
+.admin-count{
+  font-family:'Jost',sans-serif;font-size:14px;font-weight:400;
+  color:var(--stone);margin-left:10px;
+}
+.admin-flash{
+  padding:12px 20px;margin-bottom:24px;
+  font-size:13px;font-weight:500;
+}
+.admin-flash.success{background:var(--rose-bg);color:var(--rose)}
+.admin-flash.error{background:#fde8e8;color:#b91c1c}
+
+.admin-form{display:flex;flex-direction:column;gap:16px;max-width:860px}
+.admin-form-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:16px}
+.admin-textarea{min-height:80px;resize:vertical}
+
+.admin-table-wrap{overflow-x:auto;margin-top:16px}
+.admin-table{width:100%;border-collapse:collapse;font-size:13px}
+.admin-table th{
+  text-align:left;padding:10px 14px;
+  font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;
+  color:var(--stone);border-bottom:1px solid var(--sand);
+}
+.admin-table td{
+  padding:12px 14px;border-bottom:1px solid var(--sand);
+  color:var(--mocha);vertical-align:middle;
+}
+.admin-table tr:hover td{background:var(--linen)}
+.admin-td-muted{color:var(--stone);font-size:12px}
+
+.status-pill{
+  font-size:10px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;
+  padding:4px 10px;
+}
+.status-pill.active{background:var(--rose-bg);color:var(--rose)}
+.status-pill.inactive,.status-pill.cancelled{background:var(--sand);color:var(--stone)}
+
+.admin-actions{display:flex;gap:8px;align-items:center}
+.admin-btn-sm{
+  font-family:'Jost',sans-serif;
+  font-size:11px;font-weight:500;letter-spacing:0.08em;
+  padding:6px 14px;border:1px solid var(--sand);
+  background:var(--cream);color:var(--taupe);
+  cursor:pointer;transition:all .15s;white-space:nowrap;
+}
+.admin-btn-sm:hover{border-color:var(--mocha);color:var(--mocha)}
+.admin-btn-sm.toggle{border-color:var(--rose);color:var(--rose)}
+.admin-btn-sm.toggle:hover{background:var(--rose);color:var(--cream)}
+.admin-btn-sm.danger{border-color:#e5b4b4;color:#b91c1c}
+.admin-btn-sm.danger:hover{background:#fde8e8}
