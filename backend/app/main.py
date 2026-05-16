@@ -1,23 +1,29 @@
 import os
 from contextlib import asynccontextmanager
+from datetime import datetime, timedelta, timezone
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, members, events, content, admin, payments, settings as settings_router
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+from apscheduler.triggers.interval import IntervalTrigger
+
+from app.routers import auth, members, events, content, admin, analytics
+from app.routers import settings as settings_router
 from app.core.config import settings
 from app.database import SessionLocal
 from app.models.user import User
+from app.models.event import Event
+from app.core import email as mailer
+
+scheduler = AsyncIOScheduler()
 
 
 def _grant_admin_on_startup() -> None:
-    """Ensure ADMIN_EMAIL user has is_admin=True every time the server starts."""
     if not settings.ADMIN_EMAIL:
         return
     db = SessionLocal()
     try:
-        user = db.query(User).filter(
-            User.email == settings.ADMIN_EMAIL.lower()
-        ).first()
+        user = db.query(User).filter(User.email == settings.ADMIN_EMAIL.lower()).first()
         if user and not user.is_admin:
             user.is_admin = True
             db.commit()
@@ -27,10 +33,38 @@ def _grant_admin_on_startup() -> None:
         db.close()
 
 
+async def _send_event_reminders() -> None:
+    """Fire 24-hour-before reminders for events in the [23h, 25h] window."""
+    now = datetime.now(timezone.utc)
+    window_start = now + timedelta(hours=23)
+    window_end = now + timedelta(hours=25)
+    db = SessionLocal()
+    try:
+        upcoming = db.query(Event).filter(
+            Event.event_date >= window_start,
+            Event.event_date <= window_end,
+        ).all()
+        for event in upcoming:
+            for rsvp in event.rsvps:
+                user = rsvp.user
+                mailer.send_event_reminder(
+                    user.email,
+                    user.full_name,
+                    event.title,
+                    event.event_date.strftime("%B %d, %Y at %H:%M"),
+                    event.location,
+                )
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _grant_admin_on_startup()
+    scheduler.add_job(_send_event_reminders, IntervalTrigger(hours=1), id="event_reminders", replace_existing=True)
+    scheduler.start()
     yield
+    scheduler.shutdown()
 
 
 app = FastAPI(title="Hasmik's Club API", version="1.0.0", lifespan=lifespan)
@@ -51,7 +85,7 @@ app.include_router(members.router)
 app.include_router(events.router)
 app.include_router(content.router)
 app.include_router(admin.router)
-app.include_router(payments.router)
+app.include_router(analytics.router)
 app.include_router(settings_router.router)
 
 

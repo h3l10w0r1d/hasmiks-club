@@ -10,6 +10,7 @@ from app.schemas.user import UserOut, AdminUserUpdate
 from app.schemas.event import EventCreate, EventOut
 from app.schemas.content import ContentCreate, ContentOut
 from app.core.deps import get_current_admin
+from app.core import email as mailer
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -68,10 +69,13 @@ def update_member(
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    old_status = user.membership_status
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(user, field, value)
     db.commit()
     db.refresh(user)
+    if user.membership_status != old_status:
+        mailer.update_contact_status(user.email, user.membership_status)
     return user
 
 

@@ -5,10 +5,12 @@ import {
   adminGetMembers, adminUpdateMember, adminDeleteMember,
   adminGetEvents, adminGetEventAttendees, adminCreateEvent, adminUpdateEvent, adminDeleteEvent,
   adminGetContent, adminCreateContent, adminUpdateContent, adminDeleteContent,
-  adminUnlockContent, adminUnlockContentForAll, adminGetStats,
+  adminUnlockContent, adminUnlockContentForAll,
 } from '../api/admin'
 
-const TABS = ['members', 'events', 'content', 'stats']
+import AnalyticsDashboard from '../components/AnalyticsDashboard'
+
+const TABS = ['members', 'events', 'content', 'analytics']
 
 const EMPTY_EVENT = { title: '', title_hy: '', description: '', description_hy: '', location: '', event_date: '', max_seats: 20 }
 const EMPTY_CONTENT = { type: 'recipe', title: '', title_hy: '', description: '', description_hy: '', file_url: '', cover_url: '' }
@@ -21,7 +23,6 @@ export default function AdminPage() {
   const [members, setMembers] = useState([])
   const [events, setEvents] = useState([])
   const [content, setContent] = useState([])
-  const [stats, setStats] = useState(null)
   const [attendees, setAttendees] = useState({}) // eventId -> [user]
 
   const [eventForm, setEventForm] = useState(EMPTY_EVENT)
@@ -41,14 +42,12 @@ export default function AdminPage() {
   useEffect(() => { if (tab === 'members') load('members') }, [tab])
   useEffect(() => { if (tab === 'events') load('events') }, [tab])
   useEffect(() => { if (tab === 'content') load('content') }, [tab])
-  useEffect(() => { if (tab === 'stats') load('stats') }, [tab])
 
   const load = async (t) => {
     try {
       if (t === 'members') setMembers(await adminGetMembers())
       if (t === 'events') setEvents(await adminGetEvents())
       if (t === 'content') setContent(await adminGetContent())
-      if (t === 'stats') setStats(await adminGetStats())
     } catch { flash('Failed to load', true) }
   }
 
@@ -363,56 +362,10 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* ── STATS ── */}
-          {tab === 'stats' && (
+          {/* ── ANALYTICS ── */}
+          {tab === 'analytics' && (
             <div className="dash-section">
-              <h2 className="dash-section-title">Overview</h2>
-              {!stats ? <p className="dash-empty">Loading...</p> : (
-                <>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '16px', marginBottom: '40px' }}>
-                    {[
-                      { label: 'Total Members', value: stats.total_members },
-                      { label: 'Active Members', value: stats.active_members, color: '#2ecc71' },
-                      { label: 'Inactive Members', value: stats.inactive_members, color: '#e74c3c' },
-                      { label: 'Total Events', value: stats.total_events },
-                      { label: 'Total RSVPs', value: stats.total_rsvps },
-                      { label: 'Content Items', value: stats.total_content },
-                    ].map(({ label, value, color }) => (
-                      <div key={label} style={{ background: '#fff', borderRadius: '12px', padding: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', textAlign: 'center' }}>
-                        <div style={{ fontSize: '32px', fontWeight: 700, color: color || 'var(--deep)' }}>{value}</div>
-                        <div style={{ fontSize: '13px', color: '#666', marginTop: '4px' }}>{label}</div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <h2 className="dash-section-title">Events & RSVPs</h2>
-                  <div className="admin-table-wrap">
-                    <table className="admin-table">
-                      <thead>
-                        <tr><th>Event</th><th>Date</th><th>Seats</th><th>RSVPs</th><th>Fill %</th></tr>
-                      </thead>
-                      <tbody>
-                        {stats.events.map(ev => (
-                          <tr key={ev.id}>
-                            <td>{ev.title}</td>
-                            <td className="admin-td-muted">{new Date(ev.event_date).toLocaleDateString()}</td>
-                            <td>{ev.max_seats}</td>
-                            <td>{ev.rsvp_count}</td>
-                            <td>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{ flex: 1, background: '#f0e0e5', borderRadius: '4px', height: '6px' }}>
-                                  <div style={{ width: `${Math.round(ev.rsvp_count / ev.max_seats * 100)}%`, background: 'var(--rose)', borderRadius: '4px', height: '6px' }} />
-                                </div>
-                                <span style={{ fontSize: '12px', color: '#666' }}>{Math.round(ev.rsvp_count / ev.max_seats * 100)}%</span>
-                              </div>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              )}
+              <AnalyticsDashboard />
             </div>
           )}
         </main>

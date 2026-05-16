@@ -22,5 +22,8 @@ export const adminUnlockContent = (contentId, userId) =>
 export const adminUnlockContentForAll = (contentId) =>
   client.post(`/admin/content/${contentId}/unlock-all`).then(r => r.data)
 
-// stats
+// stats (simple)
 export const adminGetStats = () => client.get('/admin/stats').then(r => r.data)
+
+// deep analytics
+export const adminGetAnalytics = () => client.get('/admin/analytics').then(r => r.data)

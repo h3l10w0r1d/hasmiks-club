@@ -1,5 +1,4 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
 
 
 class Settings(BaseSettings):
@@ -9,19 +8,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
     ADMIN_EMAIL: str = ""
 
-    # Stripe
-    STRIPE_SECRET_KEY: str = ""
-    STRIPE_PRICE_ID: str = ""
-    STRIPE_WEBHOOK_SECRET: str = ""
-    STRIPE_SUCCESS_URL: str = "https://hasmiks-club.vercel.app/dashboard"
-    STRIPE_CANCEL_URL: str = "https://hasmiks-club.vercel.app/dashboard"
-
-    # Email (SMTP)
-    SMTP_HOST: str = ""
-    SMTP_PORT: int = 587
-    SMTP_USER: str = ""
-    SMTP_PASSWORD: str = ""
-    EMAIL_FROM: str = ""
+    # Brevo CRM
+    BREVO_API_KEY: str = ""
+    BREVO_SENDER_EMAIL: str = ""
+    BREVO_SENDER_NAME: str = "Hasmik's Club"
+    BREVO_LIST_ID: int = 0  # Brevo contact list ID for members
 
     # Telegram
     TELEGRAM_INVITE_URL: str = ""

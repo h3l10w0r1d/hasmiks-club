@@ -50,6 +50,7 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
     db.refresh(user)
     _ensure_admin(user, db)
     mailer.send_welcome(user.email, user.full_name)
+    mailer.sync_contact_async(user.email, user.full_name, user.membership_status)
     token = create_access_token(str(user.id))
     return TokenOut(access_token=token, user=UserOut.model_validate(user))
 

@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext'
 import { getMe, updateMe, uploadPhoto } from '../api/members'
 import { getEvents, rsvp, cancelRsvp } from '../api/events'
 import { getLibrary } from '../api/content'
-import { createCheckout, getPublicSettings } from '../api/payments'
+import { getPublicSettings } from '../api/payments'
 
 const TABS = ['profile', 'events', 'library']
 
@@ -19,8 +19,6 @@ export default function DashboardPage({ lang }) {
   const [msg, setMsg] = useState('')
   const [rsvpError, setRsvpError] = useState('')
   const [telegramUrl, setTelegramUrl] = useState('')
-  const [stripeEnabled, setStripeEnabled] = useState(false)
-  const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [photoUploading, setPhotoUploading] = useState(false)
   const fileInputRef = useRef(null)
 
@@ -48,11 +46,7 @@ export default function DashboardPage({ lang }) {
     recipe:         lang === 'hy' ? 'Բաղադրատոմս' : 'Recipe',
     ebook:          lang === 'hy' ? 'Էլ. գիրք' : 'E-Book',
     download:       lang === 'hy' ? 'Բեռնել' : 'Download',
-    subscribe:      lang === 'hy' ? 'Բաժանորդագրվել ($40/ամիս)' : 'Subscribe ($40/month)',
-    subscribing:    lang === 'hy' ? '...' : '...',
-    memberBenefits: lang === 'hy' ? 'Ակտիվ անդամությունը բացում է հետևյալ առավելությունները:' : 'Active membership unlocks events, library, and our private Telegram group.',
     joinTelegram:   lang === 'hy' ? 'Միանալ Telegram խմբին' : 'Join our Telegram group',
-    upgradeTitle:   lang === 'hy' ? 'Ձեր անդամությունը ոչ ակտիվ է' : 'Your membership is inactive',
   }
 
   useEffect(() => {
@@ -62,7 +56,6 @@ export default function DashboardPage({ lang }) {
     }).catch(() => {})
     getPublicSettings().then(s => {
       setTelegramUrl(s.telegram_invite_url || '')
-      setStripeEnabled(s.stripe_enabled)
     }).catch(() => {})
   }, [])
 
@@ -123,18 +116,6 @@ export default function DashboardPage({ lang }) {
     } catch (err) {
       const detail = err?.response?.data?.detail
       setRsvpError(detail || (lang === 'hy' ? 'Սխալ տեղի ունեցավ' : 'Something went wrong'))
-    }
-  }
-
-  const handleSubscribe = async () => {
-    setCheckoutLoading(true)
-    try {
-      const { checkout_url } = await createCheckout()
-      window.location.href = checkout_url
-    } catch {
-      setMsg(lang === 'hy' ? 'Վճարման սխալ' : 'Could not start checkout. Please try again.')
-    } finally {
-      setCheckoutLoading(false)
     }
   }
 
@@ -201,17 +182,6 @@ export default function DashboardPage({ lang }) {
                 >
                   ✈️ {t.joinTelegram}
                 </a>
-              )}
-
-              {/* Stripe subscribe — only for inactive members */}
-              {!isActive && stripeEnabled && (
-                <div style={{ marginBottom: '24px', padding: '16px', background: '#fdf0f0', borderRadius: '10px', border: '1px solid #f5c0c0' }}>
-                  <p style={{ margin: '0 0 12px', fontWeight: 600, color: 'var(--deep)' }}>{t.upgradeTitle}</p>
-                  <p style={{ margin: '0 0 16px', fontSize: '14px', color: '#555' }}>{t.memberBenefits}</p>
-                  <button className="btn-rose auth-submit" style={{ maxWidth: '260px' }} onClick={handleSubscribe} disabled={checkoutLoading}>
-                    {checkoutLoading ? t.subscribing : t.subscribe}
-                  </button>
-                </div>
               )}
 
               {msg && <p className="auth-success">{msg}</p>}
