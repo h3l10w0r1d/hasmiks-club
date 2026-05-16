@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: hasmiks-club-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: DATABASE_URL
+        fromDatabase:
+          name: hasmiks-club-db
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 60
+      - key: ALLOWED_ORIGINS
+        value: http://localhost:5173
+
+databases:
+  - name: hasmiks-club-db
+    databaseName: hasmiks_club
+    plan: free
