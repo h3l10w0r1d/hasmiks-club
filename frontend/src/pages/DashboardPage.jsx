@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { updateMe } from '../api/members'
 import { getEvents, rsvp, cancelRsvp } from '../api/events'
@@ -86,6 +86,9 @@ export default function DashboardPage({ lang }) {
         <div className="nav-logo">Hasmik's <span>Club</span></div>
         <div className="dash-nav-right">
           <span className="dash-user-name">{user.full_name}</span>
+          {user.is_admin && (
+            <Link to="/admin" className="nav-btn" style={{ background: 'var(--deep)', fontSize: '11px', padding: '8px 18px' }}>Admin</Link>
+          )}
           <button className="dash-signout" onClick={handleSignOut}>{t.signOut}</button>
         </div>
       </nav>
