@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { updateMe } from '../api/members'
+import { getMe, updateMe } from '../api/members'
 import { getEvents, rsvp, cancelRsvp } from '../api/events'
 import { getLibrary } from '../api/content'
 
@@ -42,9 +42,17 @@ export default function DashboardPage({ lang }) {
     download:    lang === 'hy' ? 'Բեռնել' : 'Download',
   }
 
+  // Always re-fetch on mount to guarantee is_admin and other fields are fresh
+  useEffect(() => {
+    getMe().then(fresh => {
+      setUser(fresh)
+      setProfileForm({ full_name: fresh.full_name, photo_url: fresh.photo_url || '' })
+    }).catch(() => {})
+  }, [])
+
   useEffect(() => {
     if (user) setProfileForm({ full_name: user.full_name, photo_url: user.photo_url || '' })
-  }, [user])
+  }, [])
 
   useEffect(() => {
     if (tab === 'events') getEvents().then(setEvents).catch(() => {})
@@ -104,6 +112,11 @@ export default function DashboardPage({ lang }) {
               {t[k]}
             </button>
           ))}
+          {user.is_admin && (
+            <Link to="/admin" className="dash-tab" style={{ color: 'var(--rose)', textDecoration: 'none', borderLeft: '3px solid var(--rose)' }}>
+              Admin Panel
+            </Link>
+          )}
           <div className="dash-membership-badge">
             <span className={`dash-status ${user.membership_status}`}>
               {user.membership_status === 'active' ? t.active : t.inactive}
