@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { heroImg } from '../data/images'
 import t from '../data/content'
 
@@ -40,9 +41,9 @@ export default function Hero({ lang }) {
           }
         </p>
 
-        <a href="#pricing" className="btn-rose">
+        <Link to="/register" className="btn-rose">
           {hy ? c.joinHy : c.joinEn}
-        </a>
+        </Link>
 
         <div className="hero-stats">
           <div className="hstat">

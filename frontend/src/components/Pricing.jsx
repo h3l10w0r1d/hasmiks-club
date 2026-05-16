@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import t from '../data/content'
 
 export default function Pricing({ lang }) {
@@ -31,9 +32,9 @@ export default function Pricing({ lang }) {
               <li key={i}>{hy ? item.hy : item.en}</li>
             ))}
           </ul>
-          <a href="#" className="plan-btn plan-btn-fill">
+          <Link to="/register" className="plan-btn plan-btn-fill">
             {hy ? c.btnHy : c.btnEn}
-          </a>
+          </Link>
         </div>
       </div>
 

@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { heroImg } from '../data/images'
 import t from '../data/content'
 
@@ -22,9 +23,9 @@ export default function FinalCta({ lang }) {
         <p className="final-p">
           {hy ? c.pHy : c.pEn}
         </p>
-        <a href="#pricing" className="btn-cream">
+        <Link to="/register" className="btn-cream">
           {hy ? c.btnHy : c.btnEn}
-        </a>
+        </Link>
         <p className="final-tiny">
           {hy ? c.tinyHy : c.tinyEn}
         </p>
