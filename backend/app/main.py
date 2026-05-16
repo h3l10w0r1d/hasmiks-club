@@ -1,10 +1,10 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import auth, members, events, content
 
 app = FastAPI(title="Hasmik's Club API", version="1.0.0")
-
-import os
 
 _raw = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5173,http://localhost:5174")
 _origins = [o.strip() for o in _raw.split(",")]
