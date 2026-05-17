@@ -193,9 +193,10 @@ def send_waitlist_promoted(to: str, name: str, event_title: str, event_date: str
 
 
 def send_broadcast(to: str, name: str, subject: str, body: str) -> None:
+    paragraphs = "".join(f"<p>{line}</p>" for line in body.strip().split("\n") if line.strip())
     html = _wrap(f"""
     <h2>{subject}</h2>
-    {"".join(f"<p>{line}</p>" for line in body.strip().split("\n") if line.strip())}
+    {paragraphs}
     """)
     send_async(to, name, subject, html)
 
