@@ -727,12 +727,20 @@ footer{
 
 @media(max-width:700px){
   .dash-body{flex-direction:column}
-  .dash-sidebar{width:100%;flex-direction:row;padding:0;border-right:none;border-bottom:1px solid var(--sand)}
-  .dash-tab{flex:1;text-align:center;border-left:none;border-bottom:3px solid transparent}
-  .dash-tab.active{border-bottom-color:var(--rose);border-left-color:transparent}
+  .dash-sidebar{width:100%;flex-direction:row;padding:0;border-right:none;border-bottom:1px solid var(--sand);overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .dash-sidebar::-webkit-scrollbar{display:none}
+  .dash-tab{flex:0 0 auto;text-align:center;border-left:none;border-bottom:3px solid transparent;padding:14px 20px;white-space:nowrap}
+  .dash-tab.active{border-bottom-color:var(--rose);border-left-color:transparent;background:transparent}
   .dash-membership-badge{display:none}
-  .dash-main{padding:28px 20px}
-  .dash-nav{padding:14px 20px}
+  .dash-main{padding:24px 16px}
+  .dash-nav{padding:12px 16px;flex-wrap:wrap;gap:8px}
+  .dash-nav-right{gap:10px}
+  .dash-user-name{display:none}
+  .dash-section-title{font-size:22px}
+  .event-card-top{flex-direction:column;gap:10px}
+  .event-seats{align-self:flex-start}
+  .library-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+  .library-cover{height:110px}
 }
 
 /* ═══════════════════════════════════════

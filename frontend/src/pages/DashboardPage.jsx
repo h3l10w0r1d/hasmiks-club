@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getMe, updateMe, uploadPhoto, getMemberDirectory } from '../api/members'
@@ -26,7 +26,16 @@ export default function DashboardPage({ lang }) {
   const [rsvpError, setRsvpError] = useState('')
   const [telegramUrl, setTelegramUrl] = useState('')
   const [photoUploading, setPhotoUploading] = useState(false)
+  const [selectedContent, setSelectedContent] = useState(null)
   const fileInputRef = useRef(null)
+
+  const closeContent = useCallback(() => setSelectedContent(null), [])
+  useEffect(() => {
+    if (!selectedContent) return
+    const onKey = (e) => { if (e.key === 'Escape') closeContent() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [selectedContent, closeContent])
 
   const t = {
     profile:     lang === 'hy' ? 'Պրոֆիլ' : 'Profile',
@@ -323,7 +332,8 @@ export default function DashboardPage({ lang }) {
                 : (
                   <div className="library-grid">
                     {library.map(item => (
-                      <div key={item.id} className="library-card" style={{ opacity: item.is_unlocked ? 1 : 0.6 }}>
+                      <div key={item.id} className="library-card" style={{ opacity: item.is_unlocked ? 1 : 0.6, cursor: 'pointer' }}
+                        onClick={() => setSelectedContent(item)}>
                         {item.cover_url && <img src={item.cover_url} alt={item.title} className="library-cover" />}
                         <div className="library-type">{item.type === 'recipe' ? t.recipe : t.ebook}</div>
                         <div className="library-title">{lang === 'hy' && item.title_hy ? item.title_hy : item.title}</div>
@@ -331,7 +341,7 @@ export default function DashboardPage({ lang }) {
                           <p className="library-desc">{lang === 'hy' && item.description_hy ? item.description_hy : item.description}</p>
                         )}
                         {item.is_unlocked && item.file_url
-                          ? <a href={item.file_url} target="_blank" rel="noreferrer" className="plan-btn plan-btn-fill library-dl">{t.download}</a>
+                          ? <span className="plan-btn plan-btn-fill library-dl">{t.download}</span>
                           : <span style={{ fontSize: 13, color: '#aaa', marginTop: 'auto' }}>🔒 {t.lockedLib}</span>
                         }
                       </div>
@@ -374,6 +384,63 @@ export default function DashboardPage({ lang }) {
           )}
         </main>
       </div>
+
+      {/* ── Content viewer modal ── */}
+      {selectedContent && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(44,26,26,.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}
+          onClick={closeContent}
+        >
+          <div
+            style={{ background: 'var(--linen)', borderRadius: 16, maxWidth: 620, width: '100%', maxHeight: '90vh', overflow: 'auto', position: 'relative', boxShadow: '0 24px 80px rgba(0,0,0,.3)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <button
+              onClick={closeContent}
+              style={{ position: 'absolute', top: 14, right: 18, background: 'none', border: 'none', fontSize: 26, cursor: 'pointer', color: '#999', lineHeight: 1, zIndex: 1 }}
+              aria-label="Close"
+            >×</button>
+
+            {selectedContent.cover_url && (
+              <img src={selectedContent.cover_url} alt={selectedContent.title}
+                style={{ width: '100%', height: 220, objectFit: 'cover', borderRadius: '16px 16px 0 0', display: 'block' }} />
+            )}
+
+            <div style={{ padding: '28px 32px 32px' }}>
+              <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 8 }}>
+                {selectedContent.type === 'recipe' ? t.recipe : t.ebook}
+              </div>
+              <h2 style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: 26, fontWeight: 700, color: 'var(--deep)', margin: '0 0 14px', lineHeight: 1.25 }}>
+                {lang === 'hy' && selectedContent.title_hy ? selectedContent.title_hy : selectedContent.title}
+              </h2>
+              {(lang === 'hy' && selectedContent.description_hy ? selectedContent.description_hy : selectedContent.description) && (
+                <p style={{ color: 'var(--taupe)', fontSize: 14, lineHeight: 1.75, marginBottom: 24 }}>
+                  {lang === 'hy' && selectedContent.description_hy ? selectedContent.description_hy : selectedContent.description}
+                </p>
+              )}
+
+              {selectedContent.is_unlocked && selectedContent.file_url ? (
+                <>
+                  {selectedContent.file_url.toLowerCase().endsWith('.pdf') && (
+                    <iframe
+                      src={selectedContent.file_url}
+                      title={selectedContent.title}
+                      style={{ width: '100%', height: 380, border: '1px solid var(--sand)', borderRadius: 8, marginBottom: 16, display: 'block' }}
+                    />
+                  )}
+                  <a href={selectedContent.file_url} target="_blank" rel="noreferrer"
+                    className="plan-btn plan-btn-fill"
+                    style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
+                    {t.download}
+                  </a>
+                </>
+              ) : (
+                <p style={{ textAlign: 'center', color: '#aaa', fontSize: 13, marginTop: 8 }}>🔒 {t.lockedLib}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

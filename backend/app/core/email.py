@@ -201,6 +201,16 @@ def send_broadcast(to: str, name: str, subject: str, body: str) -> None:
     send_async(to, name, subject, html)
 
 
+def send_telegram_invite(to: str, name: str, invite_url: str) -> None:
+    html = _wrap(f"""
+    <h2>You're in, {name}! 🎉</h2>
+    <p>Your Hasmik's Club membership is now active. Join our private Telegram group to connect with the community:</p>
+    <a href="{invite_url}" class="btn">Join Telegram Group →</a>
+    <p style="font-size:13px;color:#888;">This is a one-time invite link. Please do not share it.</p>
+    """)
+    send_async(to, name, "Welcome to Hasmik's Club — join us on Telegram", html)
+
+
 def send_password_reset(to: str, name: str, reset_url: str) -> None:
     html = _wrap(f"""
     <h2>Reset your password</h2>

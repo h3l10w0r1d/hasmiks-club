@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text
 import sqlalchemy as sa
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -28,6 +28,7 @@ class User(Base):
     show_in_directory = Column(Boolean, default=True, nullable=False, server_default='true')
     verification_token = Column(String, nullable=True)
     verification_token_expires = Column(sa.DateTime(timezone=True), nullable=True)
+    admin_notes = Column(Text, nullable=True)
     joined_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

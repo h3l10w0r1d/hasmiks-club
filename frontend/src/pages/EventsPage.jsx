@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import { getPublicEvents } from '../api/events'
 
 export default function EventsPage({ lang }) {
@@ -22,8 +23,20 @@ export default function EventsPage({ lang }) {
     getPublicEvents().then(setEvents).catch(() => {}).finally(() => setLoading(false))
   }, [])
 
+  const pageTitle = lang === 'hy' ? "Հանդիպումներ — Hasmik's Club" : "Upcoming Events — Hasmik's Club"
+  const pageDesc = lang === 'hy'
+    ? 'Hasmik\'s Club-ի առաջիկա հանդիպումներն ու միջոցառումները Երևանում:'
+    : "Browse upcoming gatherings and events hosted by Hasmik's Club in Yerevan."
+
   return (
     <div style={{ minHeight: '100vh', background: '#fff8f5' }}>
+      <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDesc} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDesc} />
+        <meta property="og:type" content="website" />
+      </Helmet>
       {/* nav */}
       <nav style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 40px', background: '#fff', boxShadow: '0 1px 0 #f0e0e5' }}>
         <Link to="/" style={{ textDecoration: 'none', fontFamily: 'Georgia, serif', fontSize: 22, color: '#c0394b', fontWeight: 700 }}>

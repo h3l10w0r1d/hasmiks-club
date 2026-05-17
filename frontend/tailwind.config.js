@@ -4,6 +4,7 @@ export default {
     './src/pages/AdminPage.jsx',
     './src/components/ui/**/*.{js,jsx}',
     './src/components/AnalyticsDashboard.jsx',
+    './src/components/NotificationBell.jsx',
   ],
   // Scope ALL generated utilities to .admin-shell so they never affect the landing page / dashboard
   important: '.admin-shell',

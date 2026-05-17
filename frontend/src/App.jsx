@@ -1,5 +1,6 @@
 import './App.css'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { useLang } from './hooks/useLang'
 import Nav from './components/Nav'
@@ -19,9 +20,33 @@ import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import EventsPage from './pages/EventsPage'
 
+const SITE_URL = 'https://hasmiks.club'
+const OG_IMAGE = `${SITE_URL}/og-image.jpg`
+
 function LandingPage({ lang, setLang }) {
+  const title = lang === 'hy' ? "Hasmik's Club — Կանանց համայնք Երևանում" : "Hasmik's Club — A Women's Circle in Yerevan"
+  const description = lang === 'hy'
+    ? 'Hasmik\'s Club-ը Երևանի կանանց մշակութային ակումբ է: Դասընթացներ, հանդիպումներ, և ընտանեկան մթնոլորտ:'
+    : "Hasmik's Club is a curated women's community in Yerevan — intimate gatherings, cultural events, and a circle of like-minded women."
   return (
     <>
+      <Helmet>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <link rel="canonical" href={SITE_URL} />
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:url" content={SITE_URL} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:image" content={OG_IMAGE} />
+        <meta property="og:locale" content={lang === 'hy' ? 'hy_AM' : 'en_US'} />
+        {/* Twitter Card */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={title} />
+        <meta name="twitter:description" content={description} />
+        <meta name="twitter:image" content={OG_IMAGE} />
+      </Helmet>
       <Nav lang={lang} setLang={setLang} />
       <Hero lang={lang} />
       <Band lang={lang} />

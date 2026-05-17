@@ -32,6 +32,7 @@ class UserOut(BaseModel):
     is_admin: bool = False
     is_verified: bool = False
     show_in_directory: bool = True
+    admin_notes: Optional[str] = None
     joined_at: datetime
 
     model_config = {"from_attributes": True}
@@ -41,6 +42,7 @@ class AdminUserUpdate(BaseModel):
     membership_status: Optional[str] = None
     is_admin: Optional[bool] = None
     full_name: Optional[str] = None
+    admin_notes: Optional[str] = None
 
 
 class TokenOut(BaseModel):

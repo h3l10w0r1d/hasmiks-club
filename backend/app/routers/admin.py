@@ -3,7 +3,9 @@ import io
 from datetime import datetime, timezone
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import cloudinary
+import cloudinary.uploader
+from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -21,6 +23,7 @@ from app.schemas.user import UserOut, AdminUserUpdate
 from app.core import email as mailer
 from app.core import notify
 from app.core.audit import log as audit_log
+from app.core.config import settings
 from app.core.deps import get_current_admin
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -113,6 +116,35 @@ def delete_member(user_id: int, db: Session = Depends(get_db), admin: User = Dep
     db.commit()
 
 
+@router.post("/members/{user_id}/telegram-invite")
+def send_telegram_invite(user_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not settings.TELEGRAM_INVITE_URL:
+        raise HTTPException(status_code=503, detail="TELEGRAM_INVITE_URL not configured")
+    mailer.send_telegram_invite(user.email, user.full_name, settings.TELEGRAM_INVITE_URL)
+    audit_log(db, "send_telegram_invite", admin_id=admin.id, entity_type="user", entity_id=user_id)
+    db.commit()
+    return {"ok": True}
+
+
+# ── image upload ──────────────────────────────────────────────────────────────
+
+@router.post("/upload-image")
+async def upload_image(file: UploadFile = File(...), admin: User = Depends(get_current_admin)):
+    if not settings.CLOUDINARY_CLOUD_NAME:
+        raise HTTPException(status_code=503, detail="Image upload not configured")
+    cloudinary.config(
+        cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+        api_key=settings.CLOUDINARY_API_KEY,
+        api_secret=settings.CLOUDINARY_API_SECRET,
+    )
+    data = await file.read()
+    result = cloudinary.uploader.upload(data, folder="hasmiks-club-admin", resource_type="auto")
+    return {"url": result["secure_url"]}
+
+
 # ── events ────────────────────────────────────────────────────────────────────
 
 @router.get("/events", response_model=List[EventOut])
@@ -120,13 +152,44 @@ def list_events(db: Session = Depends(get_db), _: User = Depends(get_current_adm
     return [_event_out(e) for e in db.query(Event).order_by(Event.event_date.desc()).all()]
 
 
-@router.get("/events/{event_id}/attendees", response_model=List[UserOut])
+class AttendeeOut(BaseModel):
+    id: int
+    full_name: str
+    email: str
+    membership_status: str
+    checked_in: bool = False
+    model_config = {"from_attributes": False}
+
+
+@router.get("/events/{event_id}/attendees", response_model=List[AttendeeOut])
 def event_attendees(event_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_admin)):
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    user_ids = [r.user_id for r in event.rsvps]
-    return db.query(User).filter(User.id.in_(user_ids)).all()
+    result = []
+    for r in event.rsvps:
+        u = db.query(User).filter(User.id == r.user_id).first()
+        if u:
+            result.append(AttendeeOut(
+                id=u.id, full_name=u.full_name, email=u.email,
+                membership_status=u.membership_status, checked_in=r.checked_in,
+            ))
+    return result
+
+
+@router.post("/events/{event_id}/checkin/{user_id}")
+def toggle_checkin(
+    event_id: int, user_id: int,
+    db: Session = Depends(get_db), admin: User = Depends(get_current_admin),
+):
+    rsvp = db.query(RSVP).filter(RSVP.event_id == event_id, RSVP.user_id == user_id).first()
+    if not rsvp:
+        raise HTTPException(status_code=404, detail="RSVP not found")
+    rsvp.checked_in = not rsvp.checked_in
+    action = "checkin" if rsvp.checked_in else "checkout"
+    audit_log(db, f"{action}: user #{user_id} at event #{event_id}", admin_id=admin.id, entity_type="event", entity_id=event_id)
+    db.commit()
+    return {"checked_in": rsvp.checked_in}
 
 
 @router.post("/events", response_model=EventOut, status_code=status.HTTP_201_CREATED)

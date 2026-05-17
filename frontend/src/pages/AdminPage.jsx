@@ -1,11 +1,12 @@
 import '../admin.css'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
   Users, CalendarDays, BookOpen, BarChart3, Mail, ClipboardList,
   Download, RefreshCw, Send, ChevronRight, LogOut, LayoutDashboard,
-  TrendingUp, CheckCircle2, XCircle, Percent,
+  TrendingUp, CheckCircle2, XCircle, Percent, Search, ImageUp,
+  SendHorizonal, StickyNote, Filter, UserCheck,
 } from 'lucide-react'
 
 import { Button }       from '../components/ui/button'
@@ -14,7 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Input }        from '../components/ui/input'
 import { Textarea }     from '../components/ui/textarea'
 import { Label }        from '../components/ui/label'
-import { Separator }    from '../components/ui/separator'
+import { Skeleton }     from '../components/ui/skeleton'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../components/ui/table'
@@ -24,14 +25,16 @@ import {
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
 
 import {
-  adminGetMembers, adminUpdateMember, adminDeleteMember,
+  adminGetMembers, adminUpdateMember, adminDeleteMember, adminSendTelegramInvite,
   adminGetEvents, adminGetEventAttendees, adminCreateEvent, adminUpdateEvent, adminDeleteEvent,
+  adminToggleCheckin,
   adminGetContent, adminCreateContent, adminUpdateContent, adminDeleteContent,
   adminUnlockContent, adminUnlockContentForAll,
+  adminUploadImage,
   adminBroadcast, adminExportCsv, adminGetAuditLog,
 } from '../api/admin'
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ── helpers ───────────────────────────────────────────────────────────────────
 const TABS = [
   { key: 'members',   icon: Users,         label: 'Members'   },
   { key: 'events',    icon: CalendarDays,  label: 'Events'    },
@@ -54,13 +57,14 @@ function fmtDateTime(iso) {
   return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-function KpiCard({ icon: Icon, label, value, valueClass = '' }) {
+function KpiCard({ icon: Icon, label, value, valueClass = '', loading }) {
+  if (loading) return <Card><CardContent className="p-5"><Skeleton className="h-4 w-20 mb-3" /><Skeleton className="h-9 w-12" /></CardContent></Card>
   return (
     <Card>
       <CardContent className="p-5">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
-          {Icon && <Icon className="h-4 w-4 text-muted-foreground/60" />}
+          {Icon && <Icon className="h-4 w-4 text-muted-foreground/50" />}
         </div>
         <div className={`font-serif text-4xl font-semibold leading-none ${valueClass}`}>{value}</div>
       </CardContent>
@@ -89,6 +93,35 @@ function MemberAvatar({ name, size = 'md' }) {
   )
 }
 
+// Inline image upload helper — shows file button next to URL field
+function ImageUploadField({ label, value, onChange, onUpload }) {
+  const ref = useRef(null)
+  const [uploading, setUploading] = useState(false)
+  const handleFile = async (e) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setUploading(true)
+    try {
+      const res = await onUpload(file)
+      onChange(res.url)
+    } catch { /* ignore */ }
+    finally { setUploading(false) }
+  }
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label>{label}</Label>
+      <div className="flex gap-2">
+        <Input value={value} onChange={e => onChange(e.target.value)} placeholder="https://… or upload →" className="flex-1" />
+        <Button type="button" variant="outline" size="sm" onClick={() => ref.current?.click()} disabled={uploading}>
+          <ImageUp className="h-3.5 w-3.5" />
+          {uploading ? '…' : 'Upload'}
+        </Button>
+        <input ref={ref} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      </div>
+    </div>
+  )
+}
+
 // ── main component ────────────────────────────────────────────────────────────
 export default function AdminPage() {
   const { user, signOut } = useAuth()
@@ -100,6 +133,15 @@ export default function AdminPage() {
   const [content,   setContent]   = useState([])
   const [attendees, setAttendees] = useState({})
   const [auditLog,  setAuditLog]  = useState([])
+  const [loading,   setLoading]   = useState({})
+
+  const [memberSearch,   setMemberSearch]  = useState('')
+  const [eventFilter,    setEventFilter]   = useState('all')   // all | upcoming | past
+  const [contentFilter,  setContentFilter] = useState('all')   // all | recipe | ebook
+
+  const [expandedNotes, setExpandedNotes] = useState({})       // memberId -> bool
+  const [notesDraft,    setNotesDraft]    = useState({})        // memberId -> string
+  const [savingNotes,   setSavingNotes]   = useState({})
 
   const [eventForm,      setEventForm]      = useState(EMPTY_EVENT)
   const [editingEvent,   setEditingEvent]   = useState(null)
@@ -115,18 +157,22 @@ export default function AdminPage() {
     setTimeout(() => setToast(null), 3200)
   }
 
+  const setLoad = (key, val) => setLoading(l => ({ ...l, [key]: val }))
+
   useEffect(() => { if (tab === 'members')   load('members')   }, [tab])
   useEffect(() => { if (tab === 'events')    load('events')    }, [tab])
   useEffect(() => { if (tab === 'content')   load('content')   }, [tab])
   useEffect(() => { if (tab === 'audit')     load('audit')     }, [tab])
 
   const load = async (t) => {
+    setLoad(t, true)
     try {
       if (t === 'members') setMembers(await adminGetMembers())
       if (t === 'events')  setEvents(await adminGetEvents())
       if (t === 'content') setContent(await adminGetContent())
       if (t === 'audit')   setAuditLog(await adminGetAuditLog())
     } catch { flash('Failed to load data', true) }
+    finally { setLoad(t, false) }
   }
 
   // ── members ──
@@ -139,7 +185,6 @@ export default function AdminPage() {
   const toggleAdmin = async (m) => {
     await adminUpdateMember(m.id, { is_admin: !m.is_admin })
     setMembers(ms => ms.map(x => x.id === m.id ? { ...x, is_admin: !m.is_admin } : x))
-    flash(`${m.full_name} admin → ${!m.is_admin}`)
   }
   const deleteMember = async (m) => {
     if (!confirm(`Delete ${m.full_name}? This cannot be undone.`)) return
@@ -150,11 +195,33 @@ export default function AdminPage() {
   const handleExportCsv = async () => {
     try {
       const blob = await adminExportCsv()
-      const url  = URL.createObjectURL(blob)
-      const a    = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
       a.href = url; a.download = `members-${new Date().toISOString().slice(0, 10)}.csv`; a.click()
       URL.revokeObjectURL(url)
     } catch { flash('Export failed', true) }
+  }
+  const handleSendTelegram = async (m) => {
+    try {
+      await adminSendTelegramInvite(m.id)
+      flash(`Telegram invite sent to ${m.full_name}`)
+    } catch (e) {
+      flash(e?.response?.data?.detail || 'Failed to send invite', true)
+    }
+  }
+  const toggleNotes = (m) => {
+    setExpandedNotes(n => ({ ...n, [m.id]: !n[m.id] }))
+    if (!notesDraft[m.id]) setNotesDraft(d => ({ ...d, [m.id]: m.admin_notes || '' }))
+  }
+  const saveNotes = async (m) => {
+    setSavingNotes(s => ({ ...s, [m.id]: true }))
+    try {
+      await adminUpdateMember(m.id, { admin_notes: notesDraft[m.id] })
+      setMembers(ms => ms.map(x => x.id === m.id ? { ...x, admin_notes: notesDraft[m.id] } : x))
+      flash('Notes saved')
+      setExpandedNotes(n => ({ ...n, [m.id]: false }))
+    } catch { flash('Failed to save notes', true) }
+    finally { setSavingNotes(s => ({ ...s, [m.id]: false })) }
   }
 
   // ── events ──
@@ -187,6 +254,12 @@ export default function AdminPage() {
     if (attendees[evId]) { setAttendees(a => { const n = { ...a }; delete n[evId]; return n }); return }
     try { const list = await adminGetEventAttendees(evId); setAttendees(a => ({ ...a, [evId]: list })) }
     catch { flash('Failed to load attendees', true) }
+  }
+  const handleCheckin = async (evId, userId) => {
+    try {
+      const res = await adminToggleCheckin(evId, userId)
+      setAttendees(a => ({ ...a, [evId]: a[evId].map(att => att.id === userId ? { ...att, checked_in: res.checked_in } : att) }))
+    } catch { flash('Check-in failed', true) }
   }
 
   // ── content ──
@@ -248,14 +321,36 @@ export default function AdminPage() {
   const totalRsvps    = events.reduce((s, ev) => s + (ev.seats_taken || 0), 0)
   const segmentCount  = broadcastForm.segment === 'active' ? activeCount : broadcastForm.segment === 'inactive' ? inactiveCount : members.length
 
+  // filtered data
+  const filteredMembers = members.filter(m =>
+    !memberSearch || m.full_name.toLowerCase().includes(memberSearch.toLowerCase()) || m.email.toLowerCase().includes(memberSearch.toLowerCase())
+  )
+  const filteredEvents = events.filter(ev => {
+    if (eventFilter === 'upcoming') return new Date(ev.event_date) >= new Date()
+    if (eventFilter === 'past')     return new Date(ev.event_date) < new Date()
+    return true
+  })
+  const filteredContent = content.filter(c => contentFilter === 'all' || c.type === contentFilter)
+
   const currentTab = TABS.find(t => t.key === tab)
 
-  // ── field helper ──
   const Field = ({ label, children, className = '' }) => (
     <div className={`flex flex-col gap-1.5 ${className}`}>
       <Label>{label}</Label>
       {children}
     </div>
+  )
+
+  const isLoading = (key) => loading[key]
+
+  const TableSkeleton = ({ cols, rows = 5 }) => (
+    <>{Array.from({ length: rows }).map((_, i) => (
+      <TableRow key={i}>
+        {Array.from({ length: cols }).map((_, j) => (
+          <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+        ))}
+      </TableRow>
+    ))}</>
   )
 
   return (
@@ -267,21 +362,14 @@ export default function AdminPage() {
           <span className="brand">Hasmik's <span>Club</span></span>
           <span className="badge-label">Admin Panel</span>
         </div>
-
-        {/* Use div, NOT <nav> — global nav{} CSS would override it */}
         <div className="admin-sidebar-nav">
           {TABS.map(({ key, icon: Icon, label }) => (
-            <button
-              key={key}
-              className={`admin-sidebar-item${tab === key ? ' active' : ''}`}
-              onClick={() => setTab(key)}
-            >
+            <button key={key} className={`admin-sidebar-item${tab === key ? ' active' : ''}`} onClick={() => setTab(key)}>
               <span className="si-icon"><Icon size={15} /></span>
               {label}
             </button>
           ))}
         </div>
-
         <div className="admin-sidebar-footer">
           <div className="admin-sidebar-user">
             <div className="admin-sidebar-avatar">{initials(user?.full_name)}</div>
@@ -298,21 +386,16 @@ export default function AdminPage() {
 
       {/* ══ BODY ═════════════════════════════════════════════ */}
       <div className="flex flex-col flex-1 min-w-0">
-
-        {/* topbar */}
         <header className="sticky top-0 z-40 flex h-14 items-center border-b border-border bg-background/80 backdrop-blur px-8 gap-2 flex-shrink-0">
           <span className="text-xs text-muted-foreground">Admin</span>
           <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
           <span className="text-xs font-semibold text-foreground">{currentTab?.label}</span>
         </header>
 
-        {/* main */}
         <main className="flex-1 overflow-y-auto p-8">
-
-          {/* toast */}
           {toast && (
-            <div className={`fixed top-5 right-6 z-50 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium shadow-lg animate-in slide-in-from-right-4 duration-200 ${toast.type === 'success' ? 'bg-[#1a100a] text-[#f0e8df]' : 'bg-destructive text-destructive-foreground'}`}>
-              {toast.type === 'success' ? <CheckCircle2 className="h-4 w-4 text-primary" /> : <XCircle className="h-4 w-4" />}
+            <div className={`fixed top-5 right-6 z-50 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium shadow-lg animate-in slide-in-from-right-4 duration-200 min-w-[240px] ${toast.type === 'success' ? 'bg-[#1a100a] text-[#f0e8df]' : 'bg-destructive text-destructive-foreground'}`}>
+              {toast.type === 'success' ? <CheckCircle2 className="h-4 w-4 text-primary flex-shrink-0" /> : <XCircle className="h-4 w-4 flex-shrink-0" />}
               {toast.msg}
             </div>
           )}
@@ -327,10 +410,21 @@ export default function AdminPage() {
               </SectionHeader>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <KpiCard icon={Users}        label="Total"    value={members.length} />
-                <KpiCard icon={CheckCircle2} label="Active"   value={activeCount}    valueClass="text-emerald-600" />
-                <KpiCard icon={XCircle}      label="Inactive" value={inactiveCount}  />
-                <KpiCard icon={Percent}      label="Rate"     value={`${activationPct}%`} valueClass="text-primary" />
+                <KpiCard icon={Users}        label="Total"    value={members.length}    loading={isLoading('members')} />
+                <KpiCard icon={CheckCircle2} label="Active"   value={activeCount}       loading={isLoading('members')} valueClass="text-emerald-600" />
+                <KpiCard icon={XCircle}      label="Inactive" value={inactiveCount}     loading={isLoading('members')} />
+                <KpiCard icon={Percent}      label="Rate"     value={`${activationPct}%`} loading={isLoading('members')} valueClass="text-primary" />
+              </div>
+
+              {/* search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  placeholder="Search by name or email…"
+                  value={memberSearch}
+                  onChange={e => setMemberSearch(e.target.value)}
+                />
               </div>
 
               <Card>
@@ -346,37 +440,72 @@ export default function AdminPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {members.length === 0
-                      ? <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-10">No members yet</TableCell></TableRow>
-                      : members.map(m => (
-                        <TableRow key={m.id}>
-                          <TableCell>
-                            <div className="flex items-center gap-2.5">
-                              <MemberAvatar name={m.full_name} />
-                              <span className="font-medium text-sm">{m.full_name}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">{m.email}</TableCell>
-                          <TableCell>
-                            <Badge variant={m.membership_status === 'active' ? 'success' : 'muted'}>
-                              {m.membership_status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">{fmtDate(m.joined_at)}</TableCell>
-                          <TableCell>
-                            <input type="checkbox" checked={m.is_admin} onChange={() => toggleAdmin(m)}
-                              className="h-4 w-4 cursor-pointer accent-primary" />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button variant={m.membership_status === 'active' ? 'outline' : 'success'} size="sm" onClick={() => toggleMembership(m)}>
-                                {m.membership_status === 'active' ? 'Deactivate' : 'Activate'}
-                              </Button>
-                              <Button variant="destructive" size="sm" onClick={() => deleteMember(m)}>Delete</Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
+                    {isLoading('members')
+                      ? <TableSkeleton cols={6} />
+                      : filteredMembers.length === 0
+                        ? <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-10">{memberSearch ? 'No matching members' : 'No members yet'}</TableCell></TableRow>
+                        : filteredMembers.map(m => (
+                          <>
+                            <TableRow key={m.id}>
+                              <TableCell>
+                                <div className="flex items-center gap-2.5">
+                                  <MemberAvatar name={m.full_name} />
+                                  <div>
+                                    <div className="font-medium text-sm">{m.full_name}</div>
+                                    {m.admin_notes && <div className="text-xs text-muted-foreground truncate max-w-[160px]">📝 {m.admin_notes}</div>}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">{m.email}</TableCell>
+                              <TableCell>
+                                <Badge variant={m.membership_status === 'active' ? 'success' : 'muted'}>{m.membership_status}</Badge>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">{fmtDate(m.joined_at)}</TableCell>
+                              <TableCell>
+                                <input type="checkbox" checked={m.is_admin} onChange={() => toggleAdmin(m)} className="h-4 w-4 cursor-pointer accent-primary" />
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex justify-end gap-1.5 flex-wrap">
+                                  <Button variant={m.membership_status === 'active' ? 'outline' : 'success'} size="sm" onClick={() => toggleMembership(m)}>
+                                    {m.membership_status === 'active' ? 'Deactivate' : 'Activate'}
+                                  </Button>
+                                  <Button variant="outline" size="sm" title="Send Telegram invite" onClick={() => handleSendTelegram(m)}>
+                                    <SendHorizonal className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button variant="outline" size="sm" title="Notes" onClick={() => toggleNotes(m)}>
+                                    <StickyNote className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button variant="destructive" size="sm" onClick={() => deleteMember(m)}>Delete</Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                            {expandedNotes[m.id] && (
+                              <TableRow key={`${m.id}-notes`} className="bg-muted/30">
+                                <TableCell colSpan={6} className="py-3 px-6">
+                                  <div className="flex gap-3 items-end">
+                                    <div className="flex-1">
+                                      <Label className="mb-1.5">Private notes for {m.full_name}</Label>
+                                      <Textarea
+                                        rows={2}
+                                        placeholder="e.g. paid by bank transfer, referred by Hasmik…"
+                                        value={notesDraft[m.id] ?? m.admin_notes ?? ''}
+                                        onChange={e => setNotesDraft(d => ({ ...d, [m.id]: e.target.value }))}
+                                      />
+                                    </div>
+                                    <div className="flex gap-2">
+                                      <Button size="sm" onClick={() => saveNotes(m)} disabled={savingNotes[m.id]}>
+                                        {savingNotes[m.id] ? 'Saving…' : 'Save'}
+                                      </Button>
+                                      <Button size="sm" variant="ghost" onClick={() => setExpandedNotes(n => ({ ...n, [m.id]: false }))}>
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </>
+                        ))
                     }
                   </TableBody>
                 </Table>
@@ -390,9 +519,9 @@ export default function AdminPage() {
               <SectionHeader title="Events" sub="Create and manage gathering events" />
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <KpiCard icon={CalendarDays} label="Total Events" value={events.length} />
-                <KpiCard icon={TrendingUp}   label="Upcoming"     value={upcomingCount} valueClass="text-emerald-600" />
-                <KpiCard icon={Users}        label="Total RSVPs"  value={totalRsvps}    valueClass="text-primary" />
+                <KpiCard icon={CalendarDays} label="Total Events" value={events.length}    loading={isLoading('events')} />
+                <KpiCard icon={TrendingUp}   label="Upcoming"     value={upcomingCount}    loading={isLoading('events')} valueClass="text-emerald-600" />
+                <KpiCard icon={Users}        label="Total RSVPs"  value={totalRsvps}       loading={isLoading('events')} valueClass="text-primary" />
               </div>
 
               <Card>
@@ -418,66 +547,89 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
 
-              <div className="flex items-center gap-2 mt-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">All Events</span>
-                <Badge variant="secondary">{events.length}</Badge>
+              {/* filter */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Filter className="h-3 w-3" /> Filter</span>
+                {['all', 'upcoming', 'past'].map(f => (
+                  <Button key={f} size="sm" variant={eventFilter === f ? 'default' : 'outline'} onClick={() => setEventFilter(f)}>
+                    {f.charAt(0).toUpperCase() + f.slice(1)}
+                  </Button>
+                ))}
+                <Badge variant="secondary" className="ml-auto">{filteredEvents.length} events</Badge>
               </div>
 
-              {events.length === 0
-                ? <Card><CardContent className="py-12 text-center text-muted-foreground">No events yet</CardContent></Card>
-                : events.map(ev => (
-                  <Card key={ev.id} className="overflow-hidden">
-                    <div className="flex items-start justify-between gap-4 p-5 flex-wrap">
-                      <div className="flex-1 min-w-0">
-                        <p className="font-serif text-lg font-semibold text-foreground mb-1">{ev.title}</p>
-                        <p className="text-xs text-muted-foreground">
-                          📍 {ev.location} &nbsp;·&nbsp; 🗓 {fmtDateTime(ev.event_date)} &nbsp;·&nbsp; 👥 {ev.seats_taken ?? 0}/{ev.max_seats}
-                        </p>
+              {isLoading('events')
+                ? <div className="space-y-3">{[1,2,3].map(i => <Card key={i}><CardContent className="p-5"><Skeleton className="h-4 w-48 mb-2" /><Skeleton className="h-3 w-72" /></CardContent></Card>)}</div>
+                : filteredEvents.length === 0
+                  ? <Card><CardContent className="py-12 text-center text-muted-foreground">No events</CardContent></Card>
+                  : filteredEvents.map(ev => (
+                    <Card key={ev.id} className="overflow-hidden">
+                      <div className="flex items-start justify-between gap-4 p-5 flex-wrap">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-serif text-lg font-semibold text-foreground mb-1">{ev.title}</p>
+                          <p className="text-xs text-muted-foreground">
+                            📍 {ev.location} &nbsp;·&nbsp; 🗓 {fmtDateTime(ev.event_date)} &nbsp;·&nbsp; 👥 {ev.seats_taken ?? 0}/{ev.max_seats}
+                          </p>
+                        </div>
+                        <div className="flex gap-2 flex-shrink-0">
+                          <Button variant="outline" size="sm" onClick={() => toggleAttendees(ev.id)}>
+                            <UserCheck className="h-3.5 w-3.5" />{attendees[ev.id] ? 'Hide' : 'Check-in'}
+                          </Button>
+                          <Button variant="secondary" size="sm" onClick={() => startEditEvent(ev)}>Edit</Button>
+                          <Button variant="destructive" size="sm" onClick={() => deleteEvent(ev)}>Delete</Button>
+                        </div>
                       </div>
-                      <div className="flex gap-2 flex-shrink-0">
-                        <Button variant="outline" size="sm" onClick={() => toggleAttendees(ev.id)}>
-                          {attendees[ev.id] ? 'Hide' : 'Attendees'}
-                        </Button>
-                        <Button variant="secondary" size="sm" onClick={() => startEditEvent(ev)}>Edit</Button>
-                        <Button variant="destructive" size="sm" onClick={() => deleteEvent(ev)}>Delete</Button>
-                      </div>
-                    </div>
-                    {attendees[ev.id] && (
-                      <div className="border-t border-border bg-muted/30 px-5 py-4">
-                        {attendees[ev.id].length === 0
-                          ? <p className="text-sm text-muted-foreground">No RSVPs yet.</p>
-                          : (
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Name</TableHead>
-                                  <TableHead>Email</TableHead>
-                                  <TableHead>Status</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {attendees[ev.id].map(a => (
-                                  <TableRow key={a.id}>
-                                    <TableCell>
-                                      <div className="flex items-center gap-2">
-                                        <MemberAvatar name={a.full_name} size="sm" />
-                                        <span className="text-sm">{a.full_name}</span>
-                                      </div>
-                                    </TableCell>
-                                    <TableCell className="text-muted-foreground text-sm">{a.email}</TableCell>
-                                    <TableCell>
-                                      <Badge variant={a.membership_status === 'active' ? 'success' : 'muted'}>{a.membership_status}</Badge>
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          )
-                        }
-                      </div>
-                    )}
-                  </Card>
-                ))
+                      {attendees[ev.id] && (
+                        <div className="border-t border-border bg-muted/30 px-5 py-4">
+                          {attendees[ev.id].length === 0
+                            ? <p className="text-sm text-muted-foreground">No RSVPs yet.</p>
+                            : (
+                              <>
+                                <div className="flex items-center gap-3 mb-3 text-xs text-muted-foreground">
+                                  <span>
+                                    <strong className="text-emerald-600">{attendees[ev.id].filter(a => a.checked_in).length}</strong> / {attendees[ev.id].length} checked in
+                                  </span>
+                                </div>
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Name</TableHead>
+                                      <TableHead>Email</TableHead>
+                                      <TableHead>Status</TableHead>
+                                      <TableHead>Check-in</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {attendees[ev.id].map(a => (
+                                      <TableRow key={a.id}>
+                                        <TableCell>
+                                          <div className="flex items-center gap-2">
+                                            <MemberAvatar name={a.full_name} size="sm" />
+                                            <span className="text-sm">{a.full_name}</span>
+                                          </div>
+                                        </TableCell>
+                                        <TableCell className="text-muted-foreground text-sm">{a.email}</TableCell>
+                                        <TableCell><Badge variant={a.membership_status === 'active' ? 'success' : 'muted'}>{a.membership_status}</Badge></TableCell>
+                                        <TableCell>
+                                          <Button
+                                            size="sm"
+                                            variant={a.checked_in ? 'success' : 'outline'}
+                                            onClick={() => handleCheckin(ev.id, a.id)}
+                                          >
+                                            {a.checked_in ? <><CheckCircle2 className="h-3.5 w-3.5" /> Present</> : 'Mark present'}
+                                          </Button>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </>
+                            )
+                          }
+                        </div>
+                      )}
+                    </Card>
+                  ))
               }
             </div>
           )}
@@ -488,9 +640,9 @@ export default function AdminPage() {
               <SectionHeader title="Content Library" sub="Manage recipes, e-books and member unlocks" />
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <KpiCard icon={BookOpen} label="Total Items" value={content.length} />
-                <KpiCard icon={BookOpen} label="Recipes"     value={content.filter(c => c.type === 'recipe').length} />
-                <KpiCard icon={BookOpen} label="E-Books"     value={content.filter(c => c.type === 'ebook').length} />
+                <KpiCard icon={BookOpen} label="Total"   value={content.length}                               loading={isLoading('content')} />
+                <KpiCard icon={BookOpen} label="Recipes" value={content.filter(c => c.type === 'recipe').length} loading={isLoading('content')} />
+                <KpiCard icon={BookOpen} label="E-Books" value={content.filter(c => c.type === 'ebook').length}  loading={isLoading('content')} />
               </div>
 
               <Card>
@@ -511,8 +663,18 @@ export default function AdminPage() {
                       </Field>
                       <Field label="Title (EN)"><Input value={contentForm.title} onChange={setCF('title')} required /></Field>
                       <Field label="Title (ՀԱՅ)"><Input value={contentForm.title_hy} onChange={setCF('title_hy')} /></Field>
-                      <Field label="File URL"><Input value={contentForm.file_url} onChange={setCF('file_url')} placeholder="https://…" /></Field>
-                      <Field label="Cover Image URL"><Input value={contentForm.cover_url} onChange={setCF('cover_url')} placeholder="https://…" /></Field>
+                      <ImageUploadField
+                        label="File URL"
+                        value={contentForm.file_url}
+                        onChange={v => setContentForm(f => ({ ...f, file_url: v }))}
+                        onUpload={adminUploadImage}
+                      />
+                      <ImageUploadField
+                        label="Cover Image"
+                        value={contentForm.cover_url}
+                        onChange={v => setContentForm(f => ({ ...f, cover_url: v }))}
+                        onUpload={adminUploadImage}
+                      />
                     </div>
                     <Field label="Description (EN)"><Textarea value={contentForm.description} onChange={setCF('description')} /></Field>
                     <Field label="Description (ՀԱՅ)"><Textarea value={contentForm.description_hy} onChange={setCF('description_hy')} /></Field>
@@ -527,7 +689,7 @@ export default function AdminPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm">🔓 Unlock for Specific Member</CardTitle>
-                  <CardDescription>Enter content ID and member ID to manually unlock an item.</CardDescription>
+                  <CardDescription>Enter content ID and member ID to manually unlock.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleUnlock} className="flex flex-wrap gap-3 items-end">
@@ -542,35 +704,43 @@ export default function AdminPage() {
                 </CardContent>
               </Card>
 
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">All Content</span>
-                <Badge variant="secondary">{content.length}</Badge>
+              {/* filter */}
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Filter className="h-3 w-3" /> Type</span>
+                {['all', 'recipe', 'ebook'].map(f => (
+                  <Button key={f} size="sm" variant={contentFilter === f ? 'default' : 'outline'} onClick={() => setContentFilter(f)}>
+                    {f === 'all' ? 'All' : f === 'recipe' ? 'Recipes' : 'E-Books'}
+                  </Button>
+                ))}
+                <Badge variant="secondary" className="ml-auto">{filteredContent.length} items</Badge>
               </div>
 
-              {content.length === 0
-                ? <Card><CardContent className="py-12 text-center text-muted-foreground">No content yet</CardContent></Card>
-                : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {content.map(item => (
-                      <Card key={item.id} className="flex flex-col overflow-hidden">
-                        {item.cover_url && <img src={item.cover_url} alt={item.title} className="w-full h-36 object-cover" />}
-                        <CardContent className="p-4 flex flex-col flex-1 gap-2">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="secondary">{item.type}</Badge>
-                            <span className="text-xs text-muted-foreground">#{item.id}</span>
-                          </div>
-                          <p className="font-serif font-semibold text-base leading-tight">{item.title}</p>
-                          {item.description && <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>}
-                          <div className="flex gap-2 mt-auto pt-2 flex-wrap">
-                            <Button variant="secondary" size="sm" onClick={() => startEditContent(item)}>Edit</Button>
-                            <Button variant="outline"   size="sm" onClick={() => handleUnlockAll(item)}>Unlock All</Button>
-                            <Button variant="destructive" size="sm" onClick={() => deleteContent(item)}>Delete</Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                )
+              {isLoading('content')
+                ? <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{[1,2,3].map(i => <Card key={i}><CardContent className="p-4"><Skeleton className="h-36 w-full mb-3 rounded" /><Skeleton className="h-4 w-3/4 mb-2" /><Skeleton className="h-3 w-full" /></CardContent></Card>)}</div>
+                : filteredContent.length === 0
+                  ? <Card><CardContent className="py-12 text-center text-muted-foreground">No content yet</CardContent></Card>
+                  : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {filteredContent.map(item => (
+                        <Card key={item.id} className="flex flex-col overflow-hidden">
+                          {item.cover_url && <img src={item.cover_url} alt={item.title} className="w-full h-36 object-cover" />}
+                          <CardContent className="p-4 flex flex-col flex-1 gap-2">
+                            <div className="flex items-center gap-2">
+                              <Badge variant="secondary">{item.type}</Badge>
+                              <span className="text-xs text-muted-foreground">#{item.id}</span>
+                            </div>
+                            <p className="font-serif font-semibold text-base leading-tight">{item.title}</p>
+                            {item.description && <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>}
+                            <div className="flex gap-2 mt-auto pt-2 flex-wrap">
+                              <Button variant="secondary"   size="sm" onClick={() => startEditContent(item)}>Edit</Button>
+                              <Button variant="outline"     size="sm" onClick={() => handleUnlockAll(item)}>Unlock All</Button>
+                              <Button variant="destructive" size="sm" onClick={() => deleteContent(item)}>Delete</Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )
               }
             </div>
           )}
@@ -587,11 +757,10 @@ export default function AdminPage() {
           {tab === 'broadcast' && (
             <div className="space-y-6">
               <SectionHeader title="Broadcast Email" sub="Send a message to a member segment via Brevo" />
-
               <Card className="max-w-2xl">
                 <CardHeader>
                   <CardTitle className="text-sm flex items-center gap-2"><Mail className="h-4 w-4" /> Compose Message</CardTitle>
-                  <CardDescription>HTML is supported in the body. Use Brevo merge tags like {`{{params.FIRSTNAME}}`}.</CardDescription>
+                  <CardDescription>HTML is supported in the body.</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={handleBroadcast} className="space-y-4">
@@ -611,12 +780,10 @@ export default function AdminPage() {
                     <Field label="Body (HTML supported)">
                       <Textarea rows={10} value={broadcastForm.body} onChange={e => setBroadcastForm(f => ({ ...f, body: e.target.value }))} placeholder="<p>Hello,</p><p>We have an exciting announcement...</p>" required />
                     </Field>
-                    <div className="flex items-center gap-4">
-                      <Button type="submit" disabled={broadcasting}>
-                        <Send className="h-3.5 w-3.5" />
-                        {broadcasting ? 'Sending…' : `Send to ${segmentCount} recipient${segmentCount !== 1 ? 's' : ''}`}
-                      </Button>
-                    </div>
+                    <Button type="submit" disabled={broadcasting}>
+                      <Send className="h-3.5 w-3.5" />
+                      {broadcasting ? 'Sending…' : `Send to ${segmentCount} recipient${segmentCount !== 1 ? 's' : ''}`}
+                    </Button>
                   </form>
                 </CardContent>
               </Card>
@@ -631,7 +798,6 @@ export default function AdminPage() {
                   <RefreshCw className="h-3.5 w-3.5" /> Refresh
                 </Button>
               </SectionHeader>
-
               <Card>
                 <Table>
                   <TableHeader>
@@ -644,34 +810,28 @@ export default function AdminPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {auditLog.length === 0
-                      ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-12">No audit entries yet</TableCell></TableRow>
-                      : auditLog.map(entry => {
-                          const action = entry.action || ''
-                          const chip = action.includes('delete') ? 'destructive' : action.includes('create') ? 'success' : 'secondary'
-                          return (
-                            <TableRow key={entry.id}>
-                              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
-                                {fmtDateTime(entry.created_at)}
-                              </TableCell>
-                              <TableCell>
-                                {entry.admin_name
-                                  ? <div className="flex items-center gap-2"><MemberAvatar name={entry.admin_name} size="sm" /><span className="text-sm">{entry.admin_name}</span></div>
-                                  : <span className="text-muted-foreground">—</span>
-                                }
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant={chip} className="font-mono">{action}</Badge>
-                              </TableCell>
-                              <TableCell className="text-muted-foreground text-sm">
-                                {entry.entity_type ? `${entry.entity_type} #${entry.entity_id}` : '—'}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground text-xs max-w-[260px] truncate">
-                                {entry.details || '—'}
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })
+                    {isLoading('audit')
+                      ? <TableSkeleton cols={5} />
+                      : auditLog.length === 0
+                        ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-12">No audit entries yet</TableCell></TableRow>
+                        : auditLog.map(entry => {
+                            const action = entry.action || ''
+                            const chip = action.includes('delete') ? 'destructive' : action.includes('create') ? 'success' : 'secondary'
+                            return (
+                              <TableRow key={entry.id}>
+                                <TableCell className="text-muted-foreground text-xs whitespace-nowrap">{fmtDateTime(entry.created_at)}</TableCell>
+                                <TableCell>
+                                  {entry.admin_name
+                                    ? <div className="flex items-center gap-2"><MemberAvatar name={entry.admin_name} size="sm" /><span className="text-sm">{entry.admin_name}</span></div>
+                                    : <span className="text-muted-foreground">—</span>
+                                  }
+                                </TableCell>
+                                <TableCell><Badge variant={chip} className="font-mono text-xs">{action}</Badge></TableCell>
+                                <TableCell className="text-muted-foreground text-sm">{entry.entity_type ? `${entry.entity_type} #${entry.entity_id}` : '—'}</TableCell>
+                                <TableCell className="text-muted-foreground text-xs max-w-[260px] truncate">{entry.details || '—'}</TableCell>
+                              </TableRow>
+                            )
+                          })
                     }
                   </TableBody>
                 </Table>
