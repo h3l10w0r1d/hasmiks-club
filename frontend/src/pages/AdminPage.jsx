@@ -1,6 +1,28 @@
+import '../admin.css'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import {
+  Users, CalendarDays, BookOpen, BarChart3, Mail, ClipboardList,
+  Download, RefreshCw, Send, ChevronRight, LogOut, LayoutDashboard,
+  TrendingUp, CheckCircle2, XCircle, Percent,
+} from 'lucide-react'
+
+import { Button }       from '../components/ui/button'
+import { Badge }        from '../components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card'
+import { Input }        from '../components/ui/input'
+import { Textarea }     from '../components/ui/textarea'
+import { Label }        from '../components/ui/label'
+import { Separator }    from '../components/ui/separator'
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '../components/ui/table'
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '../components/ui/select'
+import AnalyticsDashboard from '../components/AnalyticsDashboard'
+
 import {
   adminGetMembers, adminUpdateMember, adminDeleteMember,
   adminGetEvents, adminGetEventAttendees, adminCreateEvent, adminUpdateEvent, adminDeleteEvent,
@@ -9,31 +31,65 @@ import {
   adminBroadcast, adminExportCsv, adminGetAuditLog,
 } from '../api/admin'
 
-import AnalyticsDashboard from '../components/AnalyticsDashboard'
-
-const TAB_CONFIG = [
-  { key: 'members',   icon: '👥', label: 'Members'   },
-  { key: 'events',    icon: '🗓', label: 'Events'    },
-  { key: 'content',   icon: '📚', label: 'Content'   },
-  { key: 'analytics', icon: '📊', label: 'Analytics' },
-  { key: 'broadcast', icon: '📨', label: 'Broadcast' },
-  { key: 'audit',     icon: '🔍', label: 'Audit Log' },
+// ── helpers ──────────────────────────────────────────────────────────────────
+const TABS = [
+  { key: 'members',   icon: Users,         label: 'Members'   },
+  { key: 'events',    icon: CalendarDays,  label: 'Events'    },
+  { key: 'content',   icon: BookOpen,      label: 'Content'   },
+  { key: 'analytics', icon: BarChart3,     label: 'Analytics' },
+  { key: 'broadcast', icon: Mail,          label: 'Broadcast' },
+  { key: 'audit',     icon: ClipboardList, label: 'Audit Log' },
 ]
 
 const EMPTY_EVENT   = { title: '', title_hy: '', description: '', description_hy: '', location: '', event_date: '', max_seats: 20 }
 const EMPTY_CONTENT = { type: 'recipe', title: '', title_hy: '', description: '', description_hy: '', file_url: '', cover_url: '' }
 
 function initials(name = '') {
-  return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
+  return name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2)
+}
+function fmtDate(iso) {
+  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+function fmtDateTime(iso) {
+  return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 }
 
-function actionChipClass(action = '') {
-  if (action.includes('create')) return 'create'
-  if (action.includes('delete')) return 'delete'
-  if (action.includes('update') || action.includes('broadcast') || action.includes('unlock') || action.includes('export')) return 'update'
-  return 'other'
+function KpiCard({ icon: Icon, label, value, valueClass = '' }) {
+  return (
+    <Card>
+      <CardContent className="p-5">
+        <div className="flex items-center justify-between mb-3">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
+          {Icon && <Icon className="h-4 w-4 text-muted-foreground/60" />}
+        </div>
+        <div className={`font-serif text-4xl font-semibold leading-none ${valueClass}`}>{value}</div>
+      </CardContent>
+    </Card>
+  )
 }
 
+function SectionHeader({ title, sub, children }) {
+  return (
+    <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
+      <div>
+        <h1 className="font-serif text-3xl font-light text-foreground leading-tight">{title}</h1>
+        {sub && <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">{sub}</p>}
+      </div>
+      {children && <div className="flex gap-2 flex-wrap">{children}</div>}
+    </div>
+  )
+}
+
+function MemberAvatar({ name, size = 'md' }) {
+  const sz = size === 'sm' ? 'w-6 h-6 text-[10px]' : 'w-8 h-8 text-xs'
+  return (
+    <span className={`inline-flex items-center justify-center rounded-full bg-primary/10 text-primary font-bold flex-shrink-0 ${sz}`}>
+      {initials(name)}
+    </span>
+  )
+}
+
+// ── main component ────────────────────────────────────────────────────────────
 export default function AdminPage() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
@@ -50,11 +106,9 @@ export default function AdminPage() {
   const [contentForm,    setContentForm]    = useState(EMPTY_CONTENT)
   const [editingContent, setEditingContent] = useState(null)
   const [unlockTarget,   setUnlockTarget]   = useState({ contentId: '', userId: '' })
-
-  const [broadcastForm, setBroadcastForm] = useState({ subject: '', body: '', segment: 'all' })
-  const [broadcasting,  setBroadcasting]  = useState(false)
-
-  const [toast, setToast] = useState(null) // { msg, type }
+  const [broadcastForm,  setBroadcastForm]  = useState({ subject: '', body: '', segment: 'all' })
+  const [broadcasting,   setBroadcasting]  = useState(false)
+  const [toast, setToast] = useState(null)
 
   const flash = (msg, isErr = false) => {
     setToast({ msg, type: isErr ? 'error' : 'success' })
@@ -80,7 +134,7 @@ export default function AdminPage() {
     const next = m.membership_status === 'active' ? 'inactive' : 'active'
     await adminUpdateMember(m.id, { membership_status: next })
     setMembers(ms => ms.map(x => x.id === m.id ? { ...x, membership_status: next } : x))
-    flash(`${m.full_name} set to ${next}`)
+    flash(`${m.full_name} → ${next}`)
   }
   const toggleAdmin = async (m) => {
     await adminUpdateMember(m.id, { is_admin: !m.is_admin })
@@ -96,11 +150,9 @@ export default function AdminPage() {
   const handleExportCsv = async () => {
     try {
       const blob = await adminExportCsv()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `members-${new Date().toISOString().slice(0, 10)}.csv`
-      a.click()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href = url; a.download = `members-${new Date().toISOString().slice(0, 10)}.csv`; a.click()
       URL.revokeObjectURL(url)
     } catch { flash('Export failed', true) }
   }
@@ -117,38 +169,24 @@ export default function AdminPage() {
         flash('Event updated')
       } else {
         const created = await adminCreateEvent(payload)
-        setEvents(es => [created, ...es])
-        flash('Event created')
+        setEvents(es => [created, ...es]); flash('Event created')
       }
       setEventForm(EMPTY_EVENT); setEditingEvent(null)
     } catch { flash('Failed to save event', true) }
   }
   const startEditEvent = (ev) => {
     setEditingEvent(ev)
-    setEventForm({
-      title: ev.title || '', title_hy: ev.title_hy || '',
-      description: ev.description || '', description_hy: ev.description_hy || '',
-      location: ev.location || '',
-      event_date: ev.event_date ? ev.event_date.slice(0, 16) : '',
-      max_seats: ev.max_seats,
-    })
+    setEventForm({ title: ev.title || '', title_hy: ev.title_hy || '', description: ev.description || '', description_hy: ev.description_hy || '', location: ev.location || '', event_date: ev.event_date ? ev.event_date.slice(0, 16) : '', max_seats: ev.max_seats })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   const deleteEvent = async (ev) => {
     if (!confirm(`Delete "${ev.title}"?`)) return
-    await adminDeleteEvent(ev.id)
-    setEvents(es => es.filter(x => x.id !== ev.id))
-    flash('Event deleted')
+    await adminDeleteEvent(ev.id); setEvents(es => es.filter(x => x.id !== ev.id)); flash('Event deleted')
   }
   const toggleAttendees = async (evId) => {
-    if (attendees[evId]) {
-      setAttendees(a => { const n = { ...a }; delete n[evId]; return n })
-      return
-    }
-    try {
-      const list = await adminGetEventAttendees(evId)
-      setAttendees(a => ({ ...a, [evId]: list }))
-    } catch { flash('Failed to load attendees', true) }
+    if (attendees[evId]) { setAttendees(a => { const n = { ...a }; delete n[evId]; return n }); return }
+    try { const list = await adminGetEventAttendees(evId); setAttendees(a => ({ ...a, [evId]: list })) }
+    catch { flash('Failed to load attendees', true) }
   }
 
   // ── content ──
@@ -158,45 +196,35 @@ export default function AdminPage() {
     try {
       if (editingContent) {
         const updated = await adminUpdateContent(editingContent.id, contentForm)
-        setContent(cs => cs.map(x => x.id === editingContent.id ? updated : x))
-        flash('Content updated')
+        setContent(cs => cs.map(x => x.id === editingContent.id ? updated : x)); flash('Content updated')
       } else {
         const created = await adminCreateContent(contentForm)
-        setContent(cs => [created, ...cs])
-        flash('Content created')
+        setContent(cs => [created, ...cs]); flash('Content created')
       }
       setContentForm(EMPTY_CONTENT); setEditingContent(null)
     } catch { flash('Failed to save content', true) }
   }
   const startEditContent = (item) => {
     setEditingContent(item)
-    setContentForm({
-      type: item.type, title: item.title || '', title_hy: item.title_hy || '',
-      description: item.description || '', description_hy: item.description_hy || '',
-      file_url: item.file_url || '', cover_url: item.cover_url || '',
-    })
+    setContentForm({ type: item.type, title: item.title || '', title_hy: item.title_hy || '', description: item.description || '', description_hy: item.description_hy || '', file_url: item.file_url || '', cover_url: item.cover_url || '' })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   const deleteContent = async (item) => {
     if (!confirm(`Delete "${item.title}"?`)) return
-    await adminDeleteContent(item.id)
-    setContent(cs => cs.filter(x => x.id !== item.id))
-    flash('Content deleted')
+    await adminDeleteContent(item.id); setContent(cs => cs.filter(x => x.id !== item.id)); flash('Content deleted')
   }
   const handleUnlock = async (e) => {
     e.preventDefault()
     try {
       await adminUnlockContent(unlockTarget.contentId, unlockTarget.userId)
-      flash(`Content #${unlockTarget.contentId} unlocked for user #${unlockTarget.userId}`)
+      flash(`Content #${unlockTarget.contentId} unlocked for member #${unlockTarget.userId}`)
       setUnlockTarget({ contentId: '', userId: '' })
     } catch { flash('Failed to unlock', true) }
   }
   const handleUnlockAll = async (item) => {
     if (!confirm(`Unlock "${item.title}" for ALL active members?`)) return
-    try {
-      await adminUnlockContentForAll(item.id)
-      flash(`"${item.title}" unlocked for all active members`)
-    } catch { flash('Failed to unlock', true) }
+    try { await adminUnlockContentForAll(item.id); flash(`"${item.title}" unlocked for all active members`) }
+    catch { flash('Failed to unlock', true) }
   }
 
   // ── broadcast ──
@@ -214,461 +242,441 @@ export default function AdminPage() {
 
   // derived stats
   const activeCount   = members.filter(m => m.membership_status === 'active').length
-  const inactiveCount = members.filter(m => m.membership_status !== 'active').length
+  const inactiveCount = members.length - activeCount
+  const activationPct = members.length ? Math.round(activeCount / members.length * 100) : 0
   const upcomingCount = events.filter(ev => new Date(ev.event_date) > new Date()).length
   const totalRsvps    = events.reduce((s, ev) => s + (ev.seats_taken || 0), 0)
+  const segmentCount  = broadcastForm.segment === 'active' ? activeCount : broadcastForm.segment === 'inactive' ? inactiveCount : members.length
 
-  const currentTab = TAB_CONFIG.find(t => t.key === tab)
+  const currentTab = TABS.find(t => t.key === tab)
+
+  // ── field helper ──
+  const Field = ({ label, children, className = '' }) => (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+      <Label>{label}</Label>
+      {children}
+    </div>
+  )
 
   return (
-    <div className="admin-shell">
+    <div className="admin-shell flex min-h-screen bg-background">
 
-      {/* ── sidebar ── */}
+      {/* ══ SIDEBAR ══════════════════════════════════════════ */}
       <aside className="admin-sidebar">
         <div className="admin-sidebar-logo">
-          Hasmik's <span>Club</span>
-          <small>Admin Panel</small>
+          <span className="brand">Hasmik's <span>Club</span></span>
+          <span className="badge-label">Admin Panel</span>
         </div>
 
-        <nav className="admin-sidebar-nav">
-          {TAB_CONFIG.map(t => (
+        {/* Use div, NOT <nav> — global nav{} CSS would override it */}
+        <div className="admin-sidebar-nav">
+          {TABS.map(({ key, icon: Icon, label }) => (
             <button
-              key={t.key}
-              className={`admin-sidebar-item${tab === t.key ? ' active' : ''}`}
-              onClick={() => setTab(t.key)}
+              key={key}
+              className={`admin-sidebar-item${tab === key ? ' active' : ''}`}
+              onClick={() => setTab(key)}
             >
-              <span className="si-icon">{t.icon}</span>
-              {t.label}
+              <span className="si-icon"><Icon size={15} /></span>
+              {label}
             </button>
           ))}
-        </nav>
+        </div>
 
         <div className="admin-sidebar-footer">
           <div className="admin-sidebar-user">
             <div className="admin-sidebar-avatar">{initials(user?.full_name)}</div>
             <span className="admin-sidebar-name">{user?.full_name}</span>
           </div>
-          <button className="admin-sidebar-back" onClick={() => navigate('/dashboard')}>
-            ← Member view
+          <button className="admin-sidebar-btn back" onClick={() => navigate('/dashboard')}>
+            <LayoutDashboard size={13} /> Member view
           </button>
-          <button className="admin-sidebar-signout" onClick={() => { signOut(); navigate('/') }}>
-            Sign out
+          <button className="admin-sidebar-btn signout" onClick={() => { signOut(); navigate('/') }}>
+            <LogOut size={13} /> Sign out
           </button>
         </div>
       </aside>
 
-      {/* ── main body ── */}
-      <div className="admin-body">
-        <header className="admin-topbar">
-          <div className="admin-breadcrumb">
-            Admin&nbsp;/&nbsp;<strong>{currentTab?.label}</strong>
-          </div>
+      {/* ══ BODY ═════════════════════════════════════════════ */}
+      <div className="flex flex-col flex-1 min-w-0">
+
+        {/* topbar */}
+        <header className="sticky top-0 z-40 flex h-14 items-center border-b border-border bg-background/80 backdrop-blur px-8 gap-2 flex-shrink-0">
+          <span className="text-xs text-muted-foreground">Admin</span>
+          <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
+          <span className="text-xs font-semibold text-foreground">{currentTab?.label}</span>
         </header>
 
-        <main className="admin-main">
+        {/* main */}
+        <main className="flex-1 overflow-y-auto p-8">
 
           {/* toast */}
           {toast && (
-            <div className={`admin-toast ${toast.type}`}>{toast.msg}</div>
+            <div className={`fixed top-5 right-6 z-50 flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium shadow-lg animate-in slide-in-from-right-4 duration-200 ${toast.type === 'success' ? 'bg-[#1a100a] text-[#f0e8df]' : 'bg-destructive text-destructive-foreground'}`}>
+              {toast.type === 'success' ? <CheckCircle2 className="h-4 w-4 text-primary" /> : <XCircle className="h-4 w-4" />}
+              {toast.msg}
+            </div>
           )}
 
-          {/* ══════════ MEMBERS ══════════ */}
+          {/* ══ MEMBERS ══ */}
           {tab === 'members' && (
-            <>
-              <div className="admin-page-hd">
-                <div className="admin-page-title">
-                  Members
-                  <small>Manage all registered members</small>
-                </div>
-                <div className="admin-page-actions">
-                  <button className="admin-btn-sm" onClick={handleExportCsv}>⬇ Export CSV</button>
-                </div>
+            <div className="space-y-6">
+              <SectionHeader title="Members" sub="Manage all registered members">
+                <Button variant="outline" size="sm" onClick={handleExportCsv}>
+                  <Download className="h-3.5 w-3.5" /> Export CSV
+                </Button>
+              </SectionHeader>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <KpiCard icon={Users}        label="Total"    value={members.length} />
+                <KpiCard icon={CheckCircle2} label="Active"   value={activeCount}    valueClass="text-emerald-600" />
+                <KpiCard icon={XCircle}      label="Inactive" value={inactiveCount}  />
+                <KpiCard icon={Percent}      label="Rate"     value={`${activationPct}%`} valueClass="text-primary" />
               </div>
 
-              <div className="admin-kpi-row">
-                <div className="admin-kpi">
-                  <div className="admin-kpi-val">{members.length}</div>
-                  <div className="admin-kpi-lbl">Total Members</div>
-                </div>
-                <div className="admin-kpi">
-                  <div className="admin-kpi-val green">{activeCount}</div>
-                  <div className="admin-kpi-lbl">Active</div>
-                </div>
-                <div className="admin-kpi">
-                  <div className="admin-kpi-val">{inactiveCount}</div>
-                  <div className="admin-kpi-lbl">Inactive</div>
-                </div>
-                <div className="admin-kpi">
-                  <div className="admin-kpi-val rose">
-                    {members.length ? Math.round(activeCount / members.length * 100) : 0}%
-                  </div>
-                  <div className="admin-kpi-lbl">Activation Rate</div>
-                </div>
-              </div>
-
-              <div className="admin-card">
-                <div className="admin-table-wrap">
-                  <table className="admin-table">
-                    <thead>
-                      <tr>
-                        <th>Member</th>
-                        <th>Email</th>
-                        <th>Status</th>
-                        <th>Joined</th>
-                        <th>Admin</th>
-                        <th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {members.length === 0
-                        ? <tr><td colSpan={6} style={{ textAlign: 'center', color: '#aaa', padding: 24 }}>No members yet</td></tr>
-                        : members.map(m => (
-                          <tr key={m.id}>
-                            <td>
-                              <span className="admin-avatar">{initials(m.full_name)}</span>
-                              {m.full_name}
-                            </td>
-                            <td className="admin-td-muted">{m.email}</td>
-                            <td><span className={`status-pill ${m.membership_status}`}>{m.membership_status}</span></td>
-                            <td className="admin-td-muted">{new Date(m.joined_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
-                            <td>
-                              <input type="checkbox" checked={m.is_admin} onChange={() => toggleAdmin(m)}
-                                style={{ accentColor: 'var(--rose)', width: 15, height: 15, cursor: 'pointer' }} />
-                            </td>
-                            <td>
-                              <div className="admin-actions">
-                                <button
-                                  className={`admin-btn-sm ${m.membership_status === 'active' ? '' : 'toggle'}`}
-                                  onClick={() => toggleMembership(m)}
-                                >
-                                  {m.membership_status === 'active' ? 'Deactivate' : 'Activate'}
-                                </button>
-                                <button className="admin-btn-sm danger" onClick={() => deleteMember(m)}>Delete</button>
-                              </div>
-                            </td>
-                          </tr>
-                        ))
-                      }
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Member</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Joined</TableHead>
+                      <TableHead>Admin</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {members.length === 0
+                      ? <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-10">No members yet</TableCell></TableRow>
+                      : members.map(m => (
+                        <TableRow key={m.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-2.5">
+                              <MemberAvatar name={m.full_name} />
+                              <span className="font-medium text-sm">{m.full_name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">{m.email}</TableCell>
+                          <TableCell>
+                            <Badge variant={m.membership_status === 'active' ? 'success' : 'muted'}>
+                              {m.membership_status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">{fmtDate(m.joined_at)}</TableCell>
+                          <TableCell>
+                            <input type="checkbox" checked={m.is_admin} onChange={() => toggleAdmin(m)}
+                              className="h-4 w-4 cursor-pointer accent-primary" />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button variant={m.membership_status === 'active' ? 'outline' : 'success'} size="sm" onClick={() => toggleMembership(m)}>
+                                {m.membership_status === 'active' ? 'Deactivate' : 'Activate'}
+                              </Button>
+                              <Button variant="destructive" size="sm" onClick={() => deleteMember(m)}>Delete</Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    }
+                  </TableBody>
+                </Table>
+              </Card>
+            </div>
           )}
 
-          {/* ══════════ EVENTS ══════════ */}
+          {/* ══ EVENTS ══ */}
           {tab === 'events' && (
-            <>
-              <div className="admin-page-hd">
-                <div className="admin-page-title">
-                  Events
-                  <small>Create and manage gathering events</small>
-                </div>
+            <div className="space-y-6">
+              <SectionHeader title="Events" sub="Create and manage gathering events" />
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <KpiCard icon={CalendarDays} label="Total Events" value={events.length} />
+                <KpiCard icon={TrendingUp}   label="Upcoming"     value={upcomingCount} valueClass="text-emerald-600" />
+                <KpiCard icon={Users}        label="Total RSVPs"  value={totalRsvps}    valueClass="text-primary" />
               </div>
 
-              <div className="admin-kpi-row">
-                <div className="admin-kpi">
-                  <div className="admin-kpi-val">{events.length}</div>
-                  <div className="admin-kpi-lbl">Total Events</div>
-                </div>
-                <div className="admin-kpi">
-                  <div className="admin-kpi-val green">{upcomingCount}</div>
-                  <div className="admin-kpi-lbl">Upcoming</div>
-                </div>
-                <div className="admin-kpi">
-                  <div className="admin-kpi-val rose">{totalRsvps}</div>
-                  <div className="admin-kpi-lbl">Total RSVPs</div>
-                </div>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">{editingEvent ? '✏️  Edit Event' : '＋  New Event'}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={submitEvent} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Field label="Title (EN)"><Input value={eventForm.title} onChange={setEF('title')} required /></Field>
+                      <Field label="Title (ՀԱՅ)"><Input value={eventForm.title_hy} onChange={setEF('title_hy')} /></Field>
+                      <Field label="Location"><Input value={eventForm.location} onChange={setEF('location')} required /></Field>
+                      <Field label="Date & Time"><Input type="datetime-local" value={eventForm.event_date} onChange={setEF('event_date')} required /></Field>
+                      <Field label="Max Seats"><Input type="number" value={eventForm.max_seats} onChange={setEF('max_seats')} min={1} required /></Field>
+                    </div>
+                    <Field label="Description (EN)"><Textarea value={eventForm.description} onChange={setEF('description')} /></Field>
+                    <Field label="Description (ՀԱՅ)"><Textarea value={eventForm.description_hy} onChange={setEF('description_hy')} /></Field>
+                    <div className="flex gap-2">
+                      <Button type="submit">{editingEvent ? 'Update Event' : 'Create Event'}</Button>
+                      {editingEvent && <Button type="button" variant="outline" onClick={() => { setEditingEvent(null); setEventForm(EMPTY_EVENT) }}>Cancel</Button>}
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
 
-              <div className="admin-card">
-                <div className="admin-card-title">{editingEvent ? '✏️ Edit Event' : '＋ New Event'}</div>
-                <form onSubmit={submitEvent} className="admin-form">
-                  <div className="admin-form-grid">
-                    <label className="auth-label">Title (EN)<input className="auth-input" value={eventForm.title} onChange={setEF('title')} required /></label>
-                    <label className="auth-label">Title (ՀԱՅ)<input className="auth-input" value={eventForm.title_hy} onChange={setEF('title_hy')} /></label>
-                    <label className="auth-label">Location<input className="auth-input" value={eventForm.location} onChange={setEF('location')} required /></label>
-                    <label className="auth-label">Date &amp; Time<input className="auth-input" type="datetime-local" value={eventForm.event_date} onChange={setEF('event_date')} required /></label>
-                    <label className="auth-label">Max Seats<input className="auth-input" type="number" value={eventForm.max_seats} onChange={setEF('max_seats')} min={1} required /></label>
-                  </div>
-                  <label className="auth-label">Description (EN)<textarea className="auth-input admin-textarea" value={eventForm.description} onChange={setEF('description')} /></label>
-                  <label className="auth-label">Description (ՀԱՅ)<textarea className="auth-input admin-textarea" value={eventForm.description_hy} onChange={setEF('description_hy')} /></label>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <button className="admin-btn-sm primary" type="submit" style={{ padding: '9px 24px' }}>
-                      {editingEvent ? 'Update Event' : 'Create Event'}
-                    </button>
-                    {editingEvent && (
-                      <button type="button" className="admin-btn-sm" onClick={() => { setEditingEvent(null); setEventForm(EMPTY_EVENT) }}>
-                        Cancel
-                      </button>
-                    )}
-                  </div>
-                </form>
-              </div>
-
-              <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: 'var(--stone)', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>
-                  All Events
-                </span>
-                <span className="admin-count-badge">{events.length}</span>
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">All Events</span>
+                <Badge variant="secondary">{events.length}</Badge>
               </div>
 
               {events.length === 0
-                ? <div className="admin-card" style={{ textAlign: 'center', color: 'var(--stone)', padding: '40px 24px' }}>No events yet</div>
+                ? <Card><CardContent className="py-12 text-center text-muted-foreground">No events yet</CardContent></Card>
                 : events.map(ev => (
-                  <div key={ev.id} className="admin-event-card">
-                    <div className="admin-event-card-top">
-                      <div style={{ flex: 1 }}>
-                        <div className="admin-event-title">{ev.title}</div>
-                        <div className="admin-event-meta">
-                          📍 {ev.location}&nbsp;&nbsp;·&nbsp;&nbsp;
-                          🗓 {new Date(ev.event_date).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}&nbsp;&nbsp;·&nbsp;&nbsp;
-                          👥 {ev.seats_taken ?? 0}/{ev.max_seats} RSVPs
-                        </div>
+                  <Card key={ev.id} className="overflow-hidden">
+                    <div className="flex items-start justify-between gap-4 p-5 flex-wrap">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-serif text-lg font-semibold text-foreground mb-1">{ev.title}</p>
+                        <p className="text-xs text-muted-foreground">
+                          📍 {ev.location} &nbsp;·&nbsp; 🗓 {fmtDateTime(ev.event_date)} &nbsp;·&nbsp; 👥 {ev.seats_taken ?? 0}/{ev.max_seats}
+                        </p>
                       </div>
-                      <div className="admin-actions">
-                        <button className="admin-btn-sm" onClick={() => toggleAttendees(ev.id)}>
+                      <div className="flex gap-2 flex-shrink-0">
+                        <Button variant="outline" size="sm" onClick={() => toggleAttendees(ev.id)}>
                           {attendees[ev.id] ? 'Hide' : 'Attendees'}
-                        </button>
-                        <button className="admin-btn-sm toggle" onClick={() => startEditEvent(ev)}>Edit</button>
-                        <button className="admin-btn-sm danger" onClick={() => deleteEvent(ev)}>Delete</button>
+                        </Button>
+                        <Button variant="secondary" size="sm" onClick={() => startEditEvent(ev)}>Edit</Button>
+                        <Button variant="destructive" size="sm" onClick={() => deleteEvent(ev)}>Delete</Button>
                       </div>
                     </div>
                     {attendees[ev.id] && (
-                      <div className="admin-event-attendees">
+                      <div className="border-t border-border bg-muted/30 px-5 py-4">
                         {attendees[ev.id].length === 0
-                          ? <p style={{ color: 'var(--stone)', fontSize: 13 }}>No RSVPs yet.</p>
+                          ? <p className="text-sm text-muted-foreground">No RSVPs yet.</p>
                           : (
-                            <table className="admin-table" style={{ fontSize: 12 }}>
-                              <thead><tr><th>Name</th><th>Email</th><th>Status</th></tr></thead>
-                              <tbody>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Name</TableHead>
+                                  <TableHead>Email</TableHead>
+                                  <TableHead>Status</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
                                 {attendees[ev.id].map(a => (
-                                  <tr key={a.id}>
-                                    <td>
-                                      <span className="admin-avatar" style={{ width: 24, height: 24, fontSize: 10 }}>{initials(a.full_name)}</span>
-                                      {a.full_name}
-                                    </td>
-                                    <td className="admin-td-muted">{a.email}</td>
-                                    <td><span className={`status-pill ${a.membership_status}`}>{a.membership_status}</span></td>
-                                  </tr>
+                                  <TableRow key={a.id}>
+                                    <TableCell>
+                                      <div className="flex items-center gap-2">
+                                        <MemberAvatar name={a.full_name} size="sm" />
+                                        <span className="text-sm">{a.full_name}</span>
+                                      </div>
+                                    </TableCell>
+                                    <TableCell className="text-muted-foreground text-sm">{a.email}</TableCell>
+                                    <TableCell>
+                                      <Badge variant={a.membership_status === 'active' ? 'success' : 'muted'}>{a.membership_status}</Badge>
+                                    </TableCell>
+                                  </TableRow>
                                 ))}
-                              </tbody>
-                            </table>
+                              </TableBody>
+                            </Table>
                           )
                         }
                       </div>
                     )}
-                  </div>
+                  </Card>
                 ))
               }
-            </>
+            </div>
           )}
 
-          {/* ══════════ CONTENT ══════════ */}
+          {/* ══ CONTENT ══ */}
           {tab === 'content' && (
-            <>
-              <div className="admin-page-hd">
-                <div className="admin-page-title">
-                  Content Library
-                  <small>Manage recipes, e-books and unlocks</small>
-                </div>
+            <div className="space-y-6">
+              <SectionHeader title="Content Library" sub="Manage recipes, e-books and member unlocks" />
+
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <KpiCard icon={BookOpen} label="Total Items" value={content.length} />
+                <KpiCard icon={BookOpen} label="Recipes"     value={content.filter(c => c.type === 'recipe').length} />
+                <KpiCard icon={BookOpen} label="E-Books"     value={content.filter(c => c.type === 'ebook').length} />
               </div>
 
-              <div className="admin-kpi-row">
-                <div className="admin-kpi">
-                  <div className="admin-kpi-val">{content.length}</div>
-                  <div className="admin-kpi-lbl">Total Items</div>
-                </div>
-                <div className="admin-kpi">
-                  <div className="admin-kpi-val">{content.filter(c => c.type === 'recipe').length}</div>
-                  <div className="admin-kpi-lbl">Recipes</div>
-                </div>
-                <div className="admin-kpi">
-                  <div className="admin-kpi-val">{content.filter(c => c.type === 'ebook').length}</div>
-                  <div className="admin-kpi-lbl">E-Books</div>
-                </div>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">{editingContent ? '✏️  Edit Item' : '＋  Add Content'}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={submitContent} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Field label="Type">
+                        <Select value={contentForm.type} onValueChange={v => setContentForm(f => ({ ...f, type: v }))}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="recipe">Recipe</SelectItem>
+                            <SelectItem value="ebook">E-Book</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </Field>
+                      <Field label="Title (EN)"><Input value={contentForm.title} onChange={setCF('title')} required /></Field>
+                      <Field label="Title (ՀԱՅ)"><Input value={contentForm.title_hy} onChange={setCF('title_hy')} /></Field>
+                      <Field label="File URL"><Input value={contentForm.file_url} onChange={setCF('file_url')} placeholder="https://…" /></Field>
+                      <Field label="Cover Image URL"><Input value={contentForm.cover_url} onChange={setCF('cover_url')} placeholder="https://…" /></Field>
+                    </div>
+                    <Field label="Description (EN)"><Textarea value={contentForm.description} onChange={setCF('description')} /></Field>
+                    <Field label="Description (ՀԱՅ)"><Textarea value={contentForm.description_hy} onChange={setCF('description_hy')} /></Field>
+                    <div className="flex gap-2">
+                      <Button type="submit">{editingContent ? 'Update' : 'Add Content'}</Button>
+                      {editingContent && <Button type="button" variant="outline" onClick={() => { setEditingContent(null); setContentForm(EMPTY_CONTENT) }}>Cancel</Button>}
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
 
-              <div className="admin-card">
-                <div className="admin-card-title">{editingContent ? '✏️ Edit Item' : '＋ Add Content'}</div>
-                <form onSubmit={submitContent} className="admin-form">
-                  <div className="admin-form-grid">
-                    <label className="auth-label">Type
-                      <select className="auth-input" value={contentForm.type} onChange={setCF('type')}>
-                        <option value="recipe">Recipe</option>
-                        <option value="ebook">E-Book</option>
-                      </select>
-                    </label>
-                    <label className="auth-label">Title (EN)<input className="auth-input" value={contentForm.title} onChange={setCF('title')} required /></label>
-                    <label className="auth-label">Title (ՀԱՅ)<input className="auth-input" value={contentForm.title_hy} onChange={setCF('title_hy')} /></label>
-                    <label className="auth-label">File URL<input className="auth-input" value={contentForm.file_url} onChange={setCF('file_url')} placeholder="https://…" /></label>
-                    <label className="auth-label">Cover Image URL<input className="auth-input" value={contentForm.cover_url} onChange={setCF('cover_url')} placeholder="https://…" /></label>
-                  </div>
-                  <label className="auth-label">Description (EN)<textarea className="auth-input admin-textarea" value={contentForm.description} onChange={setCF('description')} /></label>
-                  <label className="auth-label">Description (ՀԱՅ)<textarea className="auth-input admin-textarea" value={contentForm.description_hy} onChange={setCF('description_hy')} /></label>
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    <button className="admin-btn-sm primary" type="submit" style={{ padding: '9px 24px' }}>
-                      {editingContent ? 'Update' : 'Add Content'}
-                    </button>
-                    {editingContent && (
-                      <button type="button" className="admin-btn-sm" onClick={() => { setEditingContent(null); setContentForm(EMPTY_CONTENT) }}>Cancel</button>
-                    )}
-                  </div>
-                </form>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-sm">🔓 Unlock for Specific Member</CardTitle>
+                  <CardDescription>Enter content ID and member ID to manually unlock an item.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleUnlock} className="flex flex-wrap gap-3 items-end">
+                    <Field label="Content ID" className="flex-1 min-w-[140px]">
+                      <Input type="number" value={unlockTarget.contentId} onChange={e => setUnlockTarget(u => ({ ...u, contentId: e.target.value }))} required />
+                    </Field>
+                    <Field label="Member ID" className="flex-1 min-w-[140px]">
+                      <Input type="number" value={unlockTarget.userId} onChange={e => setUnlockTarget(u => ({ ...u, userId: e.target.value }))} required />
+                    </Field>
+                    <Button type="submit" variant="secondary">Unlock</Button>
+                  </form>
+                </CardContent>
+              </Card>
 
-              <div className="admin-card">
-                <div className="admin-card-title">🔓 Unlock for Specific Member</div>
-                <form onSubmit={handleUnlock} className="admin-form" style={{ flexDirection: 'row', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
-                  <label className="auth-label" style={{ flex: 1, minWidth: 160 }}>Content ID
-                    <input className="auth-input" type="number" value={unlockTarget.contentId} onChange={e => setUnlockTarget(u => ({ ...u, contentId: e.target.value }))} required />
-                  </label>
-                  <label className="auth-label" style={{ flex: 1, minWidth: 160 }}>Member ID
-                    <input className="auth-input" type="number" value={unlockTarget.userId} onChange={e => setUnlockTarget(u => ({ ...u, userId: e.target.value }))} required />
-                  </label>
-                  <button className="admin-btn-sm toggle" type="submit" style={{ marginBottom: 1 }}>Unlock</button>
-                </form>
-              </div>
-
-              <div style={{ marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: 'var(--stone)', letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>All Content</span>
-                <span className="admin-count-badge">{content.length}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">All Content</span>
+                <Badge variant="secondary">{content.length}</Badge>
               </div>
 
               {content.length === 0
-                ? <div className="admin-card" style={{ textAlign: 'center', color: 'var(--stone)', padding: '40px 24px' }}>No content yet</div>
+                ? <Card><CardContent className="py-12 text-center text-muted-foreground">No content yet</CardContent></Card>
                 : (
-                  <div className="library-grid">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {content.map(item => (
-                      <div key={item.id} className="library-card" style={{ borderRadius: 10, border: '1px solid rgba(0,0,0,0.05)', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-                        {item.cover_url && <img src={item.cover_url} alt={item.title} className="library-cover" style={{ borderRadius: '6px 6px 0 0' }} />}
-                        <div className="library-type">{item.type} · #{item.id}</div>
-                        <div className="library-title">{item.title}</div>
-                        {item.description && <p className="library-desc">{item.description}</p>}
-                        <div className="admin-actions" style={{ marginTop: 'auto', flexWrap: 'wrap' }}>
-                          <button className="admin-btn-sm toggle" onClick={() => startEditContent(item)}>Edit</button>
-                          <button className="admin-btn-sm" onClick={() => handleUnlockAll(item)}>Unlock All</button>
-                          <button className="admin-btn-sm danger" onClick={() => deleteContent(item)}>Delete</button>
-                        </div>
-                      </div>
+                      <Card key={item.id} className="flex flex-col overflow-hidden">
+                        {item.cover_url && <img src={item.cover_url} alt={item.title} className="w-full h-36 object-cover" />}
+                        <CardContent className="p-4 flex flex-col flex-1 gap-2">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary">{item.type}</Badge>
+                            <span className="text-xs text-muted-foreground">#{item.id}</span>
+                          </div>
+                          <p className="font-serif font-semibold text-base leading-tight">{item.title}</p>
+                          {item.description && <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>}
+                          <div className="flex gap-2 mt-auto pt-2 flex-wrap">
+                            <Button variant="secondary" size="sm" onClick={() => startEditContent(item)}>Edit</Button>
+                            <Button variant="outline"   size="sm" onClick={() => handleUnlockAll(item)}>Unlock All</Button>
+                            <Button variant="destructive" size="sm" onClick={() => deleteContent(item)}>Delete</Button>
+                          </div>
+                        </CardContent>
+                      </Card>
                     ))}
                   </div>
                 )
               }
-            </>
+            </div>
           )}
 
-          {/* ══════════ ANALYTICS ══════════ */}
+          {/* ══ ANALYTICS ══ */}
           {tab === 'analytics' && (
-            <>
-              <div className="admin-page-hd">
-                <div className="admin-page-title">
-                  Analytics
-                  <small>Deep insights into club activity</small>
-                </div>
-              </div>
+            <div className="space-y-6">
+              <SectionHeader title="Analytics" sub="Deep insights into club activity" />
               <AnalyticsDashboard />
-            </>
+            </div>
           )}
 
-          {/* ══════════ BROADCAST ══════════ */}
+          {/* ══ BROADCAST ══ */}
           {tab === 'broadcast' && (
-            <>
-              <div className="admin-page-hd">
-                <div className="admin-page-title">
-                  Broadcast Email
-                  <small>Send a message to a member segment via Brevo</small>
-                </div>
-              </div>
+            <div className="space-y-6">
+              <SectionHeader title="Broadcast Email" sub="Send a message to a member segment via Brevo" />
 
-              <div className="admin-card" style={{ maxWidth: 680 }}>
-                <div className="admin-card-title">📨 Compose Message</div>
-                <form onSubmit={handleBroadcast} className="admin-form">
-                  <label className="auth-label">Audience
-                    <select className="auth-input" value={broadcastForm.segment} onChange={e => setBroadcastForm(f => ({ ...f, segment: e.target.value }))}>
-                      <option value="all">All Members</option>
-                      <option value="active">Active Members Only</option>
-                      <option value="inactive">Inactive Members Only</option>
-                    </select>
-                  </label>
-                  <label className="auth-label">Subject Line
-                    <input className="auth-input" value={broadcastForm.subject} onChange={e => setBroadcastForm(f => ({ ...f, subject: e.target.value }))} placeholder="e.g. Upcoming event this Friday!" required />
-                  </label>
-                  <label className="auth-label">
-                    Body <span style={{ textTransform: 'none', letterSpacing: 0, fontWeight: 400, color: 'var(--stone)' }}>(HTML supported — use {'{'}{'{'}<br />{'}'} for line breaks)</span>
-                    <textarea className="auth-input admin-textarea" rows={10} value={broadcastForm.body} onChange={e => setBroadcastForm(f => ({ ...f, body: e.target.value }))} placeholder="<p>Hello,</p><p>We have an exciting announcement...</p>" required />
-                  </label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                    <button className="admin-btn-sm primary" type="submit" disabled={broadcasting} style={{ padding: '10px 28px' }}>
-                      {broadcasting ? 'Sending…' : '📨 Send Broadcast'}
-                    </button>
-                    <span style={{ fontSize: 12, color: 'var(--stone)' }}>
-                      {broadcastForm.segment === 'all' && `Recipients: all ${members.length} members`}
-                      {broadcastForm.segment === 'active' && `Recipients: ${activeCount} active members`}
-                      {broadcastForm.segment === 'inactive' && `Recipients: ${inactiveCount} inactive members`}
-                    </span>
-                  </div>
-                </form>
-              </div>
-            </>
+              <Card className="max-w-2xl">
+                <CardHeader>
+                  <CardTitle className="text-sm flex items-center gap-2"><Mail className="h-4 w-4" /> Compose Message</CardTitle>
+                  <CardDescription>HTML is supported in the body. Use Brevo merge tags like {`{{params.FIRSTNAME}}`}.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleBroadcast} className="space-y-4">
+                    <Field label="Audience">
+                      <Select value={broadcastForm.segment} onValueChange={v => setBroadcastForm(f => ({ ...f, segment: v }))}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Members ({members.length})</SelectItem>
+                          <SelectItem value="active">Active Members ({activeCount})</SelectItem>
+                          <SelectItem value="inactive">Inactive Members ({inactiveCount})</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    <Field label="Subject Line">
+                      <Input value={broadcastForm.subject} onChange={e => setBroadcastForm(f => ({ ...f, subject: e.target.value }))} placeholder="e.g. Upcoming event this Friday!" required />
+                    </Field>
+                    <Field label="Body (HTML supported)">
+                      <Textarea rows={10} value={broadcastForm.body} onChange={e => setBroadcastForm(f => ({ ...f, body: e.target.value }))} placeholder="<p>Hello,</p><p>We have an exciting announcement...</p>" required />
+                    </Field>
+                    <div className="flex items-center gap-4">
+                      <Button type="submit" disabled={broadcasting}>
+                        <Send className="h-3.5 w-3.5" />
+                        {broadcasting ? 'Sending…' : `Send to ${segmentCount} recipient${segmentCount !== 1 ? 's' : ''}`}
+                      </Button>
+                    </div>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
           )}
 
-          {/* ══════════ AUDIT LOG ══════════ */}
+          {/* ══ AUDIT LOG ══ */}
           {tab === 'audit' && (
-            <>
-              <div className="admin-page-hd">
-                <div className="admin-page-title">
-                  Audit Log
-                  <small>Last 100 admin actions, most recent first</small>
-                </div>
-                <div className="admin-page-actions">
-                  <button className="admin-btn-sm" onClick={() => load('audit')}>↻ Refresh</button>
-                </div>
-              </div>
+            <div className="space-y-6">
+              <SectionHeader title="Audit Log" sub="Last 100 admin actions, most recent first">
+                <Button variant="outline" size="sm" onClick={() => load('audit')}>
+                  <RefreshCw className="h-3.5 w-3.5" /> Refresh
+                </Button>
+              </SectionHeader>
 
-              <div className="admin-card">
-                <div className="admin-table-wrap">
-                  <table className="admin-table">
-                    <thead>
-                      <tr>
-                        <th>Time</th>
-                        <th>Admin</th>
-                        <th>Action</th>
-                        <th>Entity</th>
-                        <th>Details</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {auditLog.length === 0
-                        ? <tr><td colSpan={5} style={{ textAlign: 'center', color: '#aaa', padding: 32 }}>No audit entries yet</td></tr>
-                        : auditLog.map(entry => (
-                          <tr key={entry.id}>
-                            <td className="admin-td-muted" style={{ whiteSpace: 'nowrap', fontSize: 12 }}>
-                              {new Date(entry.created_at).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                            </td>
-                            <td style={{ fontSize: 13 }}>
-                              {entry.admin_name
-                                ? <><span className="admin-avatar" style={{ width: 24, height: 24, fontSize: 10 }}>{initials(entry.admin_name)}</span>{entry.admin_name}</>
-                                : <span style={{ color: 'var(--stone)' }}>—</span>
-                              }
-                            </td>
-                            <td>
-                              <span className={`action-chip ${actionChipClass(entry.action)}`}>{entry.action}</span>
-                            </td>
-                            <td className="admin-td-muted" style={{ fontSize: 12 }}>
-                              {entry.entity_type ? `${entry.entity_type} #${entry.entity_id}` : '—'}
-                            </td>
-                            <td className="admin-td-muted" style={{ fontSize: 12, maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {entry.details || '—'}
-                            </td>
-                          </tr>
-                        ))
-                      }
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </>
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Admin</TableHead>
+                      <TableHead>Action</TableHead>
+                      <TableHead>Entity</TableHead>
+                      <TableHead>Details</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {auditLog.length === 0
+                      ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-12">No audit entries yet</TableCell></TableRow>
+                      : auditLog.map(entry => {
+                          const action = entry.action || ''
+                          const chip = action.includes('delete') ? 'destructive' : action.includes('create') ? 'success' : 'secondary'
+                          return (
+                            <TableRow key={entry.id}>
+                              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                                {fmtDateTime(entry.created_at)}
+                              </TableCell>
+                              <TableCell>
+                                {entry.admin_name
+                                  ? <div className="flex items-center gap-2"><MemberAvatar name={entry.admin_name} size="sm" /><span className="text-sm">{entry.admin_name}</span></div>
+                                  : <span className="text-muted-foreground">—</span>
+                                }
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant={chip} className="font-mono">{action}</Badge>
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-sm">
+                                {entry.entity_type ? `${entry.entity_type} #${entry.entity_id}` : '—'}
+                              </TableCell>
+                              <TableCell className="text-muted-foreground text-xs max-w-[260px] truncate">
+                                {entry.details || '—'}
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })
+                    }
+                  </TableBody>
+                </Table>
+              </Card>
+            </div>
           )}
 
         </main>

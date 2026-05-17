@@ -1,0 +1,179 @@
+/* Tailwind directives — only consumed when .admin-shell is present */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* shadcn CSS variables — scoped to .admin-shell so they don't affect other pages */
+.admin-shell {
+  --background:              30 20% 97%;
+  --foreground:              20 14% 14%;
+  --card:                    0 0% 100%;
+  --card-foreground:         20 14% 14%;
+  --popover:                 0 0% 100%;
+  --popover-foreground:      20 14% 14%;
+  --primary:                 4 38% 50%;       /* brand rose #A85C5A */
+  --primary-foreground:      0 0% 98%;
+  --secondary:               28 22% 93%;
+  --secondary-foreground:    20 14% 28%;
+  --muted:                   28 18% 94%;
+  --muted-foreground:        20 10% 50%;
+  --accent:                  28 22% 90%;
+  --accent-foreground:       20 14% 20%;
+  --destructive:             0 72% 51%;
+  --destructive-foreground:  0 0% 98%;
+  --border:                  28 18% 87%;
+  --input:                   28 18% 87%;
+  --ring:                    4 38% 50%;
+  --radius:                  0.5rem;
+  --success:                 142 58% 36%;
+  --success-foreground:      0 0% 98%;
+  --warning:                 38 92% 50%;
+  --warning-foreground:      0 0% 10%;
+}
+
+/* Dark sidebar — keep as hand-crafted CSS since Tailwind arbitrary values are verbose */
+.admin-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  background: #1a100a;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+}
+.admin-sidebar-logo {
+  padding: 24px 20px 18px;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.admin-sidebar-logo .brand {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 17px;
+  font-weight: 600;
+  color: #f5ede0;
+  letter-spacing: 0.03em;
+}
+.admin-sidebar-logo .brand span { color: #d4847e; }
+.admin-sidebar-logo .badge-label {
+  display: block;
+  margin-top: 3px;
+  font-family: 'Jost', sans-serif;
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
+}
+.admin-sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 10px;
+  flex: 1;
+  overflow-y: auto;
+}
+.admin-sidebar-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0.03em;
+  color: rgba(255,255,255,0.42);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: 'Jost', sans-serif;
+  transition: background 0.14s, color 0.14s;
+  text-align: left;
+  width: 100%;
+}
+.admin-sidebar-item:hover {
+  background: rgba(255,255,255,0.06);
+  color: rgba(255,255,255,0.72);
+}
+.admin-sidebar-item.active {
+  background: rgba(168,92,90,0.2);
+  color: #e8a4a0;
+}
+.admin-sidebar-item .si-icon {
+  font-size: 15px;
+  width: 19px;
+  text-align: center;
+  flex-shrink: 0;
+}
+.admin-sidebar-footer {
+  padding: 12px 10px;
+  border-top: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.admin-sidebar-user {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 8px;
+}
+.admin-sidebar-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #A85C5A;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.admin-sidebar-name {
+  font-size: 12px;
+  color: rgba(255,255,255,0.45);
+  font-family: 'Jost', sans-serif;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.admin-sidebar-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border-radius: 7px;
+  font-size: 11.5px;
+  font-weight: 500;
+  background: none;
+  cursor: pointer;
+  font-family: 'Jost', sans-serif;
+  transition: all 0.14s;
+  width: 100%;
+  text-align: left;
+}
+.admin-sidebar-btn.back {
+  border: 1px solid rgba(255,255,255,0.1);
+  color: rgba(255,255,255,0.36);
+}
+.admin-sidebar-btn.back:hover {
+  color: rgba(255,255,255,0.64);
+  border-color: rgba(255,255,255,0.22);
+}
+.admin-sidebar-btn.signout {
+  border: 1px solid rgba(200,80,80,0.18);
+  color: rgba(220,100,100,0.6);
+}
+.admin-sidebar-btn.signout:hover {
+  color: #e08888;
+  border-color: rgba(200,80,80,0.38);
+}
+
+@media (max-width: 860px) {
+  .admin-shell { flex-direction: column; }
+  .admin-sidebar { width: 100%; height: auto; position: relative; }
+  .admin-sidebar-nav { flex-direction: row; flex-wrap: wrap; padding: 6px 8px; }
+  .admin-sidebar-item { flex-direction: column; gap: 3px; padding: 7px 10px; font-size: 10px; }
+  .admin-sidebar-footer { flex-direction: row; flex-wrap: wrap; border-top: none; border-left: 1px solid rgba(255,255,255,0.07); }
+}
