@@ -8,6 +8,9 @@ class UserRegister(BaseModel):
     password: str
     full_name: str
     lang_pref: str = "en"
+    bio: Optional[str] = None
+    referral_code: Optional[str] = None   # ref code of the inviter
+    application_message: Optional[str] = None
 
 
 class UserLogin(BaseModel):
@@ -20,6 +23,7 @@ class UserUpdate(BaseModel):
     photo_url: Optional[str] = None
     lang_pref: Optional[str] = None
     show_in_directory: Optional[bool] = None
+    bio: Optional[str] = None
 
 
 class UserOut(BaseModel):
@@ -33,6 +37,11 @@ class UserOut(BaseModel):
     is_verified: bool = False
     show_in_directory: bool = True
     admin_notes: Optional[str] = None
+    bio: Optional[str] = None
+    referral_code: Optional[str] = None
+    referred_by_id: Optional[int] = None
+    application_status: str = "approved"
+    onboarding_completed: bool = False
     joined_at: datetime
 
     model_config = {"from_attributes": True}
@@ -55,6 +64,8 @@ class MemberDirectoryOut(BaseModel):
     id: int
     full_name: str
     photo_url: Optional[str]
+    bio: Optional[str] = None
     joined_at: datetime
+    referral_code: Optional[str] = None
 
     model_config = {"from_attributes": True}

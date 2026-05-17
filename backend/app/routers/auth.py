@@ -1,4 +1,5 @@
 import secrets
+import string
 from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -10,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.user import User
 from app.models.password_reset import PasswordResetToken
+from app.models.app_setting import AppSetting
 from app.schemas.user import UserRegister, UserOut, TokenOut
 from app.core.security import hash_password, verify_password, create_access_token
 from app.core.config import settings
@@ -17,6 +19,8 @@ from app.core.deps import get_current_user
 from app.core import email as mailer
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+_REF_CHARS = string.ascii_uppercase + string.digits
 
 
 class ForgotPasswordRequest(BaseModel):
@@ -36,16 +40,45 @@ def _ensure_admin(user: User, db: Session) -> None:
             db.refresh(user)
 
 
+def _get_setting(db: Session, key: str, default: str = "") -> str:
+    row = db.query(AppSetting).filter(AppSetting.key == key).first()
+    return row.value if row and row.value is not None else default
+
+
+def _gen_referral_code(db: Session) -> str:
+    for _ in range(10):
+        code = "".join(secrets.choice(_REF_CHARS) for _ in range(8))
+        if not db.query(User).filter(User.referral_code == code).first():
+            return code
+    return secrets.token_hex(4).upper()
+
+
 @router.post("/register", response_model=TokenOut, status_code=status.HTTP_201_CREATED)
 def register(payload: UserRegister, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == payload.email).first():
         raise HTTPException(status_code=400, detail="Email already registered")
+
+    require_approval = _get_setting(db, "require_approval", "false").lower() == "true"
+    app_status = "pending" if require_approval else "approved"
+
+    # Resolve referral code → referred_by_id
+    referred_by_id = None
+    if payload.referral_code:
+        referrer = db.query(User).filter(User.referral_code == payload.referral_code.upper()).first()
+        if referrer:
+            referred_by_id = referrer.id
+
     user = User(
         email=payload.email,
         password_hash=hash_password(payload.password),
         full_name=payload.full_name,
         lang_pref=payload.lang_pref,
+        bio=payload.bio,
         is_verified=False,
+        application_message=payload.application_message,
+        application_status=app_status,
+        referred_by_id=referred_by_id,
+        referral_code=_gen_referral_code(db),
     )
     db.add(user)
     db.commit()
@@ -59,7 +92,11 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
     db.commit()
     verify_url = f"https://hasmiks-club.vercel.app/verify-email?token={vtoken}"
     mailer.send_verification(user.email, user.full_name, verify_url)
-    mailer.send_welcome(user.email, user.full_name)
+
+    if app_status == "pending":
+        mailer.send_application_received(user.email, user.full_name)
+    else:
+        mailer.send_welcome(user.email, user.full_name)
     mailer.sync_contact_async(user.email, user.full_name, user.membership_status)
 
     token = create_access_token(str(user.id))

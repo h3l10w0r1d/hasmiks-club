@@ -129,6 +129,67 @@ def send_telegram_invite(user_id: int, db: Session = Depends(get_db), admin: Use
     return {"ok": True}
 
 
+# ── applications ──────────────────────────────────────────────────────────────
+
+@router.get("/applications")
+def list_applications(db: Session = Depends(get_db), _: User = Depends(get_current_admin)):
+    """Pending membership applications."""
+    users = db.query(User).filter(User.application_status == "pending").order_by(User.joined_at.desc()).all()
+    return [UserOut.model_validate(u) for u in users]
+
+
+@router.post("/applications/{user_id}/approve", response_model=UserOut)
+def approve_application(user_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.application_status = "approved"
+    audit_log(db, f"approve_application: {user.email}", admin_id=admin.id, entity_type="user", entity_id=user_id)
+    db.commit()
+    db.refresh(user)
+    mailer.send_application_approved(user.email, user.full_name)
+    return user
+
+
+@router.post("/applications/{user_id}/decline", response_model=UserOut)
+def decline_application(user_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    user.application_status = "declined"
+    audit_log(db, f"decline_application: {user.email}", admin_id=admin.id, entity_type="user", entity_id=user_id)
+    db.commit()
+    db.refresh(user)
+    mailer.send_application_declined(user.email, user.full_name)
+    return user
+
+
+# ── referrals ─────────────────────────────────────────────────────────────────
+
+@router.get("/referrals")
+def get_referrals(db: Session = Depends(get_db), _: User = Depends(get_current_admin)):
+    """Leaderboard of members who have referred others."""
+    from sqlalchemy import func
+    rows = (
+        db.query(User.referred_by_id, func.count(User.id).label("count"))
+        .filter(User.referred_by_id.isnot(None))
+        .group_by(User.referred_by_id)
+        .order_by(func.count(User.id).desc())
+        .all()
+    )
+    referrer_ids = [r.referred_by_id for r in rows]
+    referrers = {u.id: u for u in db.query(User).filter(User.id.in_(referrer_ids)).all()} if referrer_ids else {}
+    return [
+        {
+            "referrer_id": r.referred_by_id,
+            "referrer_name": referrers[r.referred_by_id].full_name if r.referred_by_id in referrers else "Unknown",
+            "referrer_email": referrers[r.referred_by_id].email if r.referred_by_id in referrers else "",
+            "referral_count": r.count,
+        }
+        for r in rows
+    ]
+
+
 # ── image upload ──────────────────────────────────────────────────────────────
 
 @router.post("/upload-image")

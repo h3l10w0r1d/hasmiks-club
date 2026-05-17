@@ -1,5 +1,5 @@
 import '../admin.css'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, Fragment } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import {
@@ -7,6 +7,7 @@ import {
   Download, RefreshCw, Send, ChevronRight, LogOut, LayoutDashboard,
   TrendingUp, CheckCircle2, XCircle, Percent, Search, ImageUp,
   SendHorizonal, StickyNote, Filter, UserCheck,
+  Inbox, GalleryHorizontal, Settings2, Trophy, Link2, Plus, Trash2, ExternalLink,
 } from 'lucide-react'
 
 import { Button }       from '../components/ui/button'
@@ -26,23 +27,40 @@ import AnalyticsDashboard from '../components/AnalyticsDashboard'
 
 import {
   adminGetMembers, adminUpdateMember, adminDeleteMember, adminSendTelegramInvite,
+  adminGetApplications, adminApproveApplication, adminDeclineApplication,
+  adminGetReferrals,
   adminGetEvents, adminGetEventAttendees, adminCreateEvent, adminUpdateEvent, adminDeleteEvent,
   adminToggleCheckin,
   adminGetContent, adminCreateContent, adminUpdateContent, adminDeleteContent,
   adminUnlockContent, adminUnlockContentForAll,
   adminUploadImage,
+  adminGetAlbums, adminGetAlbum, adminCreateAlbum, adminDeleteAlbum,
+  adminAddPhoto, adminDeletePhoto, adminUploadGalleryPhoto,
   adminBroadcast, adminExportCsv, adminGetAuditLog,
+  adminGetSettings, adminSaveSettings,
 } from '../api/admin'
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 const TABS = [
-  { key: 'members',   icon: Users,         label: 'Members'   },
-  { key: 'events',    icon: CalendarDays,  label: 'Events'    },
-  { key: 'content',   icon: BookOpen,      label: 'Content'   },
-  { key: 'analytics', icon: BarChart3,     label: 'Analytics' },
-  { key: 'broadcast', icon: Mail,          label: 'Broadcast' },
-  { key: 'audit',     icon: ClipboardList, label: 'Audit Log' },
+  { key: 'members',      icon: Users,             label: 'Members'      },
+  { key: 'applications', icon: Inbox,             label: 'Applications' },
+  { key: 'events',       icon: CalendarDays,      label: 'Events'       },
+  { key: 'content',      icon: BookOpen,          label: 'Content'      },
+  { key: 'gallery',      icon: GalleryHorizontal, label: 'Gallery'      },
+  { key: 'analytics',    icon: BarChart3,         label: 'Analytics'    },
+  { key: 'broadcast',    icon: Mail,              label: 'Broadcast'    },
+  { key: 'audit',        icon: ClipboardList,     label: 'Audit Log'    },
+  { key: 'settings',     icon: Settings2,         label: 'Settings'     },
 ]
+
+const EMPTY_ALBUM = { title: '', description: '', event_id: '', cover_url: '' }
+
+const DEFAULT_SETTINGS = {
+  telegram_invite_url: '', require_approval: 'false',
+  membership_price_display: '', club_description: '',
+  club_instagram: '', club_location: '',
+  welcome_email_body: '', event_reminder_body: '', email_footer: '',
+}
 
 const EMPTY_EVENT   = { title: '', title_hy: '', description: '', description_hy: '', location: '', event_date: '', max_seats: 20 }
 const EMPTY_CONTENT = { type: 'recipe', title: '', title_hy: '', description: '', description_hy: '', file_url: '', cover_url: '' }
@@ -139,6 +157,21 @@ export default function AdminPage() {
   const [eventFilter,    setEventFilter]   = useState('all')   // all | upcoming | past
   const [contentFilter,  setContentFilter] = useState('all')   // all | recipe | ebook
 
+  const [applications, setApplications] = useState([])
+  const [albums,       setAlbums]       = useState([])
+  const [openAlbum,    setOpenAlbum]    = useState(null)   // full album detail
+  const [albumForm,    setAlbumForm]    = useState(EMPTY_ALBUM)
+  const [photoUrl,     setPhotoUrl]     = useState('')
+  const [photoCaption, setPhotoCaption] = useState('')
+  const [uploadingPhoto, setUploadingPhoto] = useState(false)
+  const galleryPhotoRef = useRef(null)
+
+  const [adminSettings,  setAdminSettings]  = useState(DEFAULT_SETTINGS)
+  const [settingsForm,   setSettingsForm]   = useState(DEFAULT_SETTINGS)
+  const [savingSettings, setSavingSettings] = useState(false)
+
+  const [referrals, setReferrals] = useState([])
+
   const [expandedNotes, setExpandedNotes] = useState({})       // memberId -> bool
   const [notesDraft,    setNotesDraft]    = useState({})        // memberId -> string
   const [savingNotes,   setSavingNotes]   = useState({})
@@ -159,18 +192,30 @@ export default function AdminPage() {
 
   const setLoad = (key, val) => setLoading(l => ({ ...l, [key]: val }))
 
-  useEffect(() => { if (tab === 'members')   load('members')   }, [tab])
-  useEffect(() => { if (tab === 'events')    load('events')    }, [tab])
-  useEffect(() => { if (tab === 'content')   load('content')   }, [tab])
-  useEffect(() => { if (tab === 'audit')     load('audit')     }, [tab])
+  useEffect(() => { if (tab === 'members')      load('members')      }, [tab])
+  useEffect(() => { if (tab === 'applications') load('applications') }, [tab])
+  useEffect(() => { if (tab === 'events')       load('events')       }, [tab])
+  useEffect(() => { if (tab === 'content')      load('content')      }, [tab])
+  useEffect(() => { if (tab === 'gallery')      load('gallery')      }, [tab])
+  useEffect(() => { if (tab === 'audit')        load('audit')        }, [tab])
+  useEffect(() => { if (tab === 'settings')     load('settings')     }, [tab])
+  useEffect(() => { if (tab === 'analytics')    load('referrals')    }, [tab])
 
   const load = async (t) => {
     setLoad(t, true)
     try {
-      if (t === 'members') setMembers(await adminGetMembers())
-      if (t === 'events')  setEvents(await adminGetEvents())
-      if (t === 'content') setContent(await adminGetContent())
-      if (t === 'audit')   setAuditLog(await adminGetAuditLog())
+      if (t === 'members')      setMembers(await adminGetMembers())
+      if (t === 'applications') setApplications(await adminGetApplications())
+      if (t === 'events')       setEvents(await adminGetEvents())
+      if (t === 'content')      setContent(await adminGetContent())
+      if (t === 'gallery')      setAlbums(await adminGetAlbums())
+      if (t === 'audit')        setAuditLog(await adminGetAuditLog())
+      if (t === 'referrals')    setReferrals(await adminGetReferrals())
+      if (t === 'settings') {
+        const s = await adminGetSettings()
+        setAdminSettings(s)
+        setSettingsForm({ ...DEFAULT_SETTINGS, ...s })
+      }
     } catch { flash('Failed to load data', true) }
     finally { setLoad(t, false) }
   }
@@ -300,6 +345,82 @@ export default function AdminPage() {
     catch { flash('Failed to unlock', true) }
   }
 
+  // ── applications ──
+  const handleApprove = async (app) => {
+    try {
+      await adminApproveApplication(app.id)
+      setApplications(a => a.filter(x => x.id !== app.id))
+      flash(`${app.full_name} approved`)
+    } catch { flash('Failed to approve', true) }
+  }
+  const handleDecline = async (app) => {
+    if (!confirm(`Decline ${app.full_name}'s application?`)) return
+    try {
+      await adminDeclineApplication(app.id)
+      setApplications(a => a.filter(x => x.id !== app.id))
+      flash(`${app.full_name} declined`)
+    } catch { flash('Failed to decline', true) }
+  }
+
+  // ── gallery ──
+  const submitAlbum = async (e) => {
+    e.preventDefault()
+    try {
+      const payload = { ...albumForm, event_id: albumForm.event_id ? Number(albumForm.event_id) : null }
+      const created = await adminCreateAlbum(payload)
+      setAlbums(a => [created, ...a])
+      setAlbumForm(EMPTY_ALBUM)
+      flash('Album created')
+    } catch { flash('Failed to create album', true) }
+  }
+  const deleteAlbum = async (album) => {
+    if (!confirm(`Delete album "${album.title}" and all its photos?`)) return
+    await adminDeleteAlbum(album.id)
+    setAlbums(a => a.filter(x => x.id !== album.id))
+    if (openAlbum?.id === album.id) setOpenAlbum(null)
+    flash('Album deleted')
+  }
+  const openAlbumDetail = async (album) => {
+    if (openAlbum?.id === album.id) { setOpenAlbum(null); return }
+    const detail = await adminGetAlbum(album.id)
+    setOpenAlbum(detail)
+  }
+  const handlePhotoFileUpload = async (e) => {
+    const file = e.target.files?.[0]; if (!file) return
+    setUploadingPhoto(true)
+    try { const res = await adminUploadGalleryPhoto(file); setPhotoUrl(res.url) }
+    catch { flash('Upload failed', true) }
+    finally { setUploadingPhoto(false) }
+  }
+  const handleAddPhoto = async (e) => {
+    e.preventDefault()
+    if (!openAlbum || !photoUrl) return
+    try {
+      const photo = await adminAddPhoto(openAlbum.id, { url: photoUrl, caption: photoCaption, sort_order: openAlbum.photos?.length ?? 0 })
+      setOpenAlbum(a => ({ ...a, photos: [...(a.photos || []), photo], photo_count: (a.photo_count || 0) + 1 }))
+      setAlbums(a => a.map(x => x.id === openAlbum.id ? { ...x, photo_count: (x.photo_count || 0) + 1, cover_url: x.cover_url || photoUrl } : x))
+      setPhotoUrl(''); setPhotoCaption('')
+      flash('Photo added')
+    } catch { flash('Failed to add photo', true) }
+  }
+  const handleDeletePhoto = async (photo) => {
+    await adminDeletePhoto(photo.id)
+    setOpenAlbum(a => ({ ...a, photos: a.photos.filter(p => p.id !== photo.id), photo_count: Math.max((a.photo_count || 1) - 1, 0) }))
+    flash('Photo deleted')
+  }
+
+  // ── settings ──
+  const handleSaveSettings = async (e) => {
+    e.preventDefault()
+    setSavingSettings(true)
+    try {
+      await adminSaveSettings(settingsForm)
+      setAdminSettings(settingsForm)
+      flash('Settings saved')
+    } catch { flash('Failed to save settings', true) }
+    finally { setSavingSettings(false) }
+  }
+
   // ── broadcast ──
   const handleBroadcast = async (e) => {
     e.preventDefault()
@@ -367,6 +488,11 @@ export default function AdminPage() {
             <button key={key} className={`admin-sidebar-item${tab === key ? ' active' : ''}`} onClick={() => setTab(key)}>
               <span className="si-icon"><Icon size={15} /></span>
               {label}
+              {key === 'applications' && applications.length > 0 && (
+                <span style={{ marginLeft: 'auto', background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))', borderRadius: '9999px', fontSize: 10, fontWeight: 700, padding: '1px 6px', lineHeight: '16px' }}>
+                  {applications.length}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -745,10 +871,209 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* ══ APPLICATIONS ══ */}
+          {tab === 'applications' && (
+            <div className="space-y-6">
+              <SectionHeader title="Applications" sub="Pending membership applications awaiting review">
+                <Button variant="outline" size="sm" onClick={() => load('applications')}>
+                  <RefreshCw className="h-3.5 w-3.5" /> Refresh
+                </Button>
+              </SectionHeader>
+
+              {isLoading('applications')
+                ? <Card><CardContent className="py-12 text-center"><Skeleton className="h-4 w-32 mx-auto" /></CardContent></Card>
+                : applications.length === 0
+                  ? (
+                    <Card>
+                      <CardContent className="py-16 text-center">
+                        <Inbox className="h-10 w-10 text-muted-foreground/30 mx-auto mb-4" />
+                        <p className="text-muted-foreground text-sm">No pending applications</p>
+                        <p className="text-xs text-muted-foreground/60 mt-1">Enable "Require approval" in Settings to use this feature</p>
+                      </CardContent>
+                    </Card>
+                  )
+                  : (
+                    <div className="space-y-4">
+                      {applications.map(app => (
+                        <Card key={app.id}>
+                          <CardContent className="p-5">
+                            <div className="flex items-start gap-4 flex-wrap">
+                              <MemberAvatar name={app.full_name} />
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-sm">{app.full_name}</p>
+                                <p className="text-xs text-muted-foreground">{app.email}</p>
+                                <p className="text-xs text-muted-foreground mt-0.5">Applied {fmtDate(app.joined_at)}</p>
+                                {app.application_message && (
+                                  <div className="mt-3 p-3 bg-muted/40 rounded-lg">
+                                    <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider mb-1">Application message</p>
+                                    <p className="text-sm">{app.application_message}</p>
+                                  </div>
+                                )}
+                                {app.referred_by_id && (
+                                  <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                                    <Link2 className="h-3 w-3" /> Referred by member #{app.referred_by_id}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="flex gap-2 flex-shrink-0">
+                                <Button size="sm" variant="success" onClick={() => handleApprove(app)}>
+                                  <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                                </Button>
+                                <Button size="sm" variant="destructive" onClick={() => handleDecline(app)}>
+                                  <XCircle className="h-3.5 w-3.5" /> Decline
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )
+              }
+            </div>
+          )}
+
+          {/* ══ GALLERY ══ */}
+          {tab === 'gallery' && (
+            <div className="space-y-6">
+              <SectionHeader title="Gallery" sub="Event photo albums visible to all members" />
+
+              <Card>
+                <CardHeader><CardTitle className="text-sm"><Plus className="inline h-3.5 w-3.5 mr-1" />New Album</CardTitle></CardHeader>
+                <CardContent>
+                  <form onSubmit={submitAlbum} className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <Field label="Album Title"><Input value={albumForm.title} onChange={e => setAlbumForm(f => ({ ...f, title: e.target.value }))} required /></Field>
+                      <Field label="Linked Event ID (optional)"><Input type="number" value={albumForm.event_id} onChange={e => setAlbumForm(f => ({ ...f, event_id: e.target.value }))} placeholder="Leave blank if standalone" /></Field>
+                    </div>
+                    <Field label="Description"><Textarea value={albumForm.description} onChange={e => setAlbumForm(f => ({ ...f, description: e.target.value }))} rows={2} /></Field>
+                    <ImageUploadField label="Cover Image" value={albumForm.cover_url} onChange={v => setAlbumForm(f => ({ ...f, cover_url: v }))} onUpload={adminUploadImage} />
+                    <Button type="submit">Create Album</Button>
+                  </form>
+                </CardContent>
+              </Card>
+
+              {isLoading('gallery')
+                ? <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">{[1,2,3].map(i => <Card key={i}><CardContent className="p-4"><Skeleton className="h-32 w-full mb-3 rounded" /><Skeleton className="h-4 w-3/4" /></CardContent></Card>)}</div>
+                : albums.length === 0
+                  ? <Card><CardContent className="py-12 text-center text-muted-foreground">No albums yet</CardContent></Card>
+                  : (
+                    <div className="space-y-4">
+                      {albums.map(album => (
+                        <Card key={album.id} className="overflow-hidden">
+                          <div className="flex items-center gap-4 p-4 flex-wrap">
+                            {album.cover_url
+                              ? <img src={album.cover_url} alt={album.title} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
+                              : <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center flex-shrink-0"><GalleryHorizontal className="h-6 w-6 text-muted-foreground/40" /></div>
+                            }
+                            <div className="flex-1 min-w-0">
+                              <p className="font-serif font-semibold">{album.title}</p>
+                              {album.description && <p className="text-xs text-muted-foreground line-clamp-1">{album.description}</p>}
+                              <p className="text-xs text-muted-foreground mt-0.5">{album.photo_count} photo{album.photo_count !== 1 ? 's' : ''} · {fmtDate(album.created_at)}</p>
+                            </div>
+                            <div className="flex gap-2 flex-shrink-0">
+                              <Button variant="outline" size="sm" onClick={() => openAlbumDetail(album)}>
+                                {openAlbum?.id === album.id ? 'Close' : 'Manage Photos'}
+                              </Button>
+                              <Button variant="destructive" size="sm" onClick={() => deleteAlbum(album)}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </div>
+
+                          {openAlbum?.id === album.id && (
+                            <div className="border-t border-border bg-muted/30 p-5 space-y-4">
+                              {/* Add photo form */}
+                              <form onSubmit={handleAddPhoto} className="flex flex-wrap gap-3 items-end">
+                                <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
+                                  <Label>Photo URL</Label>
+                                  <div className="flex gap-2">
+                                    <Input value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} placeholder="https://… or upload →" className="flex-1" required />
+                                    <Button type="button" variant="outline" size="sm" onClick={() => galleryPhotoRef.current?.click()} disabled={uploadingPhoto}>
+                                      <ImageUp className="h-3.5 w-3.5" />{uploadingPhoto ? '…' : 'Upload'}
+                                    </Button>
+                                    <input ref={galleryPhotoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoFileUpload} />
+                                  </div>
+                                </div>
+                                <Field label="Caption (optional)" className="flex-1 min-w-[160px]">
+                                  <Input value={photoCaption} onChange={e => setPhotoCaption(e.target.value)} placeholder="Optional caption" />
+                                </Field>
+                                <Button type="submit" size="sm"><Plus className="h-3.5 w-3.5" /> Add</Button>
+                              </form>
+
+                              {/* Photo grid */}
+                              {openAlbum.photos?.length === 0
+                                ? <p className="text-sm text-muted-foreground text-center py-4">No photos yet. Add the first one above.</p>
+                                : (
+                                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                                    {openAlbum.photos.map(photo => (
+                                      <div key={photo.id} className="relative group rounded-lg overflow-hidden">
+                                        <img src={photo.url} alt={photo.caption || ''} className="w-full h-28 object-cover" />
+                                        {photo.caption && <p className="text-xs text-center text-muted-foreground truncate px-1 mt-1">{photo.caption}</p>}
+                                        <button
+                                          className="absolute top-1.5 right-1.5 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                          onClick={() => handleDeletePhoto(photo)}
+                                          title="Delete photo"
+                                        >
+                                          <Trash2 className="h-3 w-3" />
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )
+                              }
+                            </div>
+                          )}
+                        </Card>
+                      ))}
+                    </div>
+                  )
+              }
+            </div>
+          )}
+
           {/* ══ ANALYTICS ══ */}
           {tab === 'analytics' && (
             <div className="space-y-6">
               <SectionHeader title="Analytics" sub="Deep insights into club activity" />
+              {referrals.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-sm flex items-center gap-2"><Trophy className="h-4 w-4 text-primary" /> Referral Leaderboard</CardTitle>
+                    <CardDescription>Members who have brought in the most new members.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Rank</TableHead>
+                          <TableHead>Member</TableHead>
+                          <TableHead>Referred</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {referrals.map((r, i) => (
+                          <TableRow key={r.referrer_id}>
+                            <TableCell className="text-muted-foreground text-sm font-mono">#{i + 1}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <MemberAvatar name={r.referrer_name} size="sm" />
+                                <div>
+                                  <p className="text-sm font-medium">{r.referrer_name}</p>
+                                  <p className="text-xs text-muted-foreground">{r.referrer_email}</p>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="success">{r.referral_count} member{r.referral_count !== 1 ? 's' : ''}</Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              )}
               <AnalyticsDashboard />
             </div>
           )}
@@ -787,6 +1112,96 @@ export default function AdminPage() {
                   </form>
                 </CardContent>
               </Card>
+            </div>
+          )}
+
+          {/* ══ SETTINGS ══ */}
+          {tab === 'settings' && (
+            <div className="space-y-6">
+              <SectionHeader title="Settings" sub="Club configuration — changes take effect immediately" />
+
+              {isLoading('settings')
+                ? <Card><CardContent className="py-12"><Skeleton className="h-4 w-48 mb-4" /><Skeleton className="h-4 w-full mb-3" /><Skeleton className="h-4 w-3/4" /></CardContent></Card>
+                : (
+                  <form onSubmit={handleSaveSettings} className="space-y-6 max-w-3xl">
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm">Club Info</CardTitle>
+                        <CardDescription>Shown on the member dashboard and public pages.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <Field label="Membership Price Display (e.g. ֏25,000/month)">
+                          <Input value={settingsForm.membership_price_display} onChange={e => setSettingsForm(f => ({ ...f, membership_price_display: e.target.value }))} placeholder="e.g. ֏25,000/month" />
+                        </Field>
+                        <Field label="Club Location">
+                          <Input value={settingsForm.club_location} onChange={e => setSettingsForm(f => ({ ...f, club_location: e.target.value }))} placeholder="e.g. Yerevan, Armenia" />
+                        </Field>
+                        <Field label="Instagram Handle">
+                          <Input value={settingsForm.club_instagram} onChange={e => setSettingsForm(f => ({ ...f, club_instagram: e.target.value }))} placeholder="@hasmiks.club" />
+                        </Field>
+                        <Field label="Club Description (shown in community tab)">
+                          <Textarea rows={3} value={settingsForm.club_description} onChange={e => setSettingsForm(f => ({ ...f, club_description: e.target.value }))} placeholder="A warm, intimate community for women in Yerevan..." />
+                        </Field>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm">Membership & Applications</CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <input
+                            type="checkbox"
+                            id="require_approval"
+                            className="h-4 w-4 accent-primary cursor-pointer"
+                            checked={settingsForm.require_approval === 'true'}
+                            onChange={e => setSettingsForm(f => ({ ...f, require_approval: e.target.checked ? 'true' : 'false' }))}
+                          />
+                          <label htmlFor="require_approval" className="text-sm cursor-pointer">
+                            Require admin approval for new registrations
+                            <span className="block text-xs text-muted-foreground">New sign-ups will be held in "Applications" until you approve them</span>
+                          </label>
+                        </div>
+                        <Field label="Telegram Invite URL (for member dashboard)">
+                          <Input value={settingsForm.telegram_invite_url} onChange={e => setSettingsForm(f => ({ ...f, telegram_invite_url: e.target.value }))} placeholder="https://t.me/+…" />
+                        </Field>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm">Email Templates</CardTitle>
+                        <CardDescription>
+                          Use <code className="bg-muted px-1 rounded text-xs">{'{{name}}'}</code> for the member's first name.
+                          Leave blank to use the system default.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <Field label="Welcome Email Body (plain text, one paragraph per line)">
+                          <Textarea rows={5} value={settingsForm.welcome_email_body} onChange={e => setSettingsForm(f => ({ ...f, welcome_email_body: e.target.value }))} placeholder="Welcome to Hasmik's Club, {{name}}! We're so happy you're here..." />
+                        </Field>
+                        <Field label="Event Reminder Email Body">
+                          <Textarea rows={4} value={settingsForm.event_reminder_body} onChange={e => setSettingsForm(f => ({ ...f, event_reminder_body: e.target.value }))} placeholder="Just a reminder that your event is tomorrow, {{name}}..." />
+                        </Field>
+                        <Field label="Email Footer Text">
+                          <Input value={settingsForm.email_footer} onChange={e => setSettingsForm(f => ({ ...f, email_footer: e.target.value }))} placeholder="You received this email because you are a member of Hasmik's Club." />
+                        </Field>
+                      </CardContent>
+                    </Card>
+
+                    <div className="flex items-center gap-3">
+                      <Button type="submit" disabled={savingSettings}>
+                        {savingSettings ? 'Saving…' : 'Save All Settings'}
+                      </Button>
+                      <Button type="button" variant="ghost" onClick={() => setSettingsForm({ ...DEFAULT_SETTINGS, ...adminSettings })}>
+                        Reset
+                      </Button>
+                    </div>
+                  </form>
+                )
+              }
             </div>
           )}
 

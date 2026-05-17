@@ -211,6 +211,35 @@ def send_telegram_invite(to: str, name: str, invite_url: str) -> None:
     send_async(to, name, "Welcome to Hasmik's Club — join us on Telegram", html)
 
 
+def send_application_received(to: str, name: str) -> None:
+    html = _wrap(f"""
+    <h2>Application received, {name}!</h2>
+    <p>Thank you for applying to join Hasmik's Club. We've received your application and will review it shortly.</p>
+    <p>You'll receive an email once your application has been reviewed. We appreciate your patience!</p>
+    <p>With warmth,<br><strong>The Hasmik's Club team</strong></p>
+    """)
+    send_async(to, name, "Application received — Hasmik's Club", html)
+
+
+def send_application_approved(to: str, name: str) -> None:
+    html = _wrap(f"""
+    <h2>You're in, {name}! 🌸</h2>
+    <p>Your application to join Hasmik's Club has been approved. Welcome to our community!</p>
+    <a href="https://hasmiks-club.vercel.app/dashboard" class="btn">Go to my dashboard</a>
+    <p>With love,<br><strong>The Hasmik's Club team</strong></p>
+    """)
+    send_async(to, name, "You've been approved — Hasmik's Club 🌸", html)
+
+
+def send_application_declined(to: str, name: str) -> None:
+    html = _wrap(f"""
+    <h2>Thank you for your interest, {name}</h2>
+    <p>After careful consideration, we are unable to offer you a spot at this time. We hope to welcome you in the future.</p>
+    <p>With warmth,<br><strong>The Hasmik's Club team</strong></p>
+    """)
+    send_async(to, name, "Regarding your Hasmik's Club application", html)
+
+
 def send_password_reset(to: str, name: str, reset_url: str) -> None:
     html = _wrap(f"""
     <h2>Reset your password</h2>
