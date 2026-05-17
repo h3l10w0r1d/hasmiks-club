@@ -6,11 +6,12 @@ import {
   adminGetEvents, adminGetEventAttendees, adminCreateEvent, adminUpdateEvent, adminDeleteEvent,
   adminGetContent, adminCreateContent, adminUpdateContent, adminDeleteContent,
   adminUnlockContent, adminUnlockContentForAll,
+  adminBroadcast, adminExportCsv, adminGetAuditLog,
 } from '../api/admin'
 
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
 
-const TABS = ['members', 'events', 'content', 'analytics']
+const TABS = ['members', 'events', 'content', 'analytics', 'broadcast', 'audit']
 
 const EMPTY_EVENT = { title: '', title_hy: '', description: '', description_hy: '', location: '', event_date: '', max_seats: 20 }
 const EMPTY_CONTENT = { type: 'recipe', title: '', title_hy: '', description: '', description_hy: '', file_url: '', cover_url: '' }
@@ -31,6 +32,10 @@ export default function AdminPage() {
   const [editingContent, setEditingContent] = useState(null)
   const [unlockTarget, setUnlockTarget] = useState({ contentId: '', userId: '' })
 
+  const [auditLog, setAuditLog] = useState([])
+  const [broadcastForm, setBroadcastForm] = useState({ subject: '', body: '', segment: 'all' })
+  const [broadcasting, setBroadcasting] = useState(false)
+
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
 
@@ -42,13 +47,39 @@ export default function AdminPage() {
   useEffect(() => { if (tab === 'members') load('members') }, [tab])
   useEffect(() => { if (tab === 'events') load('events') }, [tab])
   useEffect(() => { if (tab === 'content') load('content') }, [tab])
+  useEffect(() => { if (tab === 'audit') load('audit') }, [tab])
 
   const load = async (t) => {
     try {
       if (t === 'members') setMembers(await adminGetMembers())
       if (t === 'events') setEvents(await adminGetEvents())
       if (t === 'content') setContent(await adminGetContent())
+      if (t === 'audit') setAuditLog(await adminGetAuditLog())
     } catch { flash('Failed to load', true) }
+  }
+
+  const handleExportCsv = async () => {
+    try {
+      const blob = await adminExportCsv()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `members-${new Date().toISOString().slice(0, 10)}.csv`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch { flash('Export failed', true) }
+  }
+
+  const handleBroadcast = async (e) => {
+    e.preventDefault()
+    if (!confirm(`Send email to "${broadcastForm.segment}" segment?`)) return
+    setBroadcasting(true)
+    try {
+      const res = await adminBroadcast(broadcastForm)
+      flash(`Sent to ${res.sent_to} recipient${res.sent_to !== 1 ? 's' : ''}`)
+      setBroadcastForm({ subject: '', body: '', segment: 'all' })
+    } catch { flash('Broadcast failed', true) }
+    finally { setBroadcasting(false) }
   }
 
   // ── members ──
@@ -197,7 +228,10 @@ export default function AdminPage() {
           {/* ── MEMBERS ── */}
           {tab === 'members' && (
             <div className="dash-section">
-              <h2 className="dash-section-title">Members <span className="admin-count">{members.length}</span></h2>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                <h2 className="dash-section-title" style={{ margin: 0 }}>Members <span className="admin-count">{members.length}</span></h2>
+                <button className="admin-btn-sm toggle" onClick={handleExportCsv}>⬇ Export CSV</button>
+              </div>
               <div className="admin-table-wrap">
                 <table className="admin-table">
                   <thead>
@@ -366,6 +400,108 @@ export default function AdminPage() {
           {tab === 'analytics' && (
             <div className="dash-section">
               <AnalyticsDashboard />
+            </div>
+          )}
+
+          {/* ── BROADCAST ── */}
+          {tab === 'broadcast' && (
+            <div className="dash-section">
+              <h2 className="dash-section-title">Broadcast Email</h2>
+              <p style={{ color: '#888', fontSize: 14, marginBottom: 24 }}>
+                Send an email to a segment of your members via Brevo.
+              </p>
+              <form onSubmit={handleBroadcast} className="admin-form" style={{ maxWidth: 600 }}>
+                <label className="auth-label">Segment
+                  <select
+                    className="auth-input"
+                    value={broadcastForm.segment}
+                    onChange={e => setBroadcastForm(f => ({ ...f, segment: e.target.value }))}
+                  >
+                    <option value="all">All Members</option>
+                    <option value="active">Active Members Only</option>
+                    <option value="inactive">Inactive Members Only</option>
+                  </select>
+                </label>
+                <label className="auth-label">Subject
+                  <input
+                    className="auth-input"
+                    value={broadcastForm.subject}
+                    onChange={e => setBroadcastForm(f => ({ ...f, subject: e.target.value }))}
+                    placeholder="e.g. Upcoming event this Friday!"
+                    required
+                  />
+                </label>
+                <label className="auth-label">Body (HTML supported)
+                  <textarea
+                    className="auth-input admin-textarea"
+                    rows={10}
+                    value={broadcastForm.body}
+                    onChange={e => setBroadcastForm(f => ({ ...f, body: e.target.value }))}
+                    placeholder="<p>Hello {{FIRSTNAME}},</p><p>We have an exciting update...</p>"
+                    required
+                  />
+                </label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                  <button className="btn-rose auth-submit" type="submit" disabled={broadcasting} style={{ width: 'auto', padding: '12px 32px' }}>
+                    {broadcasting ? 'Sending…' : '📨 Send Broadcast'}
+                  </button>
+                  <span style={{ fontSize: 12, color: '#aaa' }}>
+                    {broadcastForm.segment === 'all' && `Sends to all members`}
+                    {broadcastForm.segment === 'active' && `Sends to active members only`}
+                    {broadcastForm.segment === 'inactive' && `Sends to inactive members only`}
+                  </span>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* ── AUDIT LOG ── */}
+          {tab === 'audit' && (
+            <div className="dash-section">
+              <h2 className="dash-section-title">Audit Log <span className="admin-count">{auditLog.length}</span></h2>
+              <p style={{ color: '#888', fontSize: 14, marginBottom: 24 }}>Last 100 admin actions, most recent first.</p>
+              <div className="admin-table-wrap">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>Time</th>
+                      <th>Admin</th>
+                      <th>Action</th>
+                      <th>Entity</th>
+                      <th>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditLog.length === 0
+                      ? <tr><td colSpan={5} style={{ textAlign: 'center', color: '#aaa', padding: '24px' }}>No audit entries yet</td></tr>
+                      : auditLog.map(entry => (
+                        <tr key={entry.id}>
+                          <td className="admin-td-muted" style={{ whiteSpace: 'nowrap', fontSize: 12 }}>
+                            {new Date(entry.created_at).toLocaleString()}
+                          </td>
+                          <td style={{ fontSize: 13 }}>{entry.admin_name || '—'}</td>
+                          <td>
+                            <span style={{
+                              display: 'inline-block', padding: '2px 8px', borderRadius: 6, fontSize: 12,
+                              fontWeight: 600, fontFamily: 'monospace',
+                              background: entry.action.includes('delete') ? '#fde8e8' : entry.action.includes('create') ? '#e8f5e9' : '#f0f4ff',
+                              color: entry.action.includes('delete') ? '#c0394b' : entry.action.includes('create') ? '#27ae60' : '#3498db',
+                            }}>
+                              {entry.action}
+                            </span>
+                          </td>
+                          <td className="admin-td-muted" style={{ fontSize: 13 }}>
+                            {entry.entity_type ? `${entry.entity_type} #${entry.entity_id}` : '—'}
+                          </td>
+                          <td className="admin-td-muted" style={{ fontSize: 12, maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {entry.details || '—'}
+                          </td>
+                        </tr>
+                      ))
+                    }
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </main>

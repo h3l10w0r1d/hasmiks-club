@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
-from app.routers import auth, members, events, content, admin, analytics
+from app.routers import auth, members, events, content, admin, analytics, notifications
 from app.routers import settings as settings_router
 from app.core.config import settings
 from app.database import SessionLocal
@@ -86,6 +86,7 @@ app.include_router(events.router)
 app.include_router(content.router)
 app.include_router(admin.router)
 app.include_router(analytics.router)
+app.include_router(notifications.router)
 app.include_router(settings_router.router)
 
 

@@ -1,13 +1,18 @@
+from datetime import datetime, timezone
+from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from typing import List
+
 from app.database import get_db
 from app.models.event import Event
 from app.models.rsvp import RSVP
+from app.models.waitlist import EventWaitlist
 from app.models.user import User
-from app.schemas.event import EventCreate, EventOut, RSVPOut
+from app.schemas.event import EventCreate, EventOut, RSVPOut, PublicEventOut
 from app.core.deps import get_current_user
 from app.core import email as mailer
+from app.core import notify
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -30,6 +35,34 @@ def _serialize_event(event: Event, user_id: int) -> EventOut:
     )
 
 
+def _serialize_public(event: Event) -> PublicEventOut:
+    seats_taken = len(event.rsvps)
+    available = max(event.max_seats - seats_taken, 0)
+    return PublicEventOut(
+        id=event.id,
+        title=event.title,
+        title_hy=event.title_hy,
+        description=event.description,
+        description_hy=event.description_hy,
+        location=event.location,
+        event_date=event.event_date,
+        max_seats=event.max_seats,
+        seats_available=available,
+        is_full=available == 0,
+    )
+
+
+# ── public (no auth) ──────────────────────────────────────────────────────────
+
+@router.get("/public", response_model=List[PublicEventOut])
+def list_public_events(db: Session = Depends(get_db)):
+    now = datetime.now(timezone.utc)
+    events = db.query(Event).filter(Event.event_date >= now).order_by(Event.event_date).all()
+    return [_serialize_public(e) for e in events]
+
+
+# ── authenticated ─────────────────────────────────────────────────────────────
+
 @router.get("/", response_model=List[EventOut])
 def list_events(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     events = db.query(Event).order_by(Event.event_date).all()
@@ -44,15 +77,6 @@ def get_event(event_id: int, db: Session = Depends(get_db), current_user: User =
     return _serialize_event(event, current_user.id)
 
 
-@router.post("/", response_model=EventOut, status_code=status.HTTP_201_CREATED)
-def create_event(payload: EventCreate, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
-    event = Event(**payload.model_dump())
-    db.add(event)
-    db.commit()
-    db.refresh(event)
-    return _serialize_event(event, 0)
-
-
 @router.post("/{event_id}/rsvp", response_model=RSVPOut, status_code=status.HTTP_201_CREATED)
 def rsvp(event_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     event = db.query(Event).filter(Event.id == event_id).first()
@@ -63,16 +87,19 @@ def rsvp(event_id: int, db: Session = Depends(get_db), current_user: User = Depe
     existing = db.query(RSVP).filter(RSVP.user_id == current_user.id, RSVP.event_id == event_id).first()
     if existing:
         raise HTTPException(status_code=409, detail="Already RSVP'd")
+    # Remove from waitlist if they were on it
+    db.query(EventWaitlist).filter(
+        EventWaitlist.user_id == current_user.id,
+        EventWaitlist.event_id == event_id,
+    ).delete()
     rsvp_obj = RSVP(user_id=current_user.id, event_id=event_id)
     db.add(rsvp_obj)
+    notify.push(db, current_user.id, "rsvp", f"You're confirmed for {event.title}!", link="/dashboard?tab=events")
     db.commit()
     db.refresh(rsvp_obj)
     mailer.send_rsvp_confirmation(
-        current_user.email,
-        current_user.full_name,
-        event.title,
-        event.event_date.strftime("%B %d, %Y at %H:%M"),
-        event.location,
+        current_user.email, current_user.full_name, event.title,
+        event.event_date.strftime("%B %d, %Y at %H:%M"), event.location,
     )
     return rsvp_obj
 
@@ -84,6 +111,88 @@ def cancel_rsvp(event_id: int, db: Session = Depends(get_db), current_user: User
         raise HTTPException(status_code=404, detail="RSVP not found")
     event = db.query(Event).filter(Event.id == event_id).first()
     db.delete(rsvp_obj)
-    db.commit()
+    db.flush()
+
+    # Promote first person on waitlist
     if event:
+        next_in_line = (
+            db.query(EventWaitlist)
+            .filter(EventWaitlist.event_id == event_id)
+            .order_by(EventWaitlist.created_at)
+            .first()
+        )
+        if next_in_line:
+            promoted_user = db.query(User).filter(User.id == next_in_line.user_id).first()
+            db.delete(next_in_line)
+            db.add(RSVP(user_id=next_in_line.user_id, event_id=event_id))
+            notify.push(
+                db, next_in_line.user_id, "waitlist",
+                f"A spot opened for {event.title} — you're in!",
+                link="/dashboard?tab=events",
+            )
+            db.flush()
+            if promoted_user:
+                mailer.send_waitlist_promoted(
+                    promoted_user.email, promoted_user.full_name, event.title,
+                    event.event_date.strftime("%B %d, %Y at %H:%M"), event.location,
+                )
         mailer.send_rsvp_cancelled(current_user.email, current_user.full_name, event.title)
+
+    db.commit()
+
+
+# ── waitlist ──────────────────────────────────────────────────────────────────
+
+@router.post("/{event_id}/waitlist", status_code=status.HTTP_201_CREATED)
+def join_waitlist(event_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if len(event.rsvps) < event.max_seats:
+        raise HTTPException(status_code=400, detail="Event still has seats — RSVP directly")
+    existing_rsvp = db.query(RSVP).filter(RSVP.user_id == current_user.id, RSVP.event_id == event_id).first()
+    if existing_rsvp:
+        raise HTTPException(status_code=409, detail="Already RSVP'd")
+    existing_wl = db.query(EventWaitlist).filter(
+        EventWaitlist.user_id == current_user.id, EventWaitlist.event_id == event_id
+    ).first()
+    if existing_wl:
+        raise HTTPException(status_code=409, detail="Already on waitlist")
+    entry = EventWaitlist(user_id=current_user.id, event_id=event_id)
+    db.add(entry)
+    db.flush()
+    position = (
+        db.query(EventWaitlist)
+        .filter(EventWaitlist.event_id == event_id)
+        .order_by(EventWaitlist.created_at)
+        .all()
+        .index(entry) + 1
+    )
+    db.commit()
+    mailer.send_waitlist_joined(current_user.email, current_user.full_name, event.title, position)
+    return {"position": position, "event_id": event_id}
+
+
+@router.delete("/{event_id}/waitlist", status_code=status.HTTP_204_NO_CONTENT)
+def leave_waitlist(event_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    entry = db.query(EventWaitlist).filter(
+        EventWaitlist.user_id == current_user.id, EventWaitlist.event_id == event_id
+    ).first()
+    if not entry:
+        raise HTTPException(status_code=404, detail="Not on waitlist")
+    db.delete(entry)
+    db.commit()
+
+
+@router.get("/{event_id}/waitlist/position")
+def waitlist_position(event_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    entries = (
+        db.query(EventWaitlist)
+        .filter(EventWaitlist.event_id == event_id)
+        .order_by(EventWaitlist.created_at)
+        .all()
+    )
+    for i, e in enumerate(entries):
+        if e.user_id == current_user.id:
+            return {"on_waitlist": True, "position": i + 1, "total": len(entries)}
+    return {"on_waitlist": False}

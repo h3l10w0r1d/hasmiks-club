@@ -1,20 +1,26 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getMe, updateMe, uploadPhoto } from '../api/members'
-import { getEvents, rsvp, cancelRsvp } from '../api/events'
+import { getMe, updateMe, uploadPhoto, getMemberDirectory } from '../api/members'
+import { getEvents, rsvp, cancelRsvp, joinWaitlist, leaveWaitlist, getWaitlistPosition } from '../api/events'
 import { getLibrary } from '../api/content'
 import { getPublicSettings } from '../api/payments'
+import { refreshToken as apiRefresh } from '../api/auth'
+import NotificationBell from '../components/NotificationBell'
+import client from '../api/client'
 
-const TABS = ['profile', 'events', 'library']
+const TABS = ['profile', 'events', 'library', 'community']
 
 export default function DashboardPage({ lang }) {
   const { user, setUser, signOut } = useAuth()
   const navigate = useNavigate()
-  const [tab, setTab] = useState('profile')
+  const [searchParams] = useSearchParams()
+  const [tab, setTab] = useState(searchParams.get('tab') || 'profile')
   const [events, setEvents] = useState([])
   const [library, setLibrary] = useState([])
-  const [profileForm, setProfileForm] = useState({ full_name: '', photo_url: '' })
+  const [directory, setDirectory] = useState([])
+  const [waitlistPositions, setWaitlistPositions] = useState({}) // eventId -> {on_waitlist, position}
+  const [profileForm, setProfileForm] = useState({ full_name: '', photo_url: '', show_in_directory: true })
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const [rsvpError, setRsvpError] = useState('')
@@ -23,55 +29,67 @@ export default function DashboardPage({ lang }) {
   const fileInputRef = useRef(null)
 
   const t = {
-    profile:        lang === 'hy' ? 'Պրոֆիլ' : 'Profile',
-    events:         lang === 'hy' ? 'Հանդիպումներ' : 'Events',
-    library:        lang === 'hy' ? 'Գրադարան' : 'Library',
-    signOut:        lang === 'hy' ? 'Ելք' : 'Sign Out',
-    welcome:        lang === 'hy' ? 'Բարի գալուստ' : 'Welcome back',
-    memberSince:    lang === 'hy' ? 'Անդամ է' : 'Member since',
-    status:         lang === 'hy' ? 'Կարգավիճակ' : 'Status',
-    active:         lang === 'hy' ? 'Ակտիվ' : 'Active',
-    inactive:       lang === 'hy' ? 'Ոչ ակտիվ' : 'Inactive',
-    fullName:       lang === 'hy' ? 'Անուն Ազգանուն' : 'Full Name',
-    photoUrl:       lang === 'hy' ? 'Լուսանկարի հղում' : 'Photo URL',
-    uploadPhoto:    lang === 'hy' ? 'Վերբեռնել լուսանկար' : 'Upload Photo',
-    save:           lang === 'hy' ? 'Պահպանել' : 'Save Changes',
-    saved:          lang === 'hy' ? 'Պահպանված է' : 'Saved!',
-    seats:          lang === 'hy' ? 'տեղ մնացել' : 'seats left',
-    rsvpBtn:        lang === 'hy' ? 'Գրանցվել' : 'RSVP',
-    cancelRsvp:     lang === 'hy' ? 'Չեղարկել' : 'Cancel RSVP',
-    booked:         lang === 'hy' ? 'Ամբողջությամբ ամրագրված' : 'Fully booked',
-    noEvents:       lang === 'hy' ? 'Առայժմ հանդիպումներ չկան' : 'No upcoming events yet',
-    noLibrary:      lang === 'hy' ? 'Գրադարանը դատարկ է' : 'Your library is empty',
-    recipe:         lang === 'hy' ? 'Բաղադրատոմս' : 'Recipe',
-    ebook:          lang === 'hy' ? 'Էլ. գիրք' : 'E-Book',
-    download:       lang === 'hy' ? 'Բեռնել' : 'Download',
-    joinTelegram:   lang === 'hy' ? 'Միանալ Telegram խմբին' : 'Join our Telegram group',
+    profile:     lang === 'hy' ? 'Պրոֆիլ' : 'Profile',
+    events:      lang === 'hy' ? 'Հանդիպումներ' : 'Events',
+    library:     lang === 'hy' ? 'Գրադարան' : 'Library',
+    community:   lang === 'hy' ? 'Համայնք' : 'Community',
+    signOut:     lang === 'hy' ? 'Ելք' : 'Sign Out',
+    welcome:     lang === 'hy' ? 'Բարի գալուստ' : 'Welcome back',
+    memberSince: lang === 'hy' ? 'Անդամ է' : 'Member since',
+    status:      lang === 'hy' ? 'Կարգավիճակ' : 'Status',
+    active:      lang === 'hy' ? 'Ակտիվ' : 'Active',
+    inactive:    lang === 'hy' ? 'Ոչ ակտիվ' : 'Inactive',
+    fullName:    lang === 'hy' ? 'Անուն Ազգանուն' : 'Full Name',
+    uploadPhoto: lang === 'hy' ? 'Վերբեռնել լուսանկար' : 'Upload Photo',
+    save:        lang === 'hy' ? 'Պահպանել' : 'Save Changes',
+    saved:       lang === 'hy' ? 'Պահպանված է' : 'Saved!',
+    showInDir:   lang === 'hy' ? 'Ցուցադրել համայնքի ցուցակում' : 'Show in community directory',
+    seats:       lang === 'hy' ? 'տեղ մնացել' : 'seats left',
+    rsvpBtn:     lang === 'hy' ? 'Գրանցվել' : 'RSVP',
+    cancelRsvp:  lang === 'hy' ? 'Չեղարկել' : 'Cancel RSVP',
+    booked:      lang === 'hy' ? 'Ամբողջությամբ ամրագրված' : 'Fully booked',
+    waitlist:    lang === 'hy' ? 'Ցուցակ' : 'Join Waitlist',
+    leaveWait:   lang === 'hy' ? 'Ցուցակից հեռացնել' : 'Leave Waitlist',
+    waitPos:     lang === 'hy' ? 'Հերթ' : 'Waitlist position',
+    noEvents:    lang === 'hy' ? 'Առայժմ հանդիպումներ չկան' : 'No upcoming events yet',
+    noLibrary:   lang === 'hy' ? 'Ձեր գրադարանը դատարկ է' : 'Your library is empty',
+    lockedLib:   lang === 'hy' ? 'Կողպված' : 'Locked',
+    recipe:      lang === 'hy' ? 'Բաղադրատոմս' : 'Recipe',
+    ebook:       lang === 'hy' ? 'Էլ. գիրք' : 'E-Book',
+    download:    lang === 'hy' ? 'Բեռնել' : 'Download',
+    joinTelegram:lang === 'hy' ? 'Միանալ Telegram խմբին' : 'Join our Telegram group',
+    noMembers:   lang === 'hy' ? 'Անդամներ չկան ցուցակում' : 'No members in the directory yet',
+    verifyBanner:lang === 'hy' ? 'Խնդրում ենք հաստատել Ձեր էլ. հասցեն' : 'Please verify your email address',
+    resendVerify:lang === 'hy' ? 'Կրկին ուղարկել' : 'Resend verification email',
+    verifyOk:    lang === 'hy' ? 'Էլ. հասցեն հաստատված է ✓' : 'Email verified ✓',
   }
 
   useEffect(() => {
     getMe().then(fresh => {
       setUser(fresh)
-      setProfileForm({ full_name: fresh.full_name, photo_url: fresh.photo_url || '' })
+      setProfileForm({ full_name: fresh.full_name, photo_url: fresh.photo_url || '', show_in_directory: fresh.show_in_directory ?? true })
     }).catch(() => {})
-    getPublicSettings().then(s => {
-      setTelegramUrl(s.telegram_invite_url || '')
-    }).catch(() => {})
+    getPublicSettings().then(s => setTelegramUrl(s.telegram_invite_url || '')).catch(() => {})
+  }, [])
+
+  // handle ?verified=ok in URL
+  useEffect(() => {
+    const v = searchParams.get('verified')
+    if (v === 'ok') { setMsg(t.verifyOk); getMe().then(fresh => { setUser(fresh) }) }
   }, [])
 
   useEffect(() => {
-    if (tab === 'events') getEvents().then(setEvents).catch(() => {})
-    if (tab === 'library') getLibrary().then(setLibrary).catch(() => {})
-  }, [tab])
-
-  // Show payment=success notice
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (params.get('payment') === 'success') {
-      setMsg(lang === 'hy' ? 'Վճարումը հաջողված է! Անդամությունը կակտիվանա մի քանի րոպեի ընթացքում:' : 'Payment successful! Your membership will activate shortly.')
-      window.history.replaceState({}, '', '/dashboard')
+    if (tab === 'events') {
+      getEvents().then(evs => {
+        setEvents(evs)
+        evs.filter(e => e.seats_available === 0 && !e.user_has_rsvp).forEach(e => {
+          getWaitlistPosition(e.id).then(pos => setWaitlistPositions(p => ({ ...p, [e.id]: pos }))).catch(() => {})
+        })
+      }).catch(() => {})
     }
-  }, [])
+    if (tab === 'library') getLibrary().then(setLibrary).catch(() => {})
+    if (tab === 'community') getMemberDirectory().then(setDirectory).catch(() => {})
+  }, [tab])
 
   const handleSave = async (e) => {
     e.preventDefault()
@@ -81,9 +99,7 @@ export default function DashboardPage({ lang }) {
       setUser(updated)
       setMsg(t.saved)
       setTimeout(() => setMsg(''), 2500)
-    } finally {
-      setSaving(false)
-    }
+    } finally { setSaving(false) }
   }
 
   const handlePhotoUpload = async (e) => {
@@ -96,11 +112,8 @@ export default function DashboardPage({ lang }) {
       setProfileForm(f => ({ ...f, photo_url: updated.photo_url || '' }))
       setMsg(lang === 'hy' ? 'Լուսանկարը պահպանված է' : 'Photo updated!')
       setTimeout(() => setMsg(''), 2500)
-    } catch {
-      setMsg(lang === 'hy' ? 'Լուսանկարի վերբեռնումը ձախողվեց' : 'Photo upload failed')
-    } finally {
-      setPhotoUploading(false)
-    }
+    } catch { setMsg(lang === 'hy' ? 'Վերբեռնումը ձախողվեց' : 'Upload failed') }
+    finally { setPhotoUploading(false) }
   }
 
   const handleRsvp = async (event) => {
@@ -119,10 +132,34 @@ export default function DashboardPage({ lang }) {
     }
   }
 
+  const handleWaitlist = async (event) => {
+    setRsvpError('')
+    const pos = waitlistPositions[event.id]
+    try {
+      if (pos?.on_waitlist) {
+        await leaveWaitlist(event.id)
+        setWaitlistPositions(p => ({ ...p, [event.id]: { on_waitlist: false } }))
+      } else {
+        const result = await joinWaitlist(event.id)
+        setWaitlistPositions(p => ({ ...p, [event.id]: { on_waitlist: true, position: result.position } }))
+      }
+    } catch (err) {
+      const detail = err?.response?.data?.detail
+      setRsvpError(detail || (lang === 'hy' ? 'Սխալ տեղի ունեցավ' : 'Something went wrong'))
+    }
+  }
+
+  const handleResendVerify = async () => {
+    try {
+      await client.post('/auth/resend-verification')
+      setMsg(lang === 'hy' ? 'Հաստատման նամակն ուղարկվել է' : 'Verification email sent!')
+      setTimeout(() => setMsg(''), 3000)
+    } catch { setMsg(lang === 'hy' ? 'Սխալ' : 'Error sending email') }
+  }
+
   const handleSignOut = () => { signOut(); navigate('/') }
 
   if (!user) return null
-
   const isActive = user.membership_status === 'active'
 
   return (
@@ -130,6 +167,7 @@ export default function DashboardPage({ lang }) {
       <nav className="dash-nav">
         <div className="nav-logo">Hasmik's <span>Club</span></div>
         <div className="dash-nav-right">
+          <NotificationBell />
           <span className="dash-user-name">{user.full_name}</span>
           {user.is_admin && (
             <Link to="/admin" className="nav-btn" style={{ background: 'var(--deep)', fontSize: '11px', padding: '8px 18px' }}>Admin</Link>
@@ -138,14 +176,20 @@ export default function DashboardPage({ lang }) {
         </div>
       </nav>
 
+      {/* Email verification banner */}
+      {!user.is_verified && (
+        <div style={{ background: '#fff8e1', borderBottom: '1px solid #ffe082', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 14, color: '#795548' }}>⚠️ {t.verifyBanner}</span>
+          <button onClick={handleResendVerify} style={{ background: 'none', border: '1px solid #795548', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 13, color: '#795548' }}>
+            {t.resendVerify}
+          </button>
+        </div>
+      )}
+
       <div className="dash-body">
         <aside className="dash-sidebar">
           {TABS.map(k => (
-            <button
-              key={k}
-              className={`dash-tab${tab === k ? ' active' : ''}`}
-              onClick={() => setTab(k)}
-            >
+            <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>
               {t[k]}
             </button>
           ))}
@@ -155,13 +199,12 @@ export default function DashboardPage({ lang }) {
             </Link>
           )}
           <div className="dash-membership-badge">
-            <span className={`dash-status ${user.membership_status}`}>
-              {isActive ? t.active : t.inactive}
-            </span>
+            <span className={`dash-status ${user.membership_status}`}>{isActive ? t.active : t.inactive}</span>
           </div>
         </aside>
 
         <main className="dash-main">
+          {/* ── PROFILE ── */}
           {tab === 'profile' && (
             <div className="dash-section">
               <h2 className="dash-section-title">{t.welcome}, {user.full_name.split(' ')[0]}.</h2>
@@ -171,20 +214,14 @@ export default function DashboardPage({ lang }) {
                 {t.status}: <strong>{isActive ? t.active : t.inactive}</strong>
               </p>
 
-              {/* Telegram group — only for active members */}
               {isActive && telegramUrl && (
-                <a
-                  href={telegramUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-rose auth-submit"
-                  style={{ display: 'inline-block', textDecoration: 'none', marginBottom: '24px', maxWidth: '280px' }}
-                >
+                <a href={telegramUrl} target="_blank" rel="noreferrer" className="btn-rose auth-submit"
+                  style={{ display: 'inline-block', textDecoration: 'none', marginBottom: '24px', maxWidth: '280px' }}>
                   ✈️ {t.joinTelegram}
                 </a>
               )}
 
-              {msg && <p className="auth-success">{msg}</p>}
+              {msg && <p className="auth-success" style={{ marginBottom: 16 }}>{msg}</p>}
 
               <form onSubmit={handleSave} className="profile-form">
                 <label className="auth-label">{t.fullName}
@@ -192,40 +229,27 @@ export default function DashboardPage({ lang }) {
                     onChange={e => setProfileForm(f => ({ ...f, full_name: e.target.value }))} />
                 </label>
 
-                {/* Photo section */}
                 <div style={{ marginBottom: '16px' }}>
-                  {profileForm.photo_url && (
-                    <img src={profileForm.photo_url} alt="avatar" className="profile-avatar" />
-                  )}
+                  {profileForm.photo_url && <img src={profileForm.photo_url} alt="avatar" className="profile-avatar" />}
                   <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      className="plan-btn plan-btn-outline"
-                      style={{ fontSize: '13px', padding: '8px 16px' }}
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={photoUploading}
-                    >
+                    <button type="button" className="plan-btn plan-btn-outline" style={{ fontSize: '13px', padding: '8px 16px' }}
+                      onClick={() => fileInputRef.current?.click()} disabled={photoUploading}>
                       {photoUploading ? '...' : t.uploadPhoto}
                     </button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      style={{ display: 'none' }}
-                      onChange={handlePhotoUpload}
-                    />
-                    <span style={{ fontSize: '12px', color: '#888' }}>
-                      {lang === 'hy' ? 'կամ մուտքագրեք հղում' : 'or enter a URL'}
-                    </span>
+                    <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
+                    <span style={{ fontSize: '12px', color: '#888' }}>{lang === 'hy' ? 'կամ հղում' : 'or URL'}</span>
                   </div>
-                  <input
-                    className="auth-input"
-                    style={{ marginTop: '8px' }}
-                    placeholder={lang === 'hy' ? 'Լուսանկարի հղում (URL)' : 'Photo URL (optional)'}
+                  <input className="auth-input" style={{ marginTop: '8px' }}
+                    placeholder={lang === 'hy' ? 'Լուսանկարի հղում' : 'Photo URL (optional)'}
                     value={profileForm.photo_url}
-                    onChange={e => setProfileForm(f => ({ ...f, photo_url: e.target.value }))}
-                  />
+                    onChange={e => setProfileForm(f => ({ ...f, photo_url: e.target.value }))} />
                 </div>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, cursor: 'pointer', fontSize: 14, color: '#555' }}>
+                  <input type="checkbox" checked={profileForm.show_in_directory}
+                    onChange={e => setProfileForm(f => ({ ...f, show_in_directory: e.target.checked }))} />
+                  {t.showInDir}
+                </label>
 
                 <button className="btn-rose auth-submit" type="submit" disabled={saving}>
                   {saving ? '...' : t.save}
@@ -234,44 +258,63 @@ export default function DashboardPage({ lang }) {
             </div>
           )}
 
+          {/* ── EVENTS ── */}
           {tab === 'events' && (
             <div className="dash-section">
               <h2 className="dash-section-title">{t.events}</h2>
               {rsvpError && <p className="auth-error" style={{ marginBottom: '12px' }}>{rsvpError}</p>}
               {events.length === 0
                 ? <p className="dash-empty">{t.noEvents}</p>
-                : events.map(ev => (
-                  <div key={ev.id} className={`event-card${ev.user_has_rsvp ? ' rsvpd' : ''}`}>
-                    <div className="event-card-top">
-                      <div>
-                        <div className="event-title">{lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title}</div>
-                        <div className="event-meta">
-                          📍 {ev.location} &nbsp;·&nbsp;
-                          🗓 {new Date(ev.event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                : events.map(ev => {
+                  const wl = waitlistPositions[ev.id]
+                  return (
+                    <div key={ev.id} className={`event-card${ev.user_has_rsvp ? ' rsvpd' : ''}`}>
+                      <div className="event-card-top">
+                        <div>
+                          <div className="event-title">{lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title}</div>
+                          <div className="event-meta">
+                            📍 {ev.location} &nbsp;·&nbsp;
+                            🗓 {new Date(ev.event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          </div>
+                          {lang === 'hy' && ev.description_hy
+                            ? <p className="event-desc">{ev.description_hy}</p>
+                            : ev.description && <p className="event-desc">{ev.description}</p>}
                         </div>
-                        {lang === 'hy' && ev.description_hy
-                          ? <p className="event-desc">{ev.description_hy}</p>
-                          : ev.description && <p className="event-desc">{ev.description}</p>}
+                        <div className="event-seats">
+                          {ev.seats_available > 0
+                            ? <><strong>{ev.seats_available}</strong> {t.seats}</>
+                            : <span className="fully-booked">{t.booked}</span>}
+                        </div>
                       </div>
-                      <div className="event-seats">
-                        {ev.seats_available > 0
-                          ? <><strong>{ev.seats_available}</strong> {t.seats}</>
-                          : <span className="fully-booked">{t.booked}</span>}
+
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        {ev.user_has_rsvp ? (
+                          <button className="plan-btn plan-btn-outline" onClick={() => handleRsvp(ev)}>{t.cancelRsvp}</button>
+                        ) : ev.seats_available > 0 ? (
+                          <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(ev)}>{t.rsvpBtn}</button>
+                        ) : (
+                          <button
+                            className={`plan-btn ${wl?.on_waitlist ? 'plan-btn-outline' : 'plan-btn-fill'}`}
+                            style={{ background: wl?.on_waitlist ? undefined : '#f39c12', borderColor: '#f39c12', color: wl?.on_waitlist ? '#f39c12' : '#fff' }}
+                            onClick={() => handleWaitlist(ev)}
+                          >
+                            {wl?.on_waitlist ? t.leaveWait : t.waitlist}
+                          </button>
+                        )}
+                        {wl?.on_waitlist && (
+                          <span style={{ fontSize: 13, color: '#f39c12', fontWeight: 600 }}>
+                            #{wl.position} {t.waitPos}
+                          </span>
+                        )}
                       </div>
                     </div>
-                    <button
-                      className={`plan-btn ${ev.user_has_rsvp ? 'plan-btn-outline' : 'plan-btn-fill'}`}
-                      onClick={() => handleRsvp(ev)}
-                      disabled={!ev.user_has_rsvp && ev.seats_available === 0}
-                    >
-                      {ev.user_has_rsvp ? t.cancelRsvp : t.rsvpBtn}
-                    </button>
-                  </div>
-                ))
+                  )
+                })
               }
             </div>
           )}
 
+          {/* ── LIBRARY ── */}
           {tab === 'library' && (
             <div className="dash-section">
               <h2 className="dash-section-title">{t.library}</h2>
@@ -280,18 +323,48 @@ export default function DashboardPage({ lang }) {
                 : (
                   <div className="library-grid">
                     {library.map(item => (
-                      <div key={item.id} className="library-card">
+                      <div key={item.id} className="library-card" style={{ opacity: item.is_unlocked ? 1 : 0.6 }}>
                         {item.cover_url && <img src={item.cover_url} alt={item.title} className="library-cover" />}
                         <div className="library-type">{item.type === 'recipe' ? t.recipe : t.ebook}</div>
                         <div className="library-title">{lang === 'hy' && item.title_hy ? item.title_hy : item.title}</div>
                         {(lang === 'hy' && item.description_hy ? item.description_hy : item.description) && (
                           <p className="library-desc">{lang === 'hy' && item.description_hy ? item.description_hy : item.description}</p>
                         )}
-                        {item.file_url && (
-                          <a href={item.file_url} target="_blank" rel="noreferrer" className="plan-btn plan-btn-fill library-dl">
-                            {t.download}
-                          </a>
-                        )}
+                        {item.is_unlocked && item.file_url
+                          ? <a href={item.file_url} target="_blank" rel="noreferrer" className="plan-btn plan-btn-fill library-dl">{t.download}</a>
+                          : <span style={{ fontSize: 13, color: '#aaa', marginTop: 'auto' }}>🔒 {t.lockedLib}</span>
+                        }
+                      </div>
+                    ))}
+                  </div>
+                )
+              }
+            </div>
+          )}
+
+          {/* ── COMMUNITY ── */}
+          {tab === 'community' && (
+            <div className="dash-section">
+              <h2 className="dash-section-title">{lang === 'hy' ? 'Մեր Անդամները' : 'Our Members'}</h2>
+              <p style={{ color: '#888', fontSize: 14, marginBottom: 28 }}>
+                {lang === 'hy' ? 'Ծանոթացեք Hasmik\'s Club-ի ակտիվ անդամների հետ' : "Meet the active members of Hasmik's Club"}
+              </p>
+              {directory.length === 0
+                ? <p className="dash-empty">{t.noMembers}</p>
+                : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 20 }}>
+                    {directory.map(m => (
+                      <div key={m.id} style={{ textAlign: 'center', background: '#fff', borderRadius: 14, padding: '24px 16px', boxShadow: '0 2px 10px rgba(192,57,75,.07)' }}>
+                        {m.photo_url
+                          ? <img src={m.photo_url} alt={m.full_name} style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', marginBottom: 12, border: '3px solid #f5c0c0' }} />
+                          : <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#f5c0c0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, margin: '0 auto 12px', color: '#c0394b', fontWeight: 700 }}>
+                              {m.full_name.charAt(0)}
+                            </div>
+                        }
+                        <div style={{ fontWeight: 600, color: '#2c1a1a', fontSize: 14 }}>{m.full_name}</div>
+                        <div style={{ fontSize: 11, color: '#aaa', marginTop: 4 }}>
+                          {lang === 'hy' ? 'Անդամ' : 'Member'} {new Date(m.joined_at).getFullYear()}
+                        </div>
                       </div>
                     ))}
                   </div>

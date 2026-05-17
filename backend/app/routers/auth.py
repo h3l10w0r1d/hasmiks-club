@@ -3,6 +3,7 @@ from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -44,13 +45,23 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
         password_hash=hash_password(payload.password),
         full_name=payload.full_name,
         lang_pref=payload.lang_pref,
+        is_verified=False,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
     _ensure_admin(user, db)
+
+    # Send verification email
+    vtoken = secrets.token_urlsafe(32)
+    user.verification_token = vtoken
+    user.verification_token_expires = datetime.now(timezone.utc) + timedelta(hours=24)
+    db.commit()
+    verify_url = f"https://hasmiks-club.vercel.app/verify-email?token={vtoken}"
+    mailer.send_verification(user.email, user.full_name, verify_url)
     mailer.send_welcome(user.email, user.full_name)
     mailer.sync_contact_async(user.email, user.full_name, user.membership_status)
+
     token = create_access_token(str(user.id))
     return TokenOut(access_token=token, user=UserOut.model_validate(user))
 
@@ -67,31 +78,52 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
 
 @router.post("/refresh", response_model=TokenOut)
 def refresh_token(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Issue a fresh token for any currently authenticated user."""
     token = create_access_token(str(current_user.id))
     return TokenOut(access_token=token, user=UserOut.model_validate(current_user))
+
+
+@router.get("/verify-email")
+def verify_email(token: str, db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.verification_token == token).first()
+    if not user:
+        return RedirectResponse("https://hasmiks-club.vercel.app/dashboard?verified=invalid")
+    expires = user.verification_token_expires
+    if expires and expires.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        return RedirectResponse("https://hasmiks-club.vercel.app/dashboard?verified=expired")
+    user.is_verified = True
+    user.verification_token = None
+    user.verification_token_expires = None
+    db.commit()
+    return RedirectResponse("https://hasmiks-club.vercel.app/dashboard?verified=ok")
+
+
+@router.post("/resend-verification", status_code=status.HTTP_202_ACCEPTED)
+def resend_verification(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    if current_user.is_verified:
+        return {"detail": "Already verified"}
+    vtoken = secrets.token_urlsafe(32)
+    current_user.verification_token = vtoken
+    current_user.verification_token_expires = datetime.now(timezone.utc) + timedelta(hours=24)
+    db.commit()
+    verify_url = f"https://hasmiks-club.vercel.app/verify-email?token={vtoken}"
+    mailer.send_verification(current_user.email, current_user.full_name, verify_url)
+    return {"detail": "Verification email sent"}
 
 
 @router.post("/forgot-password", status_code=status.HTTP_202_ACCEPTED)
 def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == payload.email.lower()).first()
-    # Always return 202 to avoid email enumeration
     if not user:
         return {"detail": "If that email exists, a reset link was sent"}
-
-    # Invalidate old tokens
     db.query(PasswordResetToken).filter(
         PasswordResetToken.user_id == user.id,
         PasswordResetToken.used == False,
     ).update({"used": True})
     db.commit()
-
     token = secrets.token_urlsafe(32)
     expires = datetime.now(timezone.utc) + timedelta(hours=1)
-    prt = PasswordResetToken(user_id=user.id, token=token, expires_at=expires)
-    db.add(prt)
+    db.add(PasswordResetToken(user_id=user.id, token=token, expires_at=expires))
     db.commit()
-
     reset_url = f"https://hasmiks-club.vercel.app/reset-password?token={token}"
     mailer.send_password_reset(user.email, user.full_name, reset_url)
     return {"detail": "If that email exists, a reset link was sent"}
@@ -107,15 +139,12 @@ def reset_password(payload: ResetPasswordRequest, db: Session = Depends(get_db))
         raise HTTPException(status_code=400, detail="Invalid or expired reset token")
     if prt.expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="Reset token has expired")
-
     user = db.query(User).filter(User.id == prt.user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
-
     user.password_hash = hash_password(payload.new_password)
     prt.used = True
     db.commit()
     db.refresh(user)
-
     token = create_access_token(str(user.id))
     return TokenOut(access_token=token, user=UserOut.model_validate(user))

@@ -22,8 +22,17 @@ export const adminUnlockContent = (contentId, userId) =>
 export const adminUnlockContentForAll = (contentId) =>
   client.post(`/admin/content/${contentId}/unlock-all`).then(r => r.data)
 
-// stats (simple)
+// stats
 export const adminGetStats = () => client.get('/admin/stats').then(r => r.data)
 
 // deep analytics
 export const adminGetAnalytics = () => client.get('/admin/analytics').then(r => r.data)
+
+// broadcast
+export const adminBroadcast = (data) => client.post('/admin/broadcast', data).then(r => r.data)
+
+// csv export
+export const adminExportCsv = () => client.get('/admin/members/export', { responseType: 'blob' }).then(r => r.data)
+
+// audit log
+export const adminGetAuditLog = () => client.get('/admin/audit-log').then(r => r.data)

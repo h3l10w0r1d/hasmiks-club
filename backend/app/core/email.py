@@ -160,6 +160,46 @@ def send_event_reminder(to: str, name: str, event_title: str, event_date: str, l
     send_async(to, name, f"Tomorrow: {event_title} 🗓", html)
 
 
+def send_verification(to: str, name: str, verify_url: str) -> None:
+    html = _wrap(f"""
+    <h2>Verify your email, {name}!</h2>
+    <p>Thanks for joining Hasmik's Club. Please verify your email address to get started.</p>
+    <a href="{verify_url}" class="btn">Verify my email</a>
+    <p style="font-size:13px;color:#888;">This link expires in 24 hours.</p>
+    """)
+    send_async(to, name, "Please verify your email — Hasmik's Club", html)
+
+
+def send_waitlist_joined(to: str, name: str, event_title: str, position: int) -> None:
+    html = _wrap(f"""
+    <h2>You're on the waitlist, {name}!</h2>
+    <p>You're <strong>#{position}</strong> on the waitlist for <strong>{event_title}</strong>.</p>
+    <p>We'll email you immediately if a spot opens up.</p>
+    """)
+    send_async(to, name, f"Waitlist #{position}: {event_title}", html)
+
+
+def send_waitlist_promoted(to: str, name: str, event_title: str, event_date: str, location: str) -> None:
+    html = _wrap(f"""
+    <h2>Great news, {name}! A spot opened up 🎉</h2>
+    <p>You've been automatically registered for <strong>{event_title}</strong>.</p>
+    <div class="meta">
+      <p>📍 <strong>Location:</strong> {location}</p>
+      <p>🗓 <strong>Date:</strong> {event_date}</p>
+    </div>
+    <p>See you there!</p>
+    """)
+    send_async(to, name, f"You're in! Spot opened for {event_title}", html)
+
+
+def send_broadcast(to: str, name: str, subject: str, body: str) -> None:
+    html = _wrap(f"""
+    <h2>{subject}</h2>
+    {"".join(f"<p>{line}</p>" for line in body.strip().split("\n") if line.strip())}
+    """)
+    send_async(to, name, subject, html)
+
+
 def send_password_reset(to: str, name: str, reset_url: str) -> None:
     html = _wrap(f"""
     <h2>Reset your password</h2>

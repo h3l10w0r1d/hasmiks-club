@@ -17,6 +17,7 @@ import DashboardPage from './pages/DashboardPage'
 import AdminPage from './pages/AdminPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import EventsPage from './pages/EventsPage'
 
 function LandingPage({ lang, setLang }) {
   return (
@@ -67,6 +68,8 @@ function AppRoutes() {
       } />
       <Route path="/forgot-password" element={<ForgotPasswordPage lang={lang} />} />
       <Route path="/reset-password" element={<ResetPasswordPage lang={lang} />} />
+      <Route path="/events" element={<EventsPage lang={lang} />} />
+      <Route path="/verify-email" element={<ResetPasswordPage lang={lang} />} />
     </Routes>
   )
 }

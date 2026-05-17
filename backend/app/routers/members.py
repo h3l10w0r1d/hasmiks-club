@@ -1,10 +1,12 @@
 import cloudinary
 import cloudinary.uploader
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserOut, UserUpdate
+from app.schemas.user import UserOut, UserUpdate, MemberDirectoryOut
 from app.core.deps import get_current_user
 from app.core.config import settings
 
@@ -60,6 +62,20 @@ async def upload_photo(
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.get("/directory", response_model=List[MemberDirectoryOut])
+def member_directory(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Active members who opted in to the directory."""
+    return (
+        db.query(User)
+        .filter(User.membership_status == "active", User.show_in_directory == True, User.id != current_user.id)
+        .order_by(User.full_name)
+        .all()
+    )
 
 
 @router.get("/{user_id}", response_model=UserOut)

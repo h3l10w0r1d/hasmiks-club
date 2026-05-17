@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Enum, Boolean
+from sqlalchemy import Column, Integer, String, DateTime, Boolean
 import sqlalchemy as sa
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -24,6 +24,10 @@ class User(Base):
     membership_status = Column(String, default=MembershipStatus.inactive)
     stripe_customer_id = Column(String, nullable=True)
     is_admin = Column(Boolean, default=False, nullable=False, server_default='false')
+    is_verified = Column(Boolean, default=False, nullable=False, server_default='false')
+    show_in_directory = Column(Boolean, default=True, nullable=False, server_default='true')
+    verification_token = Column(String, nullable=True)
+    verification_token_expires = Column(sa.DateTime(timezone=True), nullable=True)
     joined_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 

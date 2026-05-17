@@ -36,3 +36,28 @@ class RSVPOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class PublicEventOut(BaseModel):
+    id: int
+    title: str
+    title_hy: Optional[str]
+    description: Optional[str]
+    description_hy: Optional[str]
+    location: str
+    event_date: datetime
+    max_seats: int
+    seats_available: int
+    is_full: bool
+
+    model_config = {"from_attributes": True}
+
+
+class WaitlistOut(BaseModel):
+    id: int
+    event_id: int
+    user_id: int
+    position: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}

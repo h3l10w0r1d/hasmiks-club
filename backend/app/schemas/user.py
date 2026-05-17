@@ -19,6 +19,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     photo_url: Optional[str] = None
     lang_pref: Optional[str] = None
+    show_in_directory: Optional[bool] = None
 
 
 class UserOut(BaseModel):
@@ -29,6 +30,8 @@ class UserOut(BaseModel):
     lang_pref: str
     membership_status: str
     is_admin: bool = False
+    is_verified: bool = False
+    show_in_directory: bool = True
     joined_at: datetime
 
     model_config = {"from_attributes": True}
@@ -44,3 +47,12 @@ class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserOut
+
+
+class MemberDirectoryOut(BaseModel):
+    id: int
+    full_name: str
+    photo_url: Optional[str]
+    joined_at: datetime
+
+    model_config = {"from_attributes": True}

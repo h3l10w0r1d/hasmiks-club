@@ -6,7 +6,7 @@ import os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from app.database import Base
-from app.models import user, event, rsvp, content, password_reset  # noqa: ensure models are registered
+from app.models import user, event, rsvp, content, password_reset, waitlist, audit_log, notification  # noqa
 
 config = context.config
 
