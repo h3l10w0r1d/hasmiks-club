@@ -24,7 +24,7 @@ from app.core import email as mailer
 from app.core import notify
 from app.core.audit import log as audit_log
 from app.core.config import settings
-from app.core.deps import get_current_admin
+from app.core.deps import get_current_user, get_current_admin, require_permission, ALL_PERMISSIONS, ROLE_PERMISSIONS, get_user_permissions
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -54,12 +54,12 @@ def _content_out(item: ContentItem, unlocked: bool = False) -> ContentOut:
 # ── members ───────────────────────────────────────────────────────────────────
 
 @router.get("/members", response_model=List[UserOut])
-def list_members(db: Session = Depends(get_db), _: User = Depends(get_current_admin)):
+def list_members(db: Session = Depends(get_db), _: User = Depends(require_permission('manage_members'))):
     return db.query(User).order_by(User.joined_at.desc()).all()
 
 
 @router.get("/members/export")
-def export_members_csv(db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def export_members_csv(db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_members'))):
     members = db.query(User).order_by(User.joined_at).all()
 
     buf = io.StringIO()
@@ -87,7 +87,7 @@ def export_members_csv(db: Session = Depends(get_db), admin: User = Depends(get_
 @router.patch("/members/{user_id}", response_model=UserOut)
 def update_member(
     user_id: int, payload: AdminUserUpdate,
-    db: Session = Depends(get_db), admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_members')),
 ):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
@@ -107,7 +107,7 @@ def update_member(
 
 
 @router.delete("/members/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_member(user_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def delete_member(user_id: int, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_members'))):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -117,7 +117,7 @@ def delete_member(user_id: int, db: Session = Depends(get_db), admin: User = Dep
 
 
 @router.post("/members/{user_id}/telegram-invite")
-def send_telegram_invite(user_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def send_telegram_invite(user_id: int, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_members'))):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -132,14 +132,14 @@ def send_telegram_invite(user_id: int, db: Session = Depends(get_db), admin: Use
 # ── applications ──────────────────────────────────────────────────────────────
 
 @router.get("/applications")
-def list_applications(db: Session = Depends(get_db), _: User = Depends(get_current_admin)):
+def list_applications(db: Session = Depends(get_db), _: User = Depends(require_permission('manage_applications'))):
     """Pending membership applications."""
     users = db.query(User).filter(User.application_status == "pending").order_by(User.joined_at.desc()).all()
     return [UserOut.model_validate(u) for u in users]
 
 
 @router.post("/applications/{user_id}/approve", response_model=UserOut)
-def approve_application(user_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def approve_application(user_id: int, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_applications'))):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -152,7 +152,7 @@ def approve_application(user_id: int, db: Session = Depends(get_db), admin: User
 
 
 @router.post("/applications/{user_id}/decline", response_model=UserOut)
-def decline_application(user_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def decline_application(user_id: int, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_applications'))):
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -167,7 +167,7 @@ def decline_application(user_id: int, db: Session = Depends(get_db), admin: User
 # ── referrals ─────────────────────────────────────────────────────────────────
 
 @router.get("/referrals")
-def get_referrals(db: Session = Depends(get_db), _: User = Depends(get_current_admin)):
+def get_referrals(db: Session = Depends(get_db), _: User = Depends(require_permission('manage_members'))):
     """Leaderboard of members who have referred others."""
     from sqlalchemy import func
     rows = (
@@ -209,7 +209,7 @@ async def upload_image(file: UploadFile = File(...), admin: User = Depends(get_c
 # ── events ────────────────────────────────────────────────────────────────────
 
 @router.get("/events", response_model=List[EventOut])
-def list_events(db: Session = Depends(get_db), _: User = Depends(get_current_admin)):
+def list_events(db: Session = Depends(get_db), _: User = Depends(require_permission('manage_events'))):
     return [_event_out(e) for e in db.query(Event).order_by(Event.event_date.desc()).all()]
 
 
@@ -223,7 +223,7 @@ class AttendeeOut(BaseModel):
 
 
 @router.get("/events/{event_id}/attendees", response_model=List[AttendeeOut])
-def event_attendees(event_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_admin)):
+def event_attendees(event_id: int, db: Session = Depends(get_db), _: User = Depends(require_permission('manage_events'))):
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -241,7 +241,7 @@ def event_attendees(event_id: int, db: Session = Depends(get_db), _: User = Depe
 @router.post("/events/{event_id}/checkin/{user_id}")
 def toggle_checkin(
     event_id: int, user_id: int,
-    db: Session = Depends(get_db), admin: User = Depends(get_current_admin),
+    db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_events')),
 ):
     rsvp = db.query(RSVP).filter(RSVP.event_id == event_id, RSVP.user_id == user_id).first()
     if not rsvp:
@@ -254,7 +254,7 @@ def toggle_checkin(
 
 
 @router.post("/events", response_model=EventOut, status_code=status.HTTP_201_CREATED)
-def create_event(payload: EventCreate, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def create_event(payload: EventCreate, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_events'))):
     event = Event(**payload.model_dump())
     db.add(event)
     audit_log(db, f"create_event: {payload.title}", admin_id=admin.id, entity_type="event")
@@ -264,7 +264,7 @@ def create_event(payload: EventCreate, db: Session = Depends(get_db), admin: Use
 
 
 @router.patch("/events/{event_id}", response_model=EventOut)
-def update_event(event_id: int, payload: EventCreate, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def update_event(event_id: int, payload: EventCreate, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_events'))):
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -277,7 +277,7 @@ def update_event(event_id: int, payload: EventCreate, db: Session = Depends(get_
 
 
 @router.delete("/events/{event_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_event(event_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def delete_event(event_id: int, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_events'))):
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -289,12 +289,12 @@ def delete_event(event_id: int, db: Session = Depends(get_db), admin: User = Dep
 # ── content ───────────────────────────────────────────────────────────────────
 
 @router.get("/content", response_model=List[ContentOut])
-def list_content(db: Session = Depends(get_db), _: User = Depends(get_current_admin)):
+def list_content(db: Session = Depends(get_db), _: User = Depends(require_permission('manage_content'))):
     return [_content_out(i, True) for i in db.query(ContentItem).order_by(ContentItem.published_at.desc()).all()]
 
 
 @router.post("/content", response_model=ContentOut, status_code=status.HTTP_201_CREATED)
-def create_content(payload: ContentCreate, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def create_content(payload: ContentCreate, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_content'))):
     item = ContentItem(**payload.model_dump())
     db.add(item)
     audit_log(db, f"create_content: {payload.title}", admin_id=admin.id, entity_type="content")
@@ -304,7 +304,7 @@ def create_content(payload: ContentCreate, db: Session = Depends(get_db), admin:
 
 
 @router.patch("/content/{content_id}", response_model=ContentOut)
-def update_content(content_id: int, payload: ContentCreate, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def update_content(content_id: int, payload: ContentCreate, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_content'))):
     item = db.query(ContentItem).filter(ContentItem.id == content_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Content not found")
@@ -317,7 +317,7 @@ def update_content(content_id: int, payload: ContentCreate, db: Session = Depend
 
 
 @router.delete("/content/{content_id}", status_code=status.HTTP_204_NO_CONTENT)
-def delete_content(content_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def delete_content(content_id: int, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_content'))):
     item = db.query(ContentItem).filter(ContentItem.id == content_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Content not found")
@@ -327,7 +327,7 @@ def delete_content(content_id: int, db: Session = Depends(get_db), admin: User =
 
 
 @router.post("/content/{content_id}/unlock/{user_id}", response_model=ContentOut)
-def unlock_content(content_id: int, user_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def unlock_content(content_id: int, user_id: int, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_content'))):
     item = db.query(ContentItem).filter(ContentItem.id == content_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Content not found")
@@ -341,7 +341,7 @@ def unlock_content(content_id: int, user_id: int, db: Session = Depends(get_db),
 
 
 @router.post("/content/{content_id}/unlock-all", response_model=ContentOut)
-def unlock_content_for_all_active(content_id: int, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def unlock_content_for_all_active(content_id: int, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_content'))):
     item = db.query(ContentItem).filter(ContentItem.id == content_id).first()
     if not item:
         raise HTTPException(status_code=404, detail="Content not found")
@@ -367,7 +367,7 @@ class BroadcastPayload(BaseModel):
 
 
 @router.post("/broadcast")
-def broadcast_email(payload: BroadcastPayload, db: Session = Depends(get_db), admin: User = Depends(get_current_admin)):
+def broadcast_email(payload: BroadcastPayload, db: Session = Depends(get_db), admin: User = Depends(require_permission('broadcast'))):
     query = db.query(User)
     if payload.segment == "active":
         query = query.filter(User.membership_status == "active")
@@ -403,7 +403,7 @@ class AuditLogOut(BaseModel):
 def get_audit_log(
     limit: int = 100,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(require_permission('view_audit')),
 ):
     rows = db.query(AuditLog).order_by(AuditLog.created_at.desc()).limit(limit).all()
     admin_ids = {r.admin_id for r in rows if r.admin_id}
@@ -421,7 +421,7 @@ def get_audit_log(
 # ── stats (kept for backward compat) ─────────────────────────────────────────
 
 @router.get("/stats")
-def get_stats(db: Session = Depends(get_db), _: User = Depends(get_current_admin)):
+def get_stats(db: Session = Depends(get_db), _: User = Depends(require_permission('view_analytics'))):
     return {
         "total_members": db.query(User).count(),
         "active_members": db.query(User).filter(User.membership_status == "active").count(),
@@ -429,4 +429,74 @@ def get_stats(db: Session = Depends(get_db), _: User = Depends(get_current_admin
         "total_events": db.query(Event).count(),
         "total_rsvps": db.query(RSVP).count(),
         "total_content": db.query(ContentItem).count(),
+    }
+
+
+# ── Roles & Permissions ──────────────────────────────────────────────────────
+
+@router.get("/roles")
+def list_roles(db: Session = Depends(get_db), _: User = Depends(require_permission('manage_roles'))):
+    users = db.query(User).order_by(User.full_name).all()
+    return [
+        {
+            "id": u.id,
+            "full_name": u.full_name,
+            "email": u.email,
+            "role": u.role,
+            "permissions": u.permissions,  # raw JSON string or None
+            "effective_permissions": get_user_permissions(u),
+            "is_admin": u.is_admin,
+            "membership_status": u.membership_status,
+        }
+        for u in users
+    ]
+
+
+@router.put("/roles/{user_id}")
+def update_role(
+    user_id: int,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current: User = Depends(require_permission('manage_roles')),
+):
+    import json as _json
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(404, "User not found")
+    if user.id == current.id:
+        raise HTTPException(400, "Cannot change your own role")
+
+    if "role" in payload:
+        new_role = payload["role"]
+        if new_role not in ("member", "moderator", "admin"):
+            raise HTTPException(400, "Invalid role")
+        user.role = new_role
+        # Sync is_admin for backward compat
+        user.is_admin = (new_role == "admin")
+
+    if "permissions" in payload:
+        perms = payload["permissions"]
+        if perms is None:
+            user.permissions = None  # reset to role defaults
+        else:
+            # Validate and store
+            valid = [p for p in perms if p in ALL_PERMISSIONS]
+            user.permissions = _json.dumps(valid)
+
+    db.commit()
+    db.refresh(user)
+    return {
+        "id": user.id,
+        "full_name": user.full_name,
+        "role": user.role,
+        "permissions": user.permissions,
+        "effective_permissions": get_user_permissions(user),
+    }
+
+
+@router.get("/permissions/defaults")
+def get_permission_defaults(_: User = Depends(get_current_admin)):
+    return {
+        "all_permissions": ALL_PERMISSIONS,
+        "role_defaults": ROLE_PERMISSIONS,
     }

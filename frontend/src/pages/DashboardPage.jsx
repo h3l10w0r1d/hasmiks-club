@@ -9,13 +9,24 @@ import { refreshToken as apiRefresh } from '../api/auth'
 import NotificationBell from '../components/NotificationBell'
 import client from '../api/client'
 
-const TABS = ['profile', 'events', 'library', 'gallery', 'community']
+const TABS = ['home', 'profile', 'events', 'library', 'gallery', 'community']
+
+function getCountdown(iso, lang) {
+  const diff = new Date(iso) - new Date()
+  if (diff < 0) return null
+  const h = Math.floor(diff / 36e5)
+  const d = Math.floor(diff / 864e5)
+  if (h < 3) return lang === 'hy' ? 'Այսօր! 🎉' : 'Today! 🎉'
+  if (d === 0) return lang === 'hy' ? 'Վաղը! 🌸' : 'Tomorrow! 🌸'
+  if (d <= 7) return lang === 'hy' ? `${d} օրից` : `In ${d} days`
+  return null
+}
 
 export default function DashboardPage({ lang }) {
   const { user, setUser, signOut } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const [tab, setTab] = useState(searchParams.get('tab') || 'profile')
+  const [tab, setTab] = useState(searchParams.get('tab') || 'home')
   const [events, setEvents] = useState([])
   const [library, setLibrary] = useState([])
   const [directory, setDirectory] = useState([])
@@ -30,7 +41,9 @@ export default function DashboardPage({ lang }) {
   const [selectedMember, setSelectedMember] = useState(null)
   const [albums, setAlbums] = useState([])
   const [openAlbum, setOpenAlbum] = useState(null)
+  const [rsvpDone, setRsvpDone] = useState({})
   const fileInputRef = useRef(null)
+  const homeLoaded = useRef(false)
 
   const closeContent = useCallback(() => setSelectedContent(null), [])
   useEffect(() => {
@@ -41,6 +54,7 @@ export default function DashboardPage({ lang }) {
   }, [selectedContent, closeContent])
 
   const t = {
+    home:        lang === 'hy' ? 'Գլխ.' : 'Home',
     profile:     lang === 'hy' ? 'Պրոֆիլ' : 'Profile',
     events:      lang === 'hy' ? 'Հանդիպումներ' : 'Events',
     library:     lang === 'hy' ? 'Գրադարան' : 'Library',
@@ -98,6 +112,18 @@ export default function DashboardPage({ lang }) {
   }, [])
 
   useEffect(() => {
+    if (tab === 'home' && !homeLoaded.current) {
+      homeLoaded.current = true
+      getEvents().then(evs => {
+        setEvents(evs)
+        evs.filter(e => e.seats_available === 0 && !e.user_has_rsvp).forEach(e => {
+          getWaitlistPosition(e.id).then(pos => setWaitlistPositions(p => ({ ...p, [e.id]: pos }))).catch(() => {})
+        })
+      }).catch(() => {})
+      getLibrary().then(setLibrary).catch(() => {})
+      getGallery().then(setAlbums).catch(() => {})
+      getMemberDirectory().then(setDirectory).catch(() => {})
+    }
     if (tab === 'events') {
       getEvents().then(evs => {
         setEvents(evs)
@@ -143,6 +169,8 @@ export default function DashboardPage({ lang }) {
         await cancelRsvp(event.id)
       } else {
         await rsvp(event.id)
+        setRsvpDone(s => ({ ...s, [event.id]: true }))
+        setTimeout(() => setRsvpDone(s => { const n = { ...s }; delete n[event.id]; return n }), 2500)
       }
       const updated = await getEvents()
       setEvents(updated)
@@ -180,7 +208,58 @@ export default function DashboardPage({ lang }) {
   const handleSignOut = () => { signOut(); navigate('/') }
 
   if (!user) return null
+
+  // Pending application screen
+  if (user.application_status === 'pending') {
+    const hour = new Date().getHours()
+    const greeting = hour < 12
+      ? (lang === 'hy' ? 'Բարի առավոտ' : 'Good morning')
+      : hour < 18
+        ? (lang === 'hy' ? 'Բարի կեսօր' : 'Good afternoon')
+        : (lang === 'hy' ? 'Բարի երեկո' : 'Good evening')
+    return (
+      <div style={{ minHeight: '100vh', background: '#fff8f5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', fontFamily: 'inherit' }}>
+        <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' }}>
+          <div style={{ fontSize: 52, marginBottom: 24 }}>🌸</div>
+          <h1 style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: 34, fontWeight: 700, color: '#2c1a1a', margin: '0 0 16px', lineHeight: 1.2 }}>
+            {greeting}, {user.full_name.split(' ')[0]}!
+          </h1>
+          <h2 style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: 24, fontWeight: 600, color: '#c0394b', margin: '0 0 20px' }}>
+            {lang === 'hy' ? 'Ձեր հայտը ուսումնասիրվում է 🌸' : 'Your application is under review 🌸'}
+          </h2>
+          <p style={{ fontSize: 15, color: '#2c1a1a', lineHeight: 1.75, marginBottom: 12 }}>
+            {lang === 'hy'
+              ? 'Շնորհակալ ենք Hasmik\'s Club-ին միանալու ցանկության համար: Մենք ուշադիր ծանոթանում ենք Ձեր հայտին և կապ կհաստատենք Ձեզ հետ շուտով:'
+              : "Thank you for applying to Hasmik's Club. We're carefully reviewing your application and will be in touch with you very soon."}
+          </p>
+          <p style={{ fontSize: 14, color: '#9b6e6e', lineHeight: 1.7, marginBottom: 36 }}>
+            {lang === 'hy'
+              ? 'Այս գործընթացը սովորաբար տևում է 2–3 աշխատանքային օր: Ստուգե՛ք Ձեր էլ. փոստի մուտքի արկղը:'
+              : 'This process typically takes 2–3 business days. Keep an eye on your inbox for a personal note from us.'}
+          </p>
+          <button
+            onClick={handleSignOut}
+            style={{ background: '#c0394b', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 32px', cursor: 'pointer', fontSize: 15, fontWeight: 600, letterSpacing: '0.02em' }}
+          >
+            {t.signOut}
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   const isActive = user.membership_status === 'active'
+
+  // Home tab helpers
+  const now = new Date()
+  const nextEvent = events.find(ev => new Date(ev.event_date) > now)
+  const unlockedLibrary = library.filter(item => item.is_unlocked)
+  const hour = new Date().getHours()
+  const greeting = hour < 12
+    ? (lang === 'hy' ? 'Բարի առավոտ' : 'Good morning')
+    : hour < 18
+      ? (lang === 'hy' ? 'Բարի կեսօր' : 'Good afternoon')
+      : (lang === 'hy' ? 'Բարի երեկո' : 'Good evening')
 
   return (
     <div className="dash-page">
@@ -224,6 +303,162 @@ export default function DashboardPage({ lang }) {
         </aside>
 
         <main className="dash-main">
+          <div key={tab} className="dash-tab-content">
+
+          {/* ── HOME ── */}
+          {tab === 'home' && (
+            <div className="dash-section">
+              <h2 className="dash-section-title">
+                {greeting}, {user.full_name.split(' ')[0]}! 🌸
+              </h2>
+
+              {/* Referral link — prominent, first card */}
+              {user.referral_code && (
+                <div style={{ background: '#fff', border: '1px solid #f0dde0', borderRadius: 14, padding: '20px 24px', marginBottom: 28 }}>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--deep)', marginBottom: 8 }}>
+                    {lang === 'hy' ? '👯 Հրավիրե՛ք ընկերուհի' : '👯 Invite a friend'}
+                  </p>
+                  <p style={{ fontSize: 13, color: '#888', marginBottom: 12 }}>
+                    {lang === 'hy' ? 'Կիսե՛ք հղումը՝ ընկերուհուն հրավիրելու համար:' : "Share your link and your friend's application will be linked to you."}
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <code style={{ background: '#f5ece8', borderRadius: 8, padding: '6px 12px', fontSize: 13, color: 'var(--deep)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {window.location.origin}/register?ref={user.referral_code}
+                    </code>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/register?ref=${user.referral_code}`); setMsg(lang === 'hy' ? 'Պատճենված է!' : 'Copied!'); setTimeout(() => setMsg(''), 2000) }}
+                      style={{ background: 'var(--rose)', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600, flexShrink: 0 }}
+                    >
+                      {lang === 'hy' ? 'Պատճենել' : 'Copy'}
+                    </button>
+                  </div>
+                  {msg && <p className="auth-success" style={{ marginTop: 10, marginBottom: 0 }}>{msg}</p>}
+                </div>
+              )}
+
+              {/* Next event card */}
+              <div style={{ marginBottom: 32 }}>
+                <h3 style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: 20, fontWeight: 700, color: '#2c1a1a', marginBottom: 14 }}>
+                  {lang === 'hy' ? 'Հաջորդ հանդիպումը' : 'Next Event'}
+                </h3>
+                {nextEvent ? (
+                  <div className={`event-card${nextEvent.user_has_rsvp ? ' rsvpd' : ''}`}>
+                    <div className="event-card-top">
+                      <div>
+                        <div className="event-title">{lang === 'hy' && nextEvent.title_hy ? nextEvent.title_hy : nextEvent.title}</div>
+                        <div className="event-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                          📍 {nextEvent.location} &nbsp;·&nbsp;
+                          🗓 {new Date(nextEvent.event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          {getCountdown(nextEvent.event_date, lang) && (
+                            <span style={{ background: '#fff0f2', color: '#c0394b', borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 600, marginLeft: 4 }}>
+                              {getCountdown(nextEvent.event_date, lang)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="event-seats">
+                        {nextEvent.seats_available > 0
+                          ? <><strong>{nextEvent.seats_available}</strong> {t.seats}</>
+                          : <span className="fully-booked">{t.booked}</span>}
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      {rsvpDone[nextEvent.id] ? (
+                        <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14 }}>You're going! 🎉</span>
+                      ) : nextEvent.user_has_rsvp ? (
+                        <button className="plan-btn plan-btn-outline" onClick={() => handleRsvp(nextEvent)}>{t.cancelRsvp}</button>
+                      ) : nextEvent.seats_available > 0 ? (
+                        <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(nextEvent)}>{t.rsvpBtn}</button>
+                      ) : null}
+                    </div>
+                  </div>
+                ) : (
+                  <p style={{ color: '#9b6e6e', fontSize: 14, fontStyle: 'italic' }}>
+                    {lang === 'hy' ? 'Առայժմ հանդիպումներ չկան — շուտով կլինեն' : 'No upcoming events — check back soon'}
+                  </p>
+                )}
+              </div>
+
+              {/* Library preview */}
+              <div style={{ marginBottom: 32 }}>
+                <h3 style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: 20, fontWeight: 700, color: '#2c1a1a', marginBottom: 14 }}>
+                  {lang === 'hy' ? 'Գրադարանից' : 'From the Library'}
+                </h3>
+                {unlockedLibrary.length === 0 ? (
+                  <div style={{ background: '#fff', border: '1px solid #f0dde0', borderRadius: 14, padding: '20px 24px' }}>
+                    <p style={{ fontSize: 14, color: '#9b6e6e', fontStyle: 'italic', margin: 0 }}>
+                      {lang === 'hy' ? 'Ձեր գրադարանը կհայտնվի, երբ անդամությունը ակտիվ լինի' : 'Your library will appear here once your membership is activated'}
+                    </p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {unlockedLibrary.slice(0, 2).map(item => (
+                      <div key={item.id}
+                        style={{ background: '#fff', border: '1px solid #f0dde0', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}
+                        onClick={() => setSelectedContent(item)}>
+                        {item.cover_url && (
+                          <img src={item.cover_url} alt={item.title} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                        )}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 3 }}>
+                            {item.type === 'recipe' ? t.recipe : t.ebook}
+                          </div>
+                          <div style={{ fontWeight: 600, color: '#2c1a1a', fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {lang === 'hy' && item.title_hy ? item.title_hy : item.title}
+                          </div>
+                        </div>
+                        {item.file_url && (
+                          <a href={item.file_url} target="_blank" rel="noreferrer"
+                            onClick={e => e.stopPropagation()}
+                            style={{ background: 'var(--rose)', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>
+                            {t.download}
+                          </a>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Gallery preview */}
+              {albums.length > 0 && albums[0].cover_url && (
+                <div style={{ marginBottom: 32 }}>
+                  <h3 style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: 20, fontWeight: 700, color: '#2c1a1a', marginBottom: 14 }}>
+                    {lang === 'hy' ? 'Ֆոտոսրահ' : 'Gallery'}
+                  </h3>
+                  <div
+                    style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', cursor: 'pointer' }}
+                    onClick={() => setTab('gallery')}
+                  >
+                    <img src={albums[0].cover_url} alt={albums[0].title} style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }} />
+                    <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(44,26,26,.6) 0%, transparent 50%)', display: 'flex', alignItems: 'flex-end', padding: '16px 20px' }}>
+                      <span style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: 20, fontWeight: 700, color: '#fff' }}>{albums[0].title}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Community count */}
+              {directory.length > 0 && (
+                <div style={{ background: '#fff', border: '1px solid #f0dde0', borderRadius: 14, padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                  <div>
+                    <div style={{ fontFamily: '"Cormorant Garamond", serif', fontSize: 22, fontWeight: 700, color: '#2c1a1a' }}>
+                      {directory.length} {lang === 'hy' ? 'անդամ համայնքում' : 'members in the community'}
+                    </div>
+                    <div style={{ fontSize: 13, color: '#9b6e6e', marginTop: 4 }}>
+                      {lang === 'hy' ? 'Ծանոթացե՛ք Hasmik\'s Club-ի անդամների հետ' : "Connect with fellow Hasmik's Club members"}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setTab('community')}
+                    style={{ background: 'none', border: '1px solid #c0394b', color: '#c0394b', borderRadius: 8, padding: '8px 18px', cursor: 'pointer', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
+                    {lang === 'hy' ? 'Ծանոթանալ →' : 'Meet them →'}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── PROFILE ── */}
           {tab === 'profile' && (
             <div className="dash-section">
@@ -334,14 +569,20 @@ export default function DashboardPage({ lang }) {
                 ? <p className="dash-empty">{t.noEvents}</p>
                 : events.map(ev => {
                   const wl = waitlistPositions[ev.id]
+                  const countdown = getCountdown(ev.event_date, lang)
                   return (
                     <div key={ev.id} className={`event-card${ev.user_has_rsvp ? ' rsvpd' : ''}`}>
                       <div className="event-card-top">
                         <div>
                           <div className="event-title">{lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title}</div>
-                          <div className="event-meta">
+                          <div className="event-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                             📍 {ev.location} &nbsp;·&nbsp;
                             🗓 {new Date(ev.event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            {countdown && (
+                              <span style={{ background: '#fff0f2', color: '#c0394b', borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 600, marginLeft: 4 }}>
+                                {countdown}
+                              </span>
+                            )}
                           </div>
                           {lang === 'hy' && ev.description_hy
                             ? <p className="event-desc">{ev.description_hy}</p>
@@ -355,7 +596,9 @@ export default function DashboardPage({ lang }) {
                       </div>
 
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                        {ev.user_has_rsvp ? (
+                        {rsvpDone[ev.id] ? (
+                          <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14 }}>You're going! 🎉</span>
+                        ) : ev.user_has_rsvp ? (
                           <button className="plan-btn plan-btn-outline" onClick={() => handleRsvp(ev)}>{t.cancelRsvp}</button>
                         ) : ev.seats_available > 0 ? (
                           <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(ev)}>{t.rsvpBtn}</button>
@@ -390,18 +633,36 @@ export default function DashboardPage({ lang }) {
                 : (
                   <div className="library-grid">
                     {library.map(item => (
-                      <div key={item.id} className="library-card" style={{ opacity: item.is_unlocked ? 1 : 0.6, cursor: 'pointer' }}
+                      <div key={item.id} className="library-card" style={{ cursor: 'pointer' }}
                         onClick={() => setSelectedContent(item)}>
-                        {item.cover_url && <img src={item.cover_url} alt={item.title} className="library-cover" />}
-                        <div className="library-type">{item.type === 'recipe' ? t.recipe : t.ebook}</div>
-                        <div className="library-title">{lang === 'hy' && item.title_hy ? item.title_hy : item.title}</div>
-                        {(lang === 'hy' && item.description_hy ? item.description_hy : item.description) && (
-                          <p className="library-desc">{lang === 'hy' && item.description_hy ? item.description_hy : item.description}</p>
+                        {item.is_unlocked ? (
+                          <>
+                            {item.cover_url && <img src={item.cover_url} alt={item.title} className="library-cover" />}
+                            <div className="library-type">{item.type === 'recipe' ? t.recipe : t.ebook}</div>
+                            <div className="library-title">{lang === 'hy' && item.title_hy ? item.title_hy : item.title}</div>
+                            {(lang === 'hy' && item.description_hy ? item.description_hy : item.description) && (
+                              <p className="library-desc">{lang === 'hy' && item.description_hy ? item.description_hy : item.description}</p>
+                            )}
+                            {item.file_url
+                              ? <span className="plan-btn plan-btn-fill library-dl">{t.download}</span>
+                              : null
+                            }
+                          </>
+                        ) : (
+                          <>
+                            <div style={{ position: 'relative' }}>
+                              {item.cover_url && <img src={item.cover_url} alt={item.title} className="library-cover" style={{ filter: 'blur(2px)', opacity: 0.5 }} />}
+                              <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,248,245,.8)' }}>
+                                <span style={{ fontSize: 28 }}>🔒</span>
+                                <p style={{ fontSize: 12, color: '#c0394b', fontWeight: 600, marginTop: 6, textAlign: 'center', padding: '0 8px' }}>
+                                  {lang === 'hy' ? 'Ակտիվ անդամության համար' : 'Available with active membership'}
+                                </p>
+                              </div>
+                            </div>
+                            <div className="library-type">{item.type === 'recipe' ? t.recipe : t.ebook}</div>
+                            <div className="library-title">{lang === 'hy' && item.title_hy ? item.title_hy : item.title}</div>
+                          </>
                         )}
-                        {item.is_unlocked && item.file_url
-                          ? <span className="plan-btn plan-btn-fill library-dl">{t.download}</span>
-                          : <span style={{ fontSize: 13, color: '#aaa', marginTop: 'auto' }}>🔒 {t.lockedLib}</span>
-                        }
                       </div>
                     ))}
                   </div>
@@ -477,8 +738,23 @@ export default function DashboardPage({ lang }) {
               }
             </div>
           )}
+
+          </div>
         </main>
       </div>
+
+      {/* ── Mobile bottom navigation ── */}
+      <nav className="dash-bottom-nav">
+        {TABS.map(k => {
+          const icons = { home: '🏠', profile: '👤', events: '📅', library: '📚', gallery: '🖼', community: '👯' }
+          return (
+            <button key={k} className={`dash-bottom-nav-item${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>
+              <span className="nav-icon">{icons[k]}</span>
+              {t[k]}
+            </button>
+          )
+        })}
+      </nav>
 
       {/* ── Member profile modal ── */}
       {selectedMember && (

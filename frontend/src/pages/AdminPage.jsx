@@ -8,6 +8,7 @@ import {
   TrendingUp, CheckCircle2, XCircle, Percent, Search, ImageUp,
   SendHorizonal, StickyNote, Filter, UserCheck,
   Inbox, GalleryHorizontal, Settings2, Trophy, Link2, Plus, Trash2, ExternalLink,
+  Shield,
 } from 'lucide-react'
 
 import { Button }       from '../components/ui/button'
@@ -38,12 +39,52 @@ import {
   adminAddPhoto, adminDeletePhoto, adminUploadGalleryPhoto,
   adminBroadcast, adminExportCsv, adminGetAuditLog,
   adminGetSettings, adminSaveSettings,
+  adminGetRoles, adminUpdateRole,
 } from '../api/admin'
+
+// ── permissions ───────────────────────────────────────────────────────────────
+const ALL_PERMISSIONS = [
+  'manage_members', 'manage_events', 'manage_content', 'manage_gallery',
+  'manage_applications', 'manage_settings', 'broadcast', 'view_analytics',
+  'view_audit', 'manage_roles',
+]
+
+const ROLE_PERMISSIONS = {
+  admin:     ALL_PERMISSIONS,
+  moderator: ['manage_events', 'manage_content', 'manage_gallery', 'manage_applications', 'view_analytics'],
+  member:    [],
+}
+
+const PERMISSION_LABELS = {
+  manage_members:      'Manage Members',
+  manage_events:       'Manage Events',
+  manage_content:      'Manage Content',
+  manage_gallery:      'Manage Gallery',
+  manage_applications: 'Manage Applications',
+  manage_settings:     'Manage Settings',
+  broadcast:           'Broadcast Emails',
+  view_analytics:      'View Analytics',
+  view_audit:          'View Audit Log',
+  manage_roles:        'Manage Roles & Permissions',
+}
+
+function getUserPermissions(user) {
+  if (user?.permissions) {
+    try { return JSON.parse(user.permissions) } catch { /* ignore */ }
+  }
+  return ROLE_PERMISSIONS[user?.role] || []
+}
+
+function canDo(user, perm) {
+  return getUserPermissions(user).includes(perm)
+}
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 const TABS = [
+  { key: 'today',        icon: LayoutDashboard,   label: 'Today'        },
   { key: 'members',      icon: Users,             label: 'Members'      },
   { key: 'applications', icon: Inbox,             label: 'Applications' },
+  { key: 'roles',        icon: Shield,            label: 'Roles'        },
   { key: 'events',       icon: CalendarDays,      label: 'Events'       },
   { key: 'content',      icon: BookOpen,          label: 'Content'      },
   { key: 'gallery',      icon: GalleryHorizontal, label: 'Gallery'      },
@@ -52,6 +93,29 @@ const TABS = [
   { key: 'audit',        icon: ClipboardList,     label: 'Audit Log'    },
   { key: 'settings',     icon: Settings2,         label: 'Settings'     },
 ]
+
+const TAB_GROUPS = [
+  { label: 'OVERVIEW', keys: ['today'] },
+  { label: 'PEOPLE',   keys: ['members', 'applications', 'roles'] },
+  { label: 'CONTENT',  keys: ['events', 'content', 'gallery'] },
+  { label: 'INSIGHTS', keys: ['analytics'] },
+  { label: 'OUTREACH', keys: ['broadcast'] },
+  { label: 'CONFIG',   keys: ['audit', 'settings'] },
+]
+
+const TAB_PERMISSION_MAP = {
+  today:        null,
+  members:      'manage_members',
+  applications: 'manage_applications',
+  events:       'manage_events',
+  content:      'manage_content',
+  gallery:      'manage_gallery',
+  analytics:    'view_analytics',
+  broadcast:    'broadcast',
+  audit:        'view_audit',
+  settings:     'manage_settings',
+  roles:        'manage_roles',
+}
 
 const EMPTY_ALBUM = { title: '', description: '', event_id: '', cover_url: '' }
 
@@ -144,7 +208,8 @@ function ImageUploadField({ label, value, onChange, onUpload }) {
 export default function AdminPage() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
-  const [tab, setTab] = useState('members')
+  const [tab, setTab] = useState('today')
+  const [deleteTarget, setDeleteTarget] = useState(null)   // { label, onConfirm, confirmLabel? }
 
   const [members,   setMembers]   = useState([])
   const [events,    setEvents]    = useState([])
@@ -185,6 +250,11 @@ export default function AdminPage() {
   const [broadcasting,   setBroadcasting]  = useState(false)
   const [toast, setToast] = useState(null)
 
+  const [roles,       setRoles]       = useState([])
+  const [editingRole, setEditingRole] = useState(null)
+  const [roleForm,    setRoleForm]    = useState({ role: 'member', permissions: null })
+  const [savingRole,  setSavingRole]  = useState(false)
+
   const flash = (msg, isErr = false) => {
     setToast({ msg, type: isErr ? 'error' : 'success' })
     setTimeout(() => setToast(null), 3200)
@@ -192,6 +262,13 @@ export default function AdminPage() {
 
   const setLoad = (key, val) => setLoading(l => ({ ...l, [key]: val }))
 
+  useEffect(() => {
+    if (tab === 'today') {
+      load('members')
+      load('applications')
+      load('events')
+    }
+  }, [tab])
   useEffect(() => { if (tab === 'members')      load('members')      }, [tab])
   useEffect(() => { if (tab === 'applications') load('applications') }, [tab])
   useEffect(() => { if (tab === 'events')       load('events')       }, [tab])
@@ -200,6 +277,7 @@ export default function AdminPage() {
   useEffect(() => { if (tab === 'audit')        load('audit')        }, [tab])
   useEffect(() => { if (tab === 'settings')     load('settings')     }, [tab])
   useEffect(() => { if (tab === 'analytics')    load('referrals')    }, [tab])
+  useEffect(() => { if (tab === 'roles')        load('roles')        }, [tab])
 
   const load = async (t) => {
     setLoad(t, true)
@@ -211,6 +289,7 @@ export default function AdminPage() {
       if (t === 'gallery')      setAlbums(await adminGetAlbums())
       if (t === 'audit')        setAuditLog(await adminGetAuditLog())
       if (t === 'referrals')    setReferrals(await adminGetReferrals())
+      if (t === 'roles')        setRoles(await adminGetRoles())
       if (t === 'settings') {
         const s = await adminGetSettings()
         setAdminSettings(s)
@@ -231,11 +310,15 @@ export default function AdminPage() {
     await adminUpdateMember(m.id, { is_admin: !m.is_admin })
     setMembers(ms => ms.map(x => x.id === m.id ? { ...x, is_admin: !m.is_admin } : x))
   }
-  const deleteMember = async (m) => {
-    if (!confirm(`Delete ${m.full_name}? This cannot be undone.`)) return
-    await adminDeleteMember(m.id)
-    setMembers(ms => ms.filter(x => x.id !== m.id))
-    flash('Member deleted')
+  const deleteMember = (m) => {
+    setDeleteTarget({
+      label: `Delete ${m.full_name}? This cannot be undone.`,
+      onConfirm: async () => {
+        await adminDeleteMember(m.id)
+        setMembers(ms => ms.filter(x => x.id !== m.id))
+        flash('Member deleted')
+      },
+    })
   }
   const handleExportCsv = async () => {
     try {
@@ -291,9 +374,15 @@ export default function AdminPage() {
     setEventForm({ title: ev.title || '', title_hy: ev.title_hy || '', description: ev.description || '', description_hy: ev.description_hy || '', location: ev.location || '', event_date: ev.event_date ? ev.event_date.slice(0, 16) : '', max_seats: ev.max_seats })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-  const deleteEvent = async (ev) => {
-    if (!confirm(`Delete "${ev.title}"?`)) return
-    await adminDeleteEvent(ev.id); setEvents(es => es.filter(x => x.id !== ev.id)); flash('Event deleted')
+  const deleteEvent = (ev) => {
+    setDeleteTarget({
+      label: `Delete "${ev.title}"?`,
+      onConfirm: async () => {
+        await adminDeleteEvent(ev.id)
+        setEvents(es => es.filter(x => x.id !== ev.id))
+        flash('Event deleted')
+      },
+    })
   }
   const toggleAttendees = async (evId) => {
     if (attendees[evId]) { setAttendees(a => { const n = { ...a }; delete n[evId]; return n }); return }
@@ -327,9 +416,15 @@ export default function AdminPage() {
     setContentForm({ type: item.type, title: item.title || '', title_hy: item.title_hy || '', description: item.description || '', description_hy: item.description_hy || '', file_url: item.file_url || '', cover_url: item.cover_url || '' })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-  const deleteContent = async (item) => {
-    if (!confirm(`Delete "${item.title}"?`)) return
-    await adminDeleteContent(item.id); setContent(cs => cs.filter(x => x.id !== item.id)); flash('Content deleted')
+  const deleteContent = (item) => {
+    setDeleteTarget({
+      label: `Delete "${item.title}"?`,
+      onConfirm: async () => {
+        await adminDeleteContent(item.id)
+        setContent(cs => cs.filter(x => x.id !== item.id))
+        flash('Content deleted')
+      },
+    })
   }
   const handleUnlock = async (e) => {
     e.preventDefault()
@@ -339,10 +434,15 @@ export default function AdminPage() {
       setUnlockTarget({ contentId: '', userId: '' })
     } catch { flash('Failed to unlock', true) }
   }
-  const handleUnlockAll = async (item) => {
-    if (!confirm(`Unlock "${item.title}" for ALL active members?`)) return
-    try { await adminUnlockContentForAll(item.id); flash(`"${item.title}" unlocked for all active members`) }
-    catch { flash('Failed to unlock', true) }
+  const handleUnlockAll = (item) => {
+    setDeleteTarget({
+      label: `Unlock "${item.title}" for ALL active members?`,
+      confirmLabel: 'Unlock All',
+      onConfirm: async () => {
+        try { await adminUnlockContentForAll(item.id); flash(`"${item.title}" unlocked for all active members`) }
+        catch { flash('Failed to unlock', true) }
+      },
+    })
   }
 
   // ── applications ──
@@ -353,13 +453,18 @@ export default function AdminPage() {
       flash(`${app.full_name} approved`)
     } catch { flash('Failed to approve', true) }
   }
-  const handleDecline = async (app) => {
-    if (!confirm(`Decline ${app.full_name}'s application?`)) return
-    try {
-      await adminDeclineApplication(app.id)
-      setApplications(a => a.filter(x => x.id !== app.id))
-      flash(`${app.full_name} declined`)
-    } catch { flash('Failed to decline', true) }
+  const handleDecline = (app) => {
+    setDeleteTarget({
+      label: `Decline ${app.full_name}'s application?`,
+      confirmLabel: 'Decline',
+      onConfirm: async () => {
+        try {
+          await adminDeclineApplication(app.id)
+          setApplications(a => a.filter(x => x.id !== app.id))
+          flash(`${app.full_name} declined`)
+        } catch { flash('Failed to decline', true) }
+      },
+    })
   }
 
   // ── gallery ──
@@ -373,12 +478,16 @@ export default function AdminPage() {
       flash('Album created')
     } catch { flash('Failed to create album', true) }
   }
-  const deleteAlbum = async (album) => {
-    if (!confirm(`Delete album "${album.title}" and all its photos?`)) return
-    await adminDeleteAlbum(album.id)
-    setAlbums(a => a.filter(x => x.id !== album.id))
-    if (openAlbum?.id === album.id) setOpenAlbum(null)
-    flash('Album deleted')
+  const deleteAlbum = (album) => {
+    setDeleteTarget({
+      label: `Delete album "${album.title}" and all its photos?`,
+      onConfirm: async () => {
+        await adminDeleteAlbum(album.id)
+        setAlbums(a => a.filter(x => x.id !== album.id))
+        if (openAlbum?.id === album.id) setOpenAlbum(null)
+        flash('Album deleted')
+      },
+    })
   }
   const openAlbumDetail = async (album) => {
     if (openAlbum?.id === album.id) { setOpenAlbum(null); return }
@@ -422,16 +531,61 @@ export default function AdminPage() {
   }
 
   // ── broadcast ──
-  const handleBroadcast = async (e) => {
+  const handleBroadcast = (e) => {
     e.preventDefault()
-    if (!confirm(`Send email to "${broadcastForm.segment}" segment?`)) return
-    setBroadcasting(true)
+    setDeleteTarget({
+      label: `Send email to "${broadcastForm.segment}" segment (${segmentCount} recipient${segmentCount !== 1 ? 's' : ''})?`,
+      confirmLabel: 'Send',
+      onConfirm: async () => {
+        setBroadcasting(true)
+        try {
+          const res = await adminBroadcast(broadcastForm)
+          flash(`Sent to ${res.sent_to} recipient${res.sent_to !== 1 ? 's' : ''}`)
+          setBroadcastForm({ subject: '', body: '', segment: 'all' })
+        } catch { flash('Broadcast failed', true) }
+        finally { setBroadcasting(false) }
+      },
+    })
+  }
+
+  // ── roles ──
+  const openRoleEdit = (u) => {
+    setEditingRole(u)
+    setRoleForm({
+      role: u.role,
+      permissions: u.permissions ? JSON.parse(u.permissions) : null,
+    })
+  }
+
+  const handleSaveRole = async () => {
+    if (!editingRole) return
+    setSavingRole(true)
     try {
-      const res = await adminBroadcast(broadcastForm)
-      flash(`Sent to ${res.sent_to} recipient${res.sent_to !== 1 ? 's' : ''}`)
-      setBroadcastForm({ subject: '', body: '', segment: 'all' })
-    } catch { flash('Broadcast failed', true) }
-    finally { setBroadcasting(false) }
+      const payload = {
+        role: roleForm.role,
+        permissions: roleForm.permissions,
+      }
+      const updated = await adminUpdateRole(editingRole.id, payload)
+      setRoles(rs => rs.map(r => r.id === updated.id ? { ...r, ...updated } : r))
+      setEditingRole(null)
+      flash(`${editingRole.full_name}'s role updated`)
+    } catch { flash('Failed to update role', true) }
+    finally { setSavingRole(false) }
+  }
+
+  const togglePermission = (perm) => {
+    setRoleForm(f => {
+      const current = f.permissions ?? ROLE_PERMISSIONS[f.role] ?? []
+      const has = current.includes(perm)
+      const next = has ? current.filter(p => p !== perm) : [...current, perm]
+      const defaults = ROLE_PERMISSIONS[f.role] || []
+      const isDefault = next.length === defaults.length && next.every(p => defaults.includes(p))
+      return { ...f, permissions: isDefault ? null : next }
+    })
+  }
+
+  const resetToRoleDefaults = () => {
+    setRoleForm(f => ({ ...f, permissions: null }))
   }
 
   // derived stats
@@ -484,16 +638,30 @@ export default function AdminPage() {
           <span className="badge-label">Admin Panel</span>
         </div>
         <div className="admin-sidebar-nav">
-          {TABS.map(({ key, icon: Icon, label }) => (
-            <button key={key} className={`admin-sidebar-item${tab === key ? ' active' : ''}`} onClick={() => setTab(key)}>
-              <span className="si-icon"><Icon size={15} /></span>
-              {label}
-              {key === 'applications' && applications.length > 0 && (
-                <span style={{ marginLeft: 'auto', background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))', borderRadius: '9999px', fontSize: 10, fontWeight: 700, padding: '1px 6px', lineHeight: '16px' }}>
-                  {applications.length}
-                </span>
-              )}
-            </button>
+          {TAB_GROUPS.map(group => (
+            <Fragment key={group.label}>
+              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: 'hsl(var(--muted-foreground))', padding: '14px 16px 4px', opacity: 0.6 }}>
+                {group.label}
+              </div>
+              {group.keys.map(key => {
+                const t = TABS.find(x => x.key === key)
+                if (!t) return null
+                const reqPerm = TAB_PERMISSION_MAP[key]
+                if (reqPerm && !canDo(user, reqPerm)) return null
+                const { icon: Icon, label } = t
+                return (
+                  <button key={key} className={`admin-sidebar-item${tab === key ? ' active' : ''}`} onClick={() => setTab(key)}>
+                    <span className="si-icon"><Icon size={15} /></span>
+                    {label}
+                    {key === 'applications' && applications.length > 0 && (
+                      <span style={{ marginLeft: 'auto', background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))', borderRadius: '9999px', fontSize: 10, fontWeight: 700, padding: '1px 6px', lineHeight: '16px' }}>
+                        {applications.length}
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </Fragment>
           ))}
         </div>
         <div className="admin-sidebar-footer">
@@ -525,6 +693,120 @@ export default function AdminPage() {
               {toast.msg}
             </div>
           )}
+
+          {/* ══ TODAY ══ */}
+          {tab === 'today' && (() => {
+            const hour = new Date().getHours()
+            const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+            const now = new Date()
+            const weekLater = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+            const weekEvents = events.filter(ev => {
+              const d = new Date(ev.event_date)
+              return d >= now && d <= weekLater
+            })
+            const pendingApps = applications.slice(0, 3)
+            const todayLoading = isLoading('members') || isLoading('events') || isLoading('applications')
+            return (
+              <div className="space-y-8">
+                <div>
+                  <h1 className="font-serif text-3xl font-light text-foreground leading-tight">
+                    {greeting}, {user?.full_name?.split(' ')[0] || user?.full_name || 'Admin'}
+                  </h1>
+                  <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">Here's what's happening today</p>
+                </div>
+
+                {/* KPI row */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <KpiCard icon={Users}        label="Total Members"        value={members.length}                  loading={todayLoading} />
+                  <KpiCard icon={CheckCircle2} label="Active Members"       value={activeCount}                     loading={todayLoading} valueClass="text-emerald-600" />
+                  <KpiCard icon={Inbox}        label="Pending Applications" value={applications.length}             loading={todayLoading} valueClass={applications.length > 0 ? 'text-amber-600' : ''} />
+                  <KpiCard icon={CalendarDays} label="Upcoming Events"      value={upcomingCount}                   loading={todayLoading} valueClass="text-primary" />
+                </div>
+
+                {/* Pending applications quick section */}
+                <div>
+                  <h2 className="font-serif text-xl font-semibold mb-4 text-foreground">Pending Applications</h2>
+                  {todayLoading
+                    ? <Card><CardContent className="py-8 text-center"><Skeleton className="h-4 w-32 mx-auto" /></CardContent></Card>
+                    : applications.length === 0
+                      ? (
+                        <Card>
+                          <CardContent className="py-8 flex items-center justify-center gap-2 text-emerald-600 font-medium text-sm">
+                            <CheckCircle2 className="h-4 w-4" /> All clear — no pending applications
+                          </CardContent>
+                        </Card>
+                      )
+                      : (
+                        <div className="space-y-3">
+                          {pendingApps.map(app => (
+                            <Card key={app.id}>
+                              <CardContent className="p-4 flex items-center gap-4 flex-wrap">
+                                <MemberAvatar name={app.full_name} />
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-sm">{app.full_name}</p>
+                                  <p className="text-xs text-muted-foreground">{app.email} · Applied {fmtDate(app.joined_at)}</p>
+                                </div>
+                                <div className="flex gap-2 flex-shrink-0">
+                                  <Button size="sm" variant="success" onClick={() => handleApprove(app)}>
+                                    <CheckCircle2 className="h-3.5 w-3.5" /> Approve
+                                  </Button>
+                                  <Button size="sm" variant="destructive" onClick={() => handleDecline(app)}>
+                                    <XCircle className="h-3.5 w-3.5" /> Decline
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                          {applications.length > 3 && (
+                            <p className="text-xs text-muted-foreground text-center pt-1">
+                              +{applications.length - 3} more — <button className="underline cursor-pointer" onClick={() => setTab('applications')}>view all</button>
+                            </p>
+                          )}
+                        </div>
+                      )
+                  }
+                </div>
+
+                {/* This week's events */}
+                <div>
+                  <h2 className="font-serif text-xl font-semibold mb-4 text-foreground">This Week's Events</h2>
+                  {todayLoading
+                    ? <div className="space-y-3">{[1,2].map(i => <Card key={i}><CardContent className="p-5"><Skeleton className="h-4 w-48 mb-2" /><Skeleton className="h-2 w-full" /></CardContent></Card>)}</div>
+                    : weekEvents.length === 0
+                      ? <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">No events in the next 7 days</CardContent></Card>
+                      : (
+                        <div className="space-y-3">
+                          {weekEvents.map(ev => {
+                            const taken = ev.seats_taken ?? 0
+                            const max = ev.max_seats ?? 1
+                            const pct = Math.min(100, Math.round(taken / max * 100))
+                            return (
+                              <Card key={ev.id}>
+                                <CardContent className="p-5">
+                                  <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
+                                    <div>
+                                      <p className="font-serif font-semibold text-base leading-tight">{ev.title}</p>
+                                      <p className="text-xs text-muted-foreground mt-0.5">📍 {ev.location} · 🗓 {fmtDateTime(ev.event_date)}</p>
+                                    </div>
+                                    <Badge variant={pct >= 100 ? 'destructive' : pct >= 75 ? 'secondary' : 'success'}>
+                                      {taken}/{max} seats
+                                    </Badge>
+                                  </div>
+                                  <div style={{ height: 6, background: 'hsl(var(--muted))', borderRadius: 9999, overflow: 'hidden' }}>
+                                    <div style={{ width: `${pct}%`, height: '100%', background: pct >= 100 ? 'hsl(var(--destructive))' : pct >= 75 ? 'hsl(var(--primary) / 0.7)' : 'hsl(142 70% 45%)', borderRadius: 9999, transition: 'width 0.4s ease' }} />
+                                  </div>
+                                  <p className="text-xs text-muted-foreground mt-1.5">{pct}% full</p>
+                                </CardContent>
+                              </Card>
+                            )
+                          })}
+                        </div>
+                      )
+                  }
+                </div>
+              </div>
+            )
+          })()}
 
           {/* ══ MEMBERS ══ */}
           {tab === 'members' && (
@@ -1205,6 +1487,134 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* ══ ROLES & PERMISSIONS ══ */}
+          {tab === 'roles' && (
+            <div>
+              <SectionHeader title="Roles & Permissions" sub="Assign roles and fine-tune permissions per member" />
+
+              {/* Role edit modal */}
+              {editingRole && (
+                <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,.45)', display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+                  onClick={() => setEditingRole(null)}>
+                  <div style={{ background:'#fff', borderRadius:20, padding:'28px 28px', maxWidth:480, width:'100%', boxShadow:'0 20px 60px rgba(0,0,0,.2)', maxHeight:'90vh', overflowY:'auto' }}
+                    onClick={e => e.stopPropagation()}>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+                      <div>
+                        <p style={{ fontWeight:700, fontSize:16, color:'#2c1a1a', marginBottom:2 }}>{editingRole.full_name}</p>
+                        <p style={{ fontSize:12, color:'#888' }}>{editingRole.email}</p>
+                      </div>
+                      <button onClick={() => setEditingRole(null)} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:'#bbb' }}>×</button>
+                    </div>
+
+                    {/* Role selector */}
+                    <div style={{ marginBottom:20 }}>
+                      <p style={{ fontSize:12, fontWeight:600, color:'#888', marginBottom:8, textTransform:'uppercase', letterSpacing:'0.06em' }}>Role</p>
+                      <div style={{ display:'flex', gap:8 }}>
+                        {['member','moderator','admin'].map(r => (
+                          <button key={r} onClick={() => setRoleForm(f => ({ role: r, permissions: null }))}
+                            style={{ flex:1, padding:'8px 0', borderRadius:10, border:`2px solid ${roleForm.role===r ? 'hsl(var(--primary))' : '#e5e7eb'}`, background: roleForm.role===r ? 'hsl(var(--primary)/0.08)' : '#fafafa', fontWeight:600, fontSize:13, cursor:'pointer', color: roleForm.role===r ? 'hsl(var(--primary))' : '#555', textTransform:'capitalize', transition:'all 0.15s' }}>
+                            {r}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Permissions */}
+                    <div style={{ marginBottom:24 }}>
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:8 }}>
+                        <p style={{ fontSize:12, fontWeight:600, color:'#888', textTransform:'uppercase', letterSpacing:'0.06em' }}>Permissions</p>
+                        {roleForm.permissions !== null && (
+                          <button onClick={resetToRoleDefaults} style={{ fontSize:11, color:'hsl(var(--primary))', background:'none', border:'none', cursor:'pointer', fontWeight:600 }}>
+                            Reset to {roleForm.role} defaults
+                          </button>
+                        )}
+                      </div>
+                      {roleForm.permissions === null && (
+                        <p style={{ fontSize:12, color:'#aaa', marginBottom:10, fontStyle:'italic' }}>Using {roleForm.role} role defaults</p>
+                      )}
+                      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:6 }}>
+                        {ALL_PERMISSIONS.map(perm => {
+                          const effectivePerms = roleForm.permissions ?? ROLE_PERMISSIONS[roleForm.role] ?? []
+                          const checked = effectivePerms.includes(perm)
+                          const isDefault = (ROLE_PERMISSIONS[roleForm.role] || []).includes(perm)
+                          return (
+                            <label key={perm} style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 10px', borderRadius:8, cursor:'pointer', background: checked ? 'hsl(var(--primary)/0.06)' : '#f9f9f9', border:`1px solid ${checked ? 'hsl(var(--primary)/0.25)' : '#eee'}`, transition:'all 0.12s' }}>
+                              <input type="checkbox" checked={checked} onChange={() => togglePermission(perm)} style={{ accentColor:'hsl(var(--primary))', width:14, height:14 }} />
+                              <span style={{ fontSize:12, fontWeight:500, color: checked ? 'hsl(var(--primary))' : '#666' }}>
+                                {PERMISSION_LABELS[perm]}
+                              </span>
+                              {isDefault && roleForm.permissions !== null && (
+                                <span style={{ fontSize:9, color:'#bbb', marginLeft:'auto' }}>default</span>
+                              )}
+                            </label>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div style={{ display:'flex', gap:10 }}>
+                      <Button variant="outline" onClick={() => setEditingRole(null)} style={{ flex:1 }}>Cancel</Button>
+                      <Button onClick={handleSaveRole} disabled={savingRole} style={{ flex:2 }}>
+                        {savingRole ? 'Saving…' : 'Save Role & Permissions'}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Users table */}
+              <Card>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Member</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Permissions</TableHead>
+                      <TableHead></TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoading('roles') ? <TableSkeleton cols={4} /> : roles.map(u => {
+                      const roleBadgeColor = u.role === 'admin' ? '#dc2626' : u.role === 'moderator' ? '#2563eb' : '#888'
+                      const hasCustomPerms = u.permissions !== null
+                      return (
+                        <TableRow key={u.id}>
+                          <TableCell>
+                            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+                              <MemberAvatar name={u.full_name} />
+                              <div>
+                                <div style={{ fontWeight:600, fontSize:13 }}>{u.full_name}</div>
+                                <div style={{ fontSize:11, color:'#999' }}>{u.email}</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span style={{ display:'inline-block', padding:'2px 10px', borderRadius:9999, fontSize:11, fontWeight:700, background: roleBadgeColor + '18', color: roleBadgeColor, textTransform:'capitalize' }}>
+                              {u.role}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <div style={{ fontSize:11, color: hasCustomPerms ? 'hsl(var(--primary))' : '#aaa' }}>
+                              {hasCustomPerms
+                                ? `${u.effective_permissions.length} custom permission${u.effective_permissions.length !== 1 ? 's' : ''}`
+                                : `Role defaults (${u.effective_permissions.length})`
+                              }
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {u.id !== user?.id && (
+                              <Button size="sm" variant="outline" onClick={() => openRoleEdit(u)}>Edit</Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </Card>
+            </div>
+          )}
+
           {/* ══ AUDIT LOG ══ */}
           {tab === 'audit' && (
             <div className="space-y-6">
@@ -1256,6 +1666,36 @@ export default function AdminPage() {
 
         </main>
       </div>
+
+      {/* ══ INLINE CONFIRM OVERLAY ══ */}
+      {deleteTarget && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+          onClick={() => setDeleteTarget(null)}
+        >
+          <div
+            style={{ background: '#fff', borderRadius: 16, padding: '28px 32px', maxWidth: 360, width: '90%', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <p style={{ fontSize: 15, fontWeight: 600, marginBottom: 8, color: '#2c1a1a' }}>Are you sure?</p>
+            <p style={{ fontSize: 13, color: '#888', marginBottom: 24 }}>{deleteTarget.label}</p>
+            <div style={{ display: 'flex', gap: 10, justifyContent: 'center' }}>
+              <button
+                style={{ padding: '8px 20px', borderRadius: 8, border: '1px solid #ddd', background: '#f9f9f9', cursor: 'pointer', fontSize: 13, fontWeight: 500 }}
+                onClick={() => setDeleteTarget(null)}
+              >
+                Cancel
+              </button>
+              <button
+                style={{ padding: '8px 20px', borderRadius: 8, border: 'none', background: deleteTarget.confirmLabel && deleteTarget.confirmLabel !== 'Delete' ? '#1a100a' : '#c0392b', color: '#fff', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}
+                onClick={() => { deleteTarget.onConfirm(); setDeleteTarget(null) }}
+              >
+                {deleteTarget.confirmLabel || 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

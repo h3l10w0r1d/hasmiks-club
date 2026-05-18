@@ -19,6 +19,7 @@ export default function RegisterPage({ lang }) {
   const [requireApproval, setRequireApproval] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [step, setStep] = useState(1)
 
   useEffect(() => {
     getPublicSettings().then(s => setRequireApproval(!!s.require_approval)).catch(() => {})
@@ -40,6 +41,8 @@ export default function RegisterPage({ lang }) {
     errDef:      lang === 'hy' ? 'Գրանցման սխալ' : 'Registration failed. Try again.',
     errEmail:    lang === 'hy' ? 'Այս էլ. հասցեն արդեն գրանցված է' : 'Email already registered',
     pendingInfo: lang === 'hy' ? 'Ձեր դիմումն ընդունված է: Ադմինիստրատորն ամենաշուտ կразберется:' : 'Your application has been received and is pending review. You\'ll hear from us soon!',
+    continue:    lang === 'hy' ? 'Շարունակել →' : 'Continue →',
+    back:        lang === 'hy' ? '← Վերադառնալ' : '← Back',
   }
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
@@ -70,67 +73,109 @@ export default function RegisterPage({ lang }) {
     }
   }
 
+  const stepIndicator = (
+    <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
+      <div style={{
+        width: 32, height: 8, borderRadius: 4,
+        background: step === 1 ? '#e11d48' : '#e5e7eb',
+        transition: 'background 0.2s',
+      }} />
+      <div style={{
+        width: 32, height: 8, borderRadius: 4,
+        background: step === 2 ? '#e11d48' : '#e5e7eb',
+        transition: 'background 0.2s',
+      }} />
+    </div>
+  )
+
   return (
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-logo">Hasmik's <span>Club</span></div>
         <h1 className="auth-title">{t.title}</h1>
 
-        {requireApproval && (
-          <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '10px 14px', marginBottom: 20, fontSize: 13, color: '#795548' }}>
-            ℹ️ {t.appMsgHint}
-          </div>
+        {stepIndicator}
+
+        {step === 1 && (
+          <form
+            className="auth-form"
+            onSubmit={(e) => { e.preventDefault(); setStep(2) }}
+          >
+            <label className="auth-label">{t.name}
+              <input className="auth-input" type="text" value={form.full_name} onChange={set('full_name')} required />
+            </label>
+            <label className="auth-label">{t.email}
+              <input className="auth-input" type="email" value={form.email} onChange={set('email')} required />
+            </label>
+            <label className="auth-label">{t.password}
+              <input className="auth-input" type="password" value={form.password} onChange={set('password')} required minLength={8} />
+            </label>
+
+            <button className="btn-rose auth-submit" type="submit">
+              {t.continue}
+            </button>
+          </form>
         )}
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <label className="auth-label">{t.name}
-            <input className="auth-input" type="text" value={form.full_name} onChange={set('full_name')} required />
-          </label>
-          <label className="auth-label">{t.email}
-            <input className="auth-input" type="email" value={form.email} onChange={set('email')} required />
-          </label>
-          <label className="auth-label">{t.password}
-            <input className="auth-input" type="password" value={form.password} onChange={set('password')} required minLength={8} />
-          </label>
+        {step === 2 && (
+          <>
+            {requireApproval && (
+              <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '10px 14px', marginBottom: 20, fontSize: 13, color: '#795548' }}>
+                ℹ️ {t.appMsgHint}
+              </div>
+            )}
 
-          <label className="auth-label">{t.bio}
-            <textarea
-              className="auth-input"
-              style={{ minHeight: 72, resize: 'vertical' }}
-              placeholder={t.bioHint}
-              value={form.bio}
-              onChange={set('bio')}
-            />
-          </label>
+            <form onSubmit={handleSubmit} className="auth-form">
+              <label className="auth-label">{t.bio}
+                <textarea
+                  className="auth-input"
+                  style={{ minHeight: 72, resize: 'vertical' }}
+                  placeholder={t.bioHint}
+                  value={form.bio}
+                  onChange={set('bio')}
+                />
+              </label>
 
-          {requireApproval && (
-            <label className="auth-label">{t.appMsg}
-              <textarea
-                className="auth-input"
-                style={{ minHeight: 80, resize: 'vertical' }}
-                value={form.application_message}
-                onChange={set('application_message')}
-                required={requireApproval}
-              />
-            </label>
-          )}
+              {requireApproval && (
+                <label className="auth-label">{t.appMsg}
+                  <textarea
+                    className="auth-input"
+                    style={{ minHeight: 80, resize: 'vertical' }}
+                    value={form.application_message}
+                    onChange={set('application_message')}
+                    required={requireApproval}
+                  />
+                </label>
+              )}
 
-          <label className="auth-label">{t.refLabel}
-            <input
-              className="auth-input"
-              type="text"
-              value={form.referral_code}
-              onChange={set('referral_code')}
-              placeholder="e.g. ABC12345"
-              style={{ fontFamily: 'monospace', letterSpacing: '0.08em' }}
-            />
-          </label>
+              <label className="auth-label">{t.refLabel}
+                <input
+                  className="auth-input"
+                  type="text"
+                  value={form.referral_code}
+                  onChange={set('referral_code')}
+                  placeholder="e.g. ABC12345"
+                  style={{ fontFamily: 'monospace', letterSpacing: '0.08em' }}
+                />
+              </label>
 
-          {error && <p className="auth-error">{error}</p>}
-          <button className="btn-rose auth-submit" type="submit" disabled={loading}>
-            {loading ? '...' : t.submit}
-          </button>
-        </form>
+              {error && <p className="auth-error">{error}</p>}
+
+              <button className="btn-rose auth-submit" type="submit" disabled={loading}>
+                {loading ? '...' : t.submit}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => { setError(''); setStep(1) }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: 14, padding: '4px 0', textAlign: 'center', width: '100%' }}
+              >
+                {t.back}
+              </button>
+            </form>
+          </>
+        )}
+
         <p className="auth-footer">
           {t.hasAcc} <Link to="/login" className="auth-link">{t.login}</Link>
         </p>

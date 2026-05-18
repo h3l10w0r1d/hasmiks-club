@@ -43,6 +43,8 @@ class UserOut(BaseModel):
     application_status: str = "approved"
     onboarding_completed: bool = False
     joined_at: datetime
+    role: str = 'member'
+    permissions: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -52,6 +54,8 @@ class AdminUserUpdate(BaseModel):
     is_admin: Optional[bool] = None
     full_name: Optional[str] = None
     admin_notes: Optional[str] = None
+    role: Optional[str] = None
+    permissions: Optional[str] = None  # JSON string or None to reset to role defaults
 
 
 class TokenOut(BaseModel):

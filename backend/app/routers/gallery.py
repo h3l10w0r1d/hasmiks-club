@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.deps import get_current_admin, get_current_user
+from app.core.deps import require_permission, get_current_user
 from app.database import get_db
 from app.models.album import Album, AlbumPhoto
 from app.models.user import User
@@ -98,7 +98,7 @@ def get_album(
 @router.get("/admin/gallery", response_model=List[AlbumOut])
 def admin_get_albums(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(require_permission('manage_gallery')),
 ):
     albums = db.query(Album).order_by(Album.created_at.desc()).all()
     return [
@@ -116,7 +116,7 @@ def admin_get_albums(
 def admin_get_album(
     album_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(require_permission('manage_gallery')),
 ):
     album = db.query(Album).filter(Album.id == album_id).first()
     if not album:
@@ -134,7 +134,7 @@ def admin_get_album(
 def admin_create_album(
     body: AlbumIn,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(require_permission('manage_gallery')),
 ):
     album = Album(**body.model_dump())
     db.add(album)
@@ -152,7 +152,7 @@ def admin_update_album(
     album_id: int,
     body: AlbumIn,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(require_permission('manage_gallery')),
 ):
     album = db.query(Album).filter(Album.id == album_id).first()
     if not album:
@@ -173,7 +173,7 @@ def admin_update_album(
 def admin_delete_album(
     album_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(require_permission('manage_gallery')),
 ):
     album = db.query(Album).filter(Album.id == album_id).first()
     if not album:
@@ -187,7 +187,7 @@ def admin_add_photo(
     album_id: int,
     body: PhotoIn,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(require_permission('manage_gallery')),
 ):
     album = db.query(Album).filter(Album.id == album_id).first()
     if not album:
@@ -206,7 +206,7 @@ def admin_add_photo(
 def admin_delete_photo(
     photo_id: int,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(require_permission('manage_gallery')),
 ):
     photo = db.query(AlbumPhoto).filter(AlbumPhoto.id == photo_id).first()
     if not photo:
@@ -218,7 +218,7 @@ def admin_delete_photo(
 @router.post("/admin/gallery/upload-photo")
 async def admin_upload_photo(
     file: UploadFile = File(...),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(require_permission('manage_gallery')),
 ):
     cloudinary.config(
         cloud_name=settings.CLOUDINARY_CLOUD_NAME,

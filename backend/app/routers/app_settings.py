@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_admin
+from app.core.deps import require_permission
 from app.database import get_db
 from app.models.app_setting import AppSetting
 from app.models.user import User
@@ -54,7 +54,7 @@ def _set(db: Session, key: str, value: str) -> None:
 @router.get("")
 def get_settings(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(require_permission('manage_settings')),
 ) -> dict[str, Any]:
     return _get_all(db)
 
@@ -64,7 +64,7 @@ def update_setting(
     key: str,
     body: SettingIn,
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(require_permission('manage_settings')),
 ) -> dict[str, str]:
     _set(db, key, body.value)
     return {"key": key, "value": body.value}
@@ -74,7 +74,7 @@ def update_setting(
 def update_settings_bulk(
     body: dict[str, str],
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(require_permission('manage_settings')),
 ) -> dict[str, str]:
     for key, value in body.items():
         _set(db, key, value)

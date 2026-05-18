@@ -67,3 +67,8 @@ export const adminGetAuditLog         = ()     => client.get('/admin/audit-log')
 // settings
 export const adminGetSettings         = ()           => client.get('/admin/settings').then(r => r.data)
 export const adminSaveSettings        = (data)       => client.put('/admin/settings', data).then(r => r.data)
+
+// roles & permissions
+export const adminGetRoles            = ()           => client.get('/admin/roles').then(r => r.data)
+export const adminUpdateRole          = (userId, payload) => client.put(`/admin/roles/${userId}`, payload).then(r => r.data)
+export const adminGetPermissionDefaults = ()         => client.get('/admin/permissions/defaults').then(r => r.data)
