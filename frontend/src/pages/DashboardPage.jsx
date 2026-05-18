@@ -315,12 +315,12 @@ export default function DashboardPage({ lang }) {
   return (
     <div className="dash-page">
       <nav className="dash-nav">
-        <div className="nav-logo">Hasmik's <span>Club</span></div>
+        <div className="dash-nav-brand">Hasmik's <span>Club</span></div>
         <div className="dash-nav-right">
           <NotificationBell />
           <span className="dash-user-name">{user.full_name}</span>
           {user.is_admin && (
-            <Link to="/admin" className="nav-btn" style={{ background: 'var(--deep)', fontSize: '11px', padding: '8px 18px' }}>Admin</Link>
+            <Link to="/admin" className="dash-signout" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Admin</Link>
           )}
           <button className="dash-signout" onClick={handleSignOut}>{t.signOut}</button>
         </div>
@@ -338,16 +338,24 @@ export default function DashboardPage({ lang }) {
 
       <div className="dash-body">
         <aside className="dash-sidebar">
-          {TABS.map(k => (
-            <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>
-              {t[k]}
-            </button>
-          ))}
-          {user.is_admin && (
-            <Link to="/admin" className="dash-tab" style={{ color: 'var(--rose)', textDecoration: 'none', borderLeft: '3px solid var(--rose)' }}>
-              Admin Panel
-            </Link>
-          )}
+          <div className="dash-sidebar-section">
+            <span className="dash-sidebar-section-label">{lang === 'hy' ? 'Գլխ.' : 'Overview'}</span>
+            {['home'].map(k => (
+              <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>{t[k]}</button>
+            ))}
+          </div>
+          <div className="dash-sidebar-section">
+            <span className="dash-sidebar-section-label">{lang === 'hy' ? 'Անձ.' : 'Personal'}</span>
+            {['profile', 'events', 'library'].map(k => (
+              <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>{t[k]}</button>
+            ))}
+          </div>
+          <div className="dash-sidebar-section">
+            <span className="dash-sidebar-section-label">{lang === 'hy' ? 'Համ.' : 'Community'}</span>
+            {['gallery', 'community', 'forum'].map(k => (
+              <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>{t[k]}</button>
+            ))}
+          </div>
           <div className="dash-membership-badge">
             <span className={`dash-status ${user.membership_status}`}>{isActive ? t.active : t.inactive}</span>
           </div>

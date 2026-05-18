@@ -41,7 +41,9 @@ export default function LoginPage({ lang }) {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-logo">Hasmik's <span>Club</span></div>
+        <span className="auth-logo-sub">{lang === 'hy' ? 'Անդամների հարթակ' : 'Members Portal'}</span>
         <h1 className="auth-title">{t.title}</h1>
+        <div className="auth-divider" />
         <form onSubmit={handleSubmit} className="auth-form">
           <label className="auth-label">{t.email}
             <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required />

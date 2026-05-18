@@ -92,7 +92,9 @@ export default function RegisterPage({ lang }) {
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-logo">Hasmik's <span>Club</span></div>
+        <span className="auth-logo-sub">{lang === 'hy' ? 'Անդամության հայտ' : 'Membership Application'}</span>
         <h1 className="auth-title">{t.title}</h1>
+        <div className="auth-divider" />
 
         {stepIndicator}
 
