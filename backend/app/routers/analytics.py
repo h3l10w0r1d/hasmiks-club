@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_admin
+from app.core.deps import require_permission
 from app.database import get_db
 from app.models.content import ContentItem, MemberContent
 from app.models.event import Event
@@ -49,7 +49,7 @@ def _last_n_months(n: int):
 @router.get("")
 def get_analytics(
     db: Session = Depends(get_db),
-    _: User = Depends(get_current_admin),
+    _: User = Depends(require_permission('view_analytics')),
 ) -> dict[str, Any]:
 
     now = datetime.now(timezone.utc)
@@ -304,6 +304,22 @@ def get_analytics(
     activity.sort(key=lambda x: x["at"], reverse=True)
     activity = activity[:20]
 
+    # ── referral leaderboard ─────────────────────────────────────────────────
+    from sqlalchemy.orm import aliased
+    Referred = aliased(User)
+    referral_rows = (
+        db.query(User.id, User.full_name, func.count(Referred.id).label('cnt'))
+        .join(Referred, Referred.referred_by_id == User.id)
+        .group_by(User.id, User.full_name)
+        .order_by(func.count(Referred.id).desc())
+        .limit(10)
+        .all()
+    )
+    referral_leaderboard = [
+        {"id": r.id, "full_name": r.full_name, "referral_count": r.cnt}
+        for r in referral_rows
+    ]
+
     return {
         "overview": overview,
         "member_growth": member_growth,
@@ -315,4 +331,5 @@ def get_analytics(
         "disengaged": disengaged,
         "at_risk": at_risk,
         "recent_activity": activity,
+        "referral_leaderboard": referral_leaderboard,
     }

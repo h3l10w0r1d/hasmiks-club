@@ -253,6 +253,22 @@ def toggle_checkin(
     return {"checked_in": rsvp.checked_in}
 
 
+@router.get("/events/{event_id}/checkin-token")
+def get_checkin_token(
+    event_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_permission('manage_events')),
+):
+    import secrets as _secrets
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if not event.checkin_token:
+        event.checkin_token = _secrets.token_urlsafe(16)
+        db.commit()
+    return {"event_id": event_id, "token": event.checkin_token, "checkin_url": f"/checkin/{event_id}?token={event.checkin_token}"}
+
+
 @router.post("/events", response_model=EventOut, status_code=status.HTTP_201_CREATED)
 def create_event(payload: EventCreate, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_events'))):
     event = Event(**payload.model_dump())

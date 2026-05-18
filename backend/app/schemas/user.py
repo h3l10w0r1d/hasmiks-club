@@ -24,6 +24,7 @@ class UserUpdate(BaseModel):
     lang_pref: Optional[str] = None
     show_in_directory: Optional[bool] = None
     bio: Optional[str] = None
+    onboarding_completed: Optional[bool] = None
 
 
 class UserOut(BaseModel):

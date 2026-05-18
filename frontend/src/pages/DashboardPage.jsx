@@ -7,9 +7,12 @@ import { getLibrary } from '../api/content'
 import { getPublicSettings } from '../api/payments'
 import { refreshToken as apiRefresh } from '../api/auth'
 import NotificationBell from '../components/NotificationBell'
+import OnboardingModal from '../components/OnboardingModal'
+import { getTopics, createTopic, getTopic, createPost, deletePost } from '../api/forum'
+import { getCheckinToken } from '../api/events'
 import client from '../api/client'
 
-const TABS = ['home', 'profile', 'events', 'library', 'gallery', 'community']
+const TABS = ['home', 'profile', 'events', 'library', 'gallery', 'community', 'forum']
 
 function getCountdown(iso, lang) {
   const diff = new Date(iso) - new Date()
@@ -42,6 +45,15 @@ export default function DashboardPage({ lang }) {
   const [albums, setAlbums] = useState([])
   const [openAlbum, setOpenAlbum] = useState(null)
   const [rsvpDone, setRsvpDone] = useState({})
+  const [showOnboarding, setShowOnboarding] = useState(false)
+  const [forumTopics, setForumTopics] = useState([])
+  const [forumCategory, setForumCategory] = useState('all')
+  const [openTopic, setOpenTopic] = useState(null)
+  const [newTopicForm, setNewTopicForm] = useState({ title: '', body: '', category: 'general' })
+  const [showNewTopic, setShowNewTopic] = useState(false)
+  const [replyBody, setReplyBody] = useState('')
+  const [postingReply, setPostingReply] = useState(false)
+  const [postingTopic, setPostingTopic] = useState(false)
   const fileInputRef = useRef(null)
   const homeLoaded = useRef(false)
 
@@ -95,12 +107,21 @@ export default function DashboardPage({ lang }) {
     verifyBanner:lang === 'hy' ? 'Խնդրում ենք հաստատել Ձեր էլ. հասցեն' : 'Please verify your email address',
     resendVerify:lang === 'hy' ? 'Կրկին ուղարկել' : 'Resend verification email',
     verifyOk:    lang === 'hy' ? 'Էլ. հասցեն հաստատված է ✓' : 'Email verified ✓',
+    forum:        lang === 'hy' ? 'Ֆորում' : 'Forum',
+    newTopic:     lang === 'hy' ? 'Նոր թема' : 'New Topic',
+    reply:        lang === 'hy' ? 'Պատասխանել' : 'Reply',
+    post:         lang === 'hy' ? 'Հրապարակել' : 'Post',
+    cancel:       lang === 'hy' ? 'Չեղարկել' : 'Cancel',
+    topicTitle:   lang === 'hy' ? 'Վերնագիր' : 'Title',
+    topicBody:    lang === 'hy' ? 'Բովանդակություն' : 'Content',
+    noTopics:     lang === 'hy' ? 'Թеমаներ դեռ չկան' : 'No topics yet — start a conversation!',
   }
 
   useEffect(() => {
     getMe().then(fresh => {
       setUser(fresh)
       setProfileForm({ full_name: fresh.full_name, photo_url: fresh.photo_url || '', show_in_directory: fresh.show_in_directory ?? true })
+      if (!fresh.onboarding_completed) setShowOnboarding(true)
     }).catch(() => {})
     getPublicSettings().then(s => setTelegramUrl(s.telegram_invite_url || '')).catch(() => {})
   }, [])
@@ -135,6 +156,7 @@ export default function DashboardPage({ lang }) {
     if (tab === 'library') getLibrary().then(setLibrary).catch(() => {})
     if (tab === 'gallery') getGallery().then(setAlbums).catch(() => {})
     if (tab === 'community') getMemberDirectory().then(setDirectory).catch(() => {})
+    if (tab === 'forum') getTopics().then(setForumTopics).catch(() => {})
   }, [tab])
 
   const handleSave = async (e) => {
@@ -195,6 +217,35 @@ export default function DashboardPage({ lang }) {
       const detail = err?.response?.data?.detail
       setRsvpError(detail || (lang === 'hy' ? 'Սխալ տեղի ունեցավ' : 'Something went wrong'))
     }
+  }
+
+  const handleCreateTopic = async (e) => {
+    e.preventDefault()
+    if (!newTopicForm.title.trim() || !newTopicForm.body.trim()) return
+    setPostingTopic(true)
+    try {
+      const topic = await createTopic(newTopicForm)
+      setForumTopics(ts => [topic, ...ts])
+      setNewTopicForm({ title: '', body: '', category: 'general' })
+      setShowNewTopic(false)
+    } catch { /* ignore */ }
+    finally { setPostingTopic(false) }
+  }
+
+  const handleOpenTopic = async (topic) => {
+    const detail = await getTopic(topic.id).catch(() => null)
+    if (detail) setOpenTopic(detail)
+  }
+
+  const handleReply = async () => {
+    if (!openTopic || !replyBody.trim()) return
+    setPostingReply(true)
+    try {
+      const post = await createPost(openTopic.id, replyBody)
+      setOpenTopic(t => ({ ...t, posts: [...(t.posts || []), post], post_count: (t.post_count || 0) + 1 }))
+      setReplyBody('')
+    } catch { /* ignore */ }
+    finally { setPostingReply(false) }
   }
 
   const handleResendVerify = async () => {
@@ -739,6 +790,123 @@ export default function DashboardPage({ lang }) {
             </div>
           )}
 
+          {/* ── FORUM ── */}
+          {tab === 'forum' && (
+            <div className="dash-section">
+              <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+                <h2 className="dash-section-title" style={{ marginBottom:0 }}>
+                  {lang === 'hy' ? 'Ֆորում' : 'Forum'}
+                </h2>
+                <button
+                  onClick={() => setShowNewTopic(v => !v)}
+                  style={{ background:'var(--rose)', color:'#fff', border:'none', borderRadius:10, padding:'8px 18px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
+                  + {t.newTopic}
+                </button>
+              </div>
+
+              {/* Category filter */}
+              <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:20 }}>
+                {['all','general','events','resources','introductions','off-topic'].map(cat => (
+                  <button key={cat} onClick={() => {
+                    setForumCategory(cat)
+                    const f = cat === 'all' ? undefined : cat
+                    getTopics(f).then(setForumTopics).catch(() => {})
+                  }}
+                    style={{ padding:'5px 14px', borderRadius:20, border:'1px solid', fontSize:12, fontWeight:600, cursor:'pointer',
+                      background: forumCategory===cat ? 'var(--rose)' : 'transparent',
+                      color: forumCategory===cat ? '#fff' : 'var(--stone)',
+                      borderColor: forumCategory===cat ? 'var(--rose)' : 'var(--sand)',
+                    }}>
+                    {cat === 'all' ? (lang === 'hy' ? 'Բոլորը' : 'All') : cat}
+                  </button>
+                ))}
+              </div>
+
+              {/* New topic form */}
+              {showNewTopic && (
+                <form onSubmit={handleCreateTopic} style={{ background:'#fff', border:'1px solid var(--sand)', borderRadius:14, padding:'20px 20px', marginBottom:20 }}>
+                  <select value={newTopicForm.category} onChange={e => setNewTopicForm(f => ({...f, category:e.target.value}))}
+                    style={{ width:'100%', padding:'8px 12px', borderRadius:8, border:'1px solid var(--sand)', marginBottom:10, fontSize:13 }}>
+                    {['general','events','resources','introductions','off-topic'].map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                  <input placeholder={t.topicTitle} required value={newTopicForm.title}
+                    onChange={e => setNewTopicForm(f => ({...f,title:e.target.value}))}
+                    style={{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid var(--sand)', marginBottom:10, fontSize:14, boxSizing:'border-box' }} />
+                  <textarea placeholder={t.topicBody} required value={newTopicForm.body}
+                    onChange={e => setNewTopicForm(f => ({...f,body:e.target.value}))}
+                    style={{ width:'100%', padding:'10px 12px', borderRadius:8, border:'1px solid var(--sand)', minHeight:90, fontSize:14, resize:'vertical', boxSizing:'border-box', marginBottom:12 }} />
+                  <div style={{ display:'flex', gap:10 }}>
+                    <button type="button" onClick={() => setShowNewTopic(false)}
+                      style={{ flex:1, padding:'9px 0', borderRadius:8, border:'1px solid var(--sand)', background:'#fff', cursor:'pointer', fontSize:13 }}>
+                      {t.cancel}
+                    </button>
+                    <button type="submit" disabled={postingTopic}
+                      style={{ flex:2, padding:'9px 0', borderRadius:8, background:'var(--rose)', color:'#fff', border:'none', fontWeight:700, cursor:'pointer', fontSize:13 }}>
+                      {postingTopic ? '…' : t.post}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Topics list */}
+              {forumTopics.length === 0
+                ? <p style={{ color:'#aaa', textAlign:'center', padding:40 }}>{t.noTopics}</p>
+                : forumTopics.map(topic => (
+                  <div key={topic.id} onClick={() => handleOpenTopic(topic)}
+                    style={{ background:'#fff', border:'1px solid var(--sand)', borderRadius:14, padding:'16px 20px', marginBottom:10, cursor:'pointer', transition:'box-shadow 0.15s' }}
+                    onMouseEnter={e => e.currentTarget.style.boxShadow='0 4px 16px rgba(168,92,90,0.12)'}
+                    onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
+                      {topic.pinned && <span style={{ fontSize:11, background:'var(--rose-bg)', color:'var(--rose)', borderRadius:6, padding:'2px 8px', fontWeight:700 }}>📌 Pinned</span>}
+                      <span style={{ fontSize:11, background:'#f5f5f5', color:'#888', borderRadius:6, padding:'2px 8px' }}>{topic.category}</span>
+                    </div>
+                    <p style={{ fontWeight:700, fontSize:15, color:'var(--deep)', marginBottom:4 }}>{topic.title}</p>
+                    <p style={{ fontSize:13, color:'#666', marginBottom:8, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{topic.body}</p>
+                    <div style={{ display:'flex', gap:16, fontSize:12, color:'#aaa' }}>
+                      <span>👤 {topic.author?.full_name}</span>
+                      <span>💬 {topic.post_count} {lang === 'hy' ? 'պատ.' : 'replies'}</span>
+                      <span>{new Date(topic.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))
+              }
+
+              {/* Topic detail modal */}
+              {openTopic && (
+                <div style={{ position:'fixed', inset:0, zIndex:9998, background:'rgba(44,26,26,.6)', overflowY:'auto', padding:20 }}
+                  onClick={() => setOpenTopic(null)}>
+                  <div style={{ background:'#fff', borderRadius:20, maxWidth:600, margin:'40px auto', padding:'28px 28px', position:'relative' }}
+                    onClick={e => e.stopPropagation()}>
+                    <button onClick={() => setOpenTopic(null)} style={{ position:'absolute', top:14, right:16, background:'none', border:'none', fontSize:22, cursor:'pointer', color:'#bbb' }}>×</button>
+                    <span style={{ fontSize:11, background:'#f5f5f5', color:'#888', borderRadius:6, padding:'2px 8px', marginBottom:12, display:'inline-block' }}>{openTopic.category}</span>
+                    <h2 style={{ fontFamily:'"Cormorant Garamond",serif', fontSize:22, color:'var(--deep)', marginBottom:8 }}>{openTopic.title}</h2>
+                    <p style={{ fontSize:13, color:'#888', marginBottom:16 }}>by {openTopic.author?.full_name} · {new Date(openTopic.created_at).toLocaleDateString()}</p>
+                    <p style={{ fontSize:15, color:'#444', lineHeight:1.7, marginBottom:24, borderBottom:'1px solid var(--sand)', paddingBottom:20 }}>{openTopic.body}</p>
+
+                    {(openTopic.posts || []).map(post => (
+                      <div key={post.id} style={{ marginBottom:16, paddingBottom:16, borderBottom:'1px solid #f5f5f5' }}>
+                        <p style={{ fontSize:12, color:'#aaa', marginBottom:4 }}>
+                          {post.author?.full_name} · {new Date(post.created_at).toLocaleDateString()}
+                        </p>
+                        <p style={{ fontSize:14, color:'#444', lineHeight:1.65 }}>{post.body}</p>
+                      </div>
+                    ))}
+
+                    <div style={{ marginTop:20 }}>
+                      <textarea value={replyBody} onChange={e => setReplyBody(e.target.value)}
+                        placeholder={lang === 'hy' ? 'Ձեր պատասխանը...' : 'Your reply…'}
+                        style={{ width:'100%', minHeight:80, padding:'10px 12px', borderRadius:8, border:'1px solid var(--sand)', fontSize:14, resize:'vertical', boxSizing:'border-box', marginBottom:10 }} />
+                      <button onClick={handleReply} disabled={postingReply || !replyBody.trim()}
+                        style={{ background:'var(--rose)', color:'#fff', border:'none', borderRadius:8, padding:'9px 20px', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                        {postingReply ? '…' : t.reply}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           </div>
         </main>
       </div>
@@ -746,7 +914,7 @@ export default function DashboardPage({ lang }) {
       {/* ── Mobile bottom navigation ── */}
       <nav className="dash-bottom-nav">
         {TABS.map(k => {
-          const icons = { home: '🏠', profile: '👤', events: '📅', library: '📚', gallery: '🖼', community: '👯' }
+          const icons = { home: '🏠', profile: '👤', events: '📅', library: '📚', gallery: '🖼', community: '👯', forum: '💬' }
           return (
             <button key={k} className={`dash-bottom-nav-item${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>
               <span className="nav-icon">{icons[k]}</span>
@@ -801,6 +969,15 @@ export default function DashboardPage({ lang }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Onboarding modal ── */}
+      {showOnboarding && (
+        <OnboardingModal
+          lang={lang}
+          telegramUrl={telegramUrl}
+          onDone={() => setShowOnboarding(false)}
+        />
       )}
 
       {/* ── Content viewer modal ── */}

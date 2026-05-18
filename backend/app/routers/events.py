@@ -196,3 +196,23 @@ def waitlist_position(event_id: int, db: Session = Depends(get_db), current_user
         if e.user_id == current_user.id:
             return {"on_waitlist": True, "position": i + 1, "total": len(entries)}
     return {"on_waitlist": False}
+
+
+@router.post("/{event_id}/checkin-self", status_code=204)
+def self_checkin(
+    event_id: int,
+    token: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Member self-check-in by scanning the event QR code."""
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if event.checkin_token != token:
+        raise HTTPException(status_code=400, detail="Invalid check-in token")
+    rsvp = db.query(RSVP).filter(RSVP.event_id == event_id, RSVP.user_id == current_user.id).first()
+    if not rsvp:
+        raise HTTPException(status_code=400, detail="You don't have an RSVP for this event")
+    rsvp.checked_in = True
+    db.commit()

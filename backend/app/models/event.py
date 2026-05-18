@@ -1,3 +1,4 @@
+import secrets
 from sqlalchemy import Column, Integer, String, DateTime, Text
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -16,5 +17,6 @@ class Event(Base):
     event_date = Column(DateTime(timezone=True), nullable=False)
     max_seats = Column(Integer, default=20)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    checkin_token = Column(String(32), nullable=True, unique=True, index=True)
 
     rsvps = relationship("RSVP", back_populates="event", cascade="all, delete-orphan")
