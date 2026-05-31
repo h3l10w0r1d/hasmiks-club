@@ -45,10 +45,10 @@ export default function GlobalHeader({ lang = 'en', setLang }) {
       </Link>
 
       {/* ── centre nav links ──────────────────────────── */}
-      <nav className="gh-links" aria-label="Site navigation">
+      <div className="gh-links" role="navigation" aria-label="Site navigation">
         <Link to="/"       className={`gh-link${isActive('/')       ? ' gh-link--active' : ''}`}>{t.home}</Link>
         <Link to="/events" className={`gh-link${isActive('/events') ? ' gh-link--active' : ''}`}>{t.events}</Link>
-      </nav>
+      </div>
 
       {/* ── right side ────────────────────────────────── */}
       <div className="gh-right">
