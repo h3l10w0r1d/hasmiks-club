@@ -65,7 +65,8 @@ def list_public_events(db: Session = Depends(get_db)):
 
 @router.get("/", response_model=List[EventOut])
 def list_events(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    events = db.query(Event).order_by(Event.event_date).all()
+    now = datetime.now(timezone.utc)
+    events = db.query(Event).filter(Event.event_date >= now).order_by(Event.event_date).all()
     return [_serialize_event(e, current_user.id) for e in events]
 
 
