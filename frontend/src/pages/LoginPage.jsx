@@ -1,11 +1,14 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { login } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
+import GlobalHeader from '../components/GlobalHeader'
 
 export default function LoginPage({ lang }) {
   const { signIn } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const from = location.state?.from || '/dashboard'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -29,7 +32,7 @@ export default function LoginPage({ lang }) {
     try {
       const data = await login(email, password)
       signIn(data)
-      navigate('/dashboard')
+      navigate(from, { replace: true })
     } catch {
       setError(t.errDef)
     } finally {
@@ -38,6 +41,8 @@ export default function LoginPage({ lang }) {
   }
 
   return (
+    <>
+    <GlobalHeader lang={lang} />
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-logo">Hasmik's <span>Club</span></div>
@@ -64,5 +69,6 @@ export default function LoginPage({ lang }) {
         </p>
       </div>
     </div>
+    </>
   )
 }

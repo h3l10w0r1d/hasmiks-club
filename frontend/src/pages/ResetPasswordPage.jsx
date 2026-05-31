@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { resetPassword } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
+import GlobalHeader from '../components/GlobalHeader'
 
 export default function ResetPasswordPage({ lang }) {
   const [searchParams] = useSearchParams()
@@ -45,6 +46,8 @@ export default function ResetPasswordPage({ lang }) {
   }
 
   return (
+    <>
+    <GlobalHeader lang={lang} />
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-logo">Hasmik's <span>Club</span></div>
@@ -80,5 +83,6 @@ export default function ResetPasswordPage({ lang }) {
         </p>
       </div>
     </div>
+    </>
   )
 }

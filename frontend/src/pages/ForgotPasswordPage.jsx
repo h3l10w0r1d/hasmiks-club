@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { forgotPassword } from '../api/auth'
+import GlobalHeader from '../components/GlobalHeader'
 
 export default function ForgotPasswordPage({ lang }) {
   const [email, setEmail] = useState('')
@@ -33,6 +34,8 @@ export default function ForgotPasswordPage({ lang }) {
   }
 
   return (
+    <>
+    <GlobalHeader lang={lang} />
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-logo">Hasmik's <span>Club</span></div>
@@ -71,5 +74,6 @@ export default function ForgotPasswordPage({ lang }) {
         )}
       </div>
     </div>
+    </>
   )
 }

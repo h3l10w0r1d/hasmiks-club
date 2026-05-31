@@ -7,6 +7,9 @@
    shadcn CSS variables — La Maison palette, scoped to .admin-shell
 ═══════════════════════════════════════════════════════════════ */
 .admin-shell {
+  height: 100vh;
+  overflow: hidden;
+
   /* Backgrounds — warm cream, not cold gray */
   --background:              35 30% 97%;      /* #F8F4EE warm cream */
   --foreground:              18 56% 7%;       /* #180C04 warm near-black */
@@ -56,6 +59,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
+  overflow: hidden;
   position: sticky;
   top: 0;
   border-right: 1px solid rgba(255,255,255,0.04);

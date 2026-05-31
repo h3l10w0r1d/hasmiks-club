@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { register } from '../api/auth'
 import { getPublicSettings } from '../api/payments'
 import { useAuth } from '../context/AuthContext'
+import GlobalHeader from '../components/GlobalHeader'
 
 export default function RegisterPage({ lang }) {
   const { signIn } = useAuth()
@@ -89,6 +90,8 @@ export default function RegisterPage({ lang }) {
   )
 
   return (
+    <>
+    <GlobalHeader lang={lang} />
     <div className="auth-page">
       <div className="auth-card">
         <div className="auth-logo">Hasmik's <span>Club</span></div>
@@ -183,5 +186,6 @@ export default function RegisterPage({ lang }) {
         </p>
       </div>
     </div>
+    </>
   )
 }

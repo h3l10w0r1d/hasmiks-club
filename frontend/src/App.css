@@ -25,6 +25,103 @@ html{scroll-behavior:smooth}
 body{font-family:'Jost',sans-serif;background:var(--cream);color:var(--mocha);overflow-x:hidden}
 
 /* ═══════════════════════════════════════
+   GLOBAL HEADER  (.gh-*)
+   Used on every page except dashboard/admin
+═══════════════════════════════════════ */
+.gh{
+  position:sticky;top:0;z-index:100;
+  display:flex;align-items:center;gap:0;
+  height:56px;padding:0 40px;
+  background:rgba(250,247,242,0.94);
+  backdrop-filter:blur(14px);
+  border-bottom:1px solid var(--sand);
+}
+.gh-brand{
+  font-family:var(--font-serif);
+  font-size:19px;font-weight:600;
+  color:var(--deep);letter-spacing:0.04em;
+  text-decoration:none;
+  flex-shrink:0;
+}
+.gh-brand span{color:var(--rose)}
+
+.gh-links{
+  display:flex;align-items:center;gap:2px;
+  margin:0 auto;        /* push right side to far right */
+}
+.gh-link{
+  padding:6px 14px;
+  font-family:var(--font-sans);
+  font-size:12px;font-weight:500;
+  letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--taupe);text-decoration:none;
+  border-radius:4px;
+  transition:color .15s,background .15s;
+}
+.gh-link:hover{color:var(--rose);background:var(--rose-bg)}
+.gh-link--active{color:var(--rose);font-weight:600}
+
+.gh-right{display:flex;align-items:center;gap:12px;flex-shrink:0}
+.gh-auth{display:flex;align-items:center;gap:8px}
+
+/* language toggle */
+.gh-lang{
+  display:flex;align-items:center;
+  background:var(--linen);
+  border:1px solid var(--sand);
+  border-radius:4px;
+  overflow:hidden;
+  margin-right:4px;
+}
+.gh-lang-btn{
+  padding:4px 10px;
+  font-family:var(--font-sans);
+  font-size:10px;font-weight:600;letter-spacing:0.1em;
+  background:none;border:none;cursor:pointer;
+  color:var(--taupe);
+  transition:background .15s,color .15s;
+}
+.gh-lang-btn.active{background:var(--rose);color:#fff}
+
+/* buttons */
+.gh-btn{
+  display:inline-flex;align-items:center;
+  padding:7px 16px;
+  font-family:var(--font-sans);
+  font-size:11px;font-weight:600;
+  letter-spacing:0.08em;text-transform:uppercase;
+  text-decoration:none;
+  border-radius:4px;
+  cursor:pointer;border:none;
+  transition:background .15s,color .15s,border-color .15s;
+  white-space:nowrap;
+}
+.gh-btn--ghost{
+  background:none;
+  color:var(--taupe);
+}
+.gh-btn--ghost:hover{color:var(--rose);background:var(--rose-bg)}
+.gh-btn--outline{
+  background:none;
+  border:1.5px solid var(--rose);
+  color:var(--rose);
+}
+.gh-btn--outline:hover{background:var(--rose);color:#fff}
+.gh-btn--solid{
+  background:var(--rose);
+  color:var(--linen);
+}
+.gh-btn--solid:hover{background:var(--rose-lt)}
+
+@media(max-width:640px){
+  .gh{padding:0 18px;gap:0}
+  .gh-links{margin:0 10px}
+  .gh-link{padding:5px 8px;font-size:11px}
+  .gh-btn{padding:6px 12px;font-size:10px}
+  .gh-lang{margin-right:0}
+}
+
+/* ═══════════════════════════════════════
    NAV
 ═══════════════════════════════════════ */
 nav{
@@ -59,7 +156,6 @@ nav{
   min-height:100vh;
   display:grid;
   grid-template-columns:55fr 45fr;
-  padding-top:64px;
 }
 .hero-img-side{
   position:relative;
@@ -539,7 +635,7 @@ footer{
 ═══════════════════════════════════════ */
 @media(max-width:900px){
   nav{padding:16px 24px}
-  .hero{grid-template-columns:1fr;padding-top:60px}
+  .hero{grid-template-columns:1fr}
   .hero-img-side{height:55vw}
   .hero-text-side{padding:52px 28px}
   .hero-stats{flex-wrap:wrap}
@@ -597,7 +693,7 @@ footer{
    AUTH PAGES
 ═══════════════════════════════════════ */
 .auth-page{
-  min-height:100vh;
+  min-height:calc(100vh - 56px);   /* subtract GlobalHeader height */
   background:var(--linen);
   background-image:radial-gradient(ellipse at 20% 80%, rgba(126,52,52,0.06) 0%, transparent 60%),
                    radial-gradient(ellipse at 80% 20%, rgba(160,118,56,0.05) 0%, transparent 55%);

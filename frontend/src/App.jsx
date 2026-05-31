@@ -3,7 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { useLang } from './hooks/useLang'
-import Nav from './components/Nav'
+import GlobalHeader from './components/GlobalHeader'
 import Hero from './components/Hero'
 import Band from './components/Band'
 import Why from './components/Why'
@@ -47,7 +47,7 @@ function LandingPage({ lang, setLang }) {
         <meta name="twitter:description" content={description} />
         <meta name="twitter:image" content={OG_IMAGE} />
       </Helmet>
-      <Nav lang={lang} setLang={setLang} />
+      <GlobalHeader lang={lang} setLang={setLang} />
       <Hero lang={lang} />
       <Band lang={lang} />
       <Why lang={lang} />

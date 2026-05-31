@@ -629,7 +629,7 @@ export default function AdminPage() {
   )
 
   return (
-    <div className="admin-shell flex min-h-screen bg-background">
+    <div className="admin-shell flex bg-background">
 
       {/* ══ SIDEBAR ══════════════════════════════════════════ */}
       <aside className="admin-sidebar">
@@ -679,8 +679,8 @@ export default function AdminPage() {
       </aside>
 
       {/* ══ BODY ═════════════════════════════════════════════ */}
-      <div className="flex flex-col flex-1 min-w-0">
-        <header className="sticky top-0 z-40 flex h-14 items-center border-b border-border bg-background/80 backdrop-blur px-8 gap-2 flex-shrink-0">
+      <div className="flex flex-col flex-1 min-w-0 min-h-0">
+        <header className="flex h-14 items-center border-b border-border bg-background px-8 gap-2 flex-shrink-0">
           <span className="text-xs text-muted-foreground">Admin</span>
           <ChevronRight className="h-3 w-3 text-muted-foreground/50" />
           <span className="text-xs font-semibold text-foreground">{currentTab?.label}</span>
