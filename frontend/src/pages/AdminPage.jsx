@@ -166,6 +166,27 @@ function SectionHeader({ title, sub, children }) {
   )
 }
 
+function Field({ label, children, className = '' }) {
+  return (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+      <Label>{label}</Label>
+      {children}
+    </div>
+  )
+}
+
+function TableSkeleton({ cols, rows = 5 }) {
+  return (
+    <>{Array.from({ length: rows }).map((_, i) => (
+      <TableRow key={i}>
+        {Array.from({ length: cols }).map((_, j) => (
+          <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
+        ))}
+      </TableRow>
+    ))}</>
+  )
+}
+
 function MemberAvatar({ name, size = 'md' }) {
   const sz = size === 'sm' ? 'w-6 h-6 text-[10px]' : 'w-8 h-8 text-xs'
   return (
@@ -609,24 +630,7 @@ export default function AdminPage() {
 
   const currentTab = TABS.find(t => t.key === tab)
 
-  const Field = ({ label, children, className = '' }) => (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
-      <Label>{label}</Label>
-      {children}
-    </div>
-  )
-
   const isLoading = (key) => loading[key]
-
-  const TableSkeleton = ({ cols, rows = 5 }) => (
-    <>{Array.from({ length: rows }).map((_, i) => (
-      <TableRow key={i}>
-        {Array.from({ length: cols }).map((_, j) => (
-          <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-        ))}
-      </TableRow>
-    ))}</>
-  )
 
   return (
     <div className="admin-shell flex bg-background">
