@@ -22,6 +22,13 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str = ""
     CLOUDINARY_API_SECRET: str = ""
 
+    # Stripe
+    STRIPE_SECRET_KEY: str = ""
+    STRIPE_WEBHOOK_SECRET: str = ""
+    STRIPE_PRICE_ID: str = ""
+    STRIPE_SUCCESS_URL: str = "https://hasmiks.club/dashboard"
+    STRIPE_CANCEL_URL: str = "https://hasmiks.club/events"
+
     class Config:
         env_file = ".env"
 

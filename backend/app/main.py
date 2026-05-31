@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
-from app.routers import auth, members, events, content, admin, analytics, notifications, gallery, forum
+from app.routers import auth, members, events, content, admin, analytics, notifications, gallery, forum, payments
 from app.routers import settings as settings_router
 from app.routers import app_settings as app_settings_router
 from app.core.config import settings
@@ -92,6 +92,7 @@ app.include_router(settings_router.router)
 app.include_router(app_settings_router.router)
 app.include_router(gallery.router)
 app.include_router(forum.router)
+app.include_router(payments.router)
 
 
 @app.get("/health")

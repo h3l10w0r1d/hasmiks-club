@@ -5,6 +5,7 @@ services:
     rootDir: backend
     buildCommand: pip install -r requirements.txt && alembic upgrade head
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
@@ -17,9 +18,34 @@ services:
       - key: ALGORITHM
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
-        value: 60
+        value: 10080
       - key: ALLOWED_ORIGINS
-        value: http://localhost:5173
+        value: https://hasmiks.club,https://www.hasmiks.club
+      - key: ADMIN_EMAIL
+        value: ""
+      # Brevo (email)
+      - key: BREVO_API_KEY
+        value: ""
+      - key: BREVO_SENDER_EMAIL
+        value: ""
+      # Stripe (payments)
+      - key: STRIPE_SECRET_KEY
+        value: ""
+      - key: STRIPE_WEBHOOK_SECRET
+        value: ""
+      - key: STRIPE_PRICE_ID
+        value: ""
+      - key: STRIPE_SUCCESS_URL
+        value: https://hasmiks.club/dashboard
+      - key: STRIPE_CANCEL_URL
+        value: https://hasmiks.club/events
+      # Cloudinary (photo uploads)
+      - key: CLOUDINARY_CLOUD_NAME
+        value: ""
+      - key: CLOUDINARY_API_KEY
+        value: ""
+      - key: CLOUDINARY_API_SECRET
+        value: ""
 
 databases:
   - name: hasmiks-club-db

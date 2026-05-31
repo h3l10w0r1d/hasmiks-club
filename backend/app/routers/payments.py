@@ -47,7 +47,7 @@ def create_checkout(
         success_url=settings.STRIPE_SUCCESS_URL + "?payment=success",
         cancel_url=settings.STRIPE_CANCEL_URL + "?payment=cancelled",
     )
-    return {"checkout_url": session.url}
+    return {"url": session.url}
 
 
 @router.post("/webhook")
