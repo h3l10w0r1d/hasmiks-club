@@ -11,6 +11,7 @@ class EventCreate(BaseModel):
     location: str
     event_date: datetime
     max_seats: int = 20
+    cover_url: Optional[str] = None
 
 
 class EventOut(BaseModel):
@@ -25,6 +26,7 @@ class EventOut(BaseModel):
     seats_taken: int
     seats_available: int
     user_has_rsvp: bool = False
+    cover_url: Optional[str] = None
 
     model_config = {"from_attributes": True}
 
@@ -49,6 +51,7 @@ class PublicEventOut(BaseModel):
     max_seats: int
     seats_available: int
     is_full: bool
+    cover_url: Optional[str] = None
 
     model_config = {"from_attributes": True}
 

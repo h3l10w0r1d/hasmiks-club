@@ -39,6 +39,7 @@ def _event_out(event: Event) -> EventOut:
         location=event.location, event_date=event.event_date,
         max_seats=event.max_seats, seats_taken=seats_taken,
         seats_available=max(event.max_seats - seats_taken, 0), user_has_rsvp=False,
+        cover_url=event.cover_url,
     )
 
 

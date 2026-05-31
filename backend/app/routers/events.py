@@ -32,6 +32,7 @@ def _serialize_event(event: Event, user_id: int) -> EventOut:
         seats_taken=seats_taken,
         seats_available=max(event.max_seats - seats_taken, 0),
         user_has_rsvp=user_has_rsvp,
+        cover_url=event.cover_url,
     )
 
 
@@ -49,6 +50,7 @@ def _serialize_public(event: Event) -> PublicEventOut:
         max_seats=event.max_seats,
         seats_available=available,
         is_full=available == 0,
+        cover_url=event.cover_url,
     )
 
 

@@ -215,44 +215,51 @@ export default function EventsPage({ lang = 'en' }) {
 
         {events.map(ev => {
           const bp = buttonProps(ev)
+          const title = lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title
+          const desc  = lang === 'hy' && ev.description_hy ? ev.description_hy : ev.description
           return (
             <div key={ev.id} style={styles.card}>
-              {/* card header */}
-              <div style={styles.cardTop}>
-                <div style={{ flex: 1 }}>
-                  <h2 style={styles.cardTitle}>
-                    {lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title}
-                  </h2>
-                  <div style={styles.meta}>
-                    <span>📍 {ev.location}</span>
-                    <span style={{ color: '#ddd' }}>·</span>
-                    <span>🗓 {formatDate(ev.event_date, lang)}</span>
+              {/* cover image */}
+              {ev.cover_url && (
+                <img
+                  src={ev.cover_url}
+                  alt={title}
+                  style={styles.coverImg}
+                />
+              )}
+
+              <div style={styles.cardBody}>
+                {/* card header */}
+                <div style={styles.cardTop}>
+                  <div style={{ flex: 1 }}>
+                    <h2 style={styles.cardTitle}>{title}</h2>
+                    <div style={styles.meta}>
+                      <span>📍 {ev.location}</span>
+                      <span style={{ color: '#ddd' }}>·</span>
+                      <span>🗓 {formatDate(ev.event_date, lang)}</span>
+                    </div>
+                    {desc && <p style={styles.desc}>{desc}</p>}
                   </div>
-                  {(lang === 'hy' && ev.description_hy ? ev.description_hy : ev.description) && (
-                    <p style={styles.desc}>
-                      {lang === 'hy' && ev.description_hy ? ev.description_hy : ev.description}
-                    </p>
+                  <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                    <SeatsBadge ev={ev} t={t} />
+                  </div>
+                </div>
+
+                {/* card footer */}
+                <div style={styles.cardFooter}>
+                  <button
+                    style={{ ...bp.style, opacity: busy[ev.id] || bp.disabled ? 0.65 : 1, cursor: busy[ev.id] || bp.disabled ? 'default' : 'pointer' }}
+                    onClick={() => !bp.disabled && handleAttend(ev)}
+                    disabled={!!busy[ev.id] || !!bp.disabled}
+                  >
+                    {busy[ev.id] ? '…' : bp.label}
+                  </button>
+
+                  {/* unauthenticated hint */}
+                  {!user && (
+                    <span style={styles.hint}>{t.memberOnly}</span>
                   )}
                 </div>
-                <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                  <SeatsBadge ev={ev} t={t} />
-                </div>
-              </div>
-
-              {/* card footer */}
-              <div style={styles.cardFooter}>
-                <button
-                  style={{ ...bp.style, opacity: busy[ev.id] || bp.disabled ? 0.65 : 1, cursor: busy[ev.id] || bp.disabled ? 'default' : 'pointer' }}
-                  onClick={() => !bp.disabled && handleAttend(ev)}
-                  disabled={!!busy[ev.id] || !!bp.disabled}
-                >
-                  {busy[ev.id] ? '…' : bp.label}
-                </button>
-
-                {/* unauthenticated hint */}
-                {!user && (
-                  <span style={styles.hint}>{t.memberOnly}</span>
-                )}
               </div>
             </div>
           )
@@ -322,10 +329,19 @@ const styles = {
   card: {
     background: '#fff',
     borderRadius: 16,
-    padding: '28px 32px',
     marginBottom: 20,
     boxShadow: '0 2px 12px rgba(126,52,52,.07)',
     border: '1px solid #f5ecee',
+    overflow: 'hidden',
+  },
+  coverImg: {
+    width: '100%',
+    height: 220,
+    objectFit: 'cover',
+    display: 'block',
+  },
+  cardBody: {
+    padding: '28px 32px',
   },
   cardTop: {
     display: 'flex',

@@ -126,7 +126,7 @@ const DEFAULT_SETTINGS = {
   welcome_email_body: '', event_reminder_body: '', email_footer: '',
 }
 
-const EMPTY_EVENT   = { title: '', title_hy: '', description: '', description_hy: '', location: '', event_date: '', max_seats: 20 }
+const EMPTY_EVENT   = { title: '', title_hy: '', description: '', description_hy: '', location: '', event_date: '', max_seats: 20, cover_url: '' }
 const EMPTY_CONTENT = { type: 'recipe', title: '', title_hy: '', description: '', description_hy: '', file_url: '', cover_url: '' }
 
 function initials(name = '') {
@@ -392,7 +392,7 @@ export default function AdminPage() {
   }
   const startEditEvent = (ev) => {
     setEditingEvent(ev)
-    setEventForm({ title: ev.title || '', title_hy: ev.title_hy || '', description: ev.description || '', description_hy: ev.description_hy || '', location: ev.location || '', event_date: ev.event_date ? ev.event_date.slice(0, 16) : '', max_seats: ev.max_seats })
+    setEventForm({ title: ev.title || '', title_hy: ev.title_hy || '', description: ev.description || '', description_hy: ev.description_hy || '', location: ev.location || '', event_date: ev.event_date ? ev.event_date.slice(0, 16) : '', max_seats: ev.max_seats, cover_url: ev.cover_url || '' })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   const deleteEvent = (ev) => {
@@ -951,6 +951,19 @@ export default function AdminPage() {
                     </div>
                     <Field label="Description (EN)"><Textarea value={eventForm.description} onChange={setEF('description')} /></Field>
                     <Field label="Description (ՀԱՅ)"><Textarea value={eventForm.description_hy} onChange={setEF('description_hy')} /></Field>
+                    <ImageUploadField
+                      label="Cover Image (shown on the events page)"
+                      value={eventForm.cover_url}
+                      onChange={v => setEventForm(f => ({ ...f, cover_url: v }))}
+                      onUpload={adminUploadImage}
+                    />
+                    {eventForm.cover_url && (
+                      <img
+                        src={eventForm.cover_url}
+                        alt="Cover preview"
+                        style={{ width: '100%', maxHeight: 200, objectFit: 'cover', borderRadius: 8, border: '1px solid hsl(var(--border))' }}
+                      />
+                    )}
                     <div className="flex gap-2">
                       <Button type="submit">{editingEvent ? 'Update Event' : 'Create Event'}</Button>
                       {editingEvent && <Button type="button" variant="outline" onClick={() => { setEditingEvent(null); setEventForm(EMPTY_EVENT) }}>Cancel</Button>}
