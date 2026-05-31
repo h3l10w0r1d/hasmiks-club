@@ -90,23 +90,22 @@ export default function EventsPage({ lang = 'en' }) {
   }, [])
 
   /* fetch events — authenticated route returns rsvp state */
-  const loadEvents = useCallback(async () => {
+  const loadEvents = useCallback(async (isAuthed) => {
     setLoading(true)
     try {
-      const data = user
-        ? await getEvents()
-        : await getPublicEvents()
+      const data = isAuthed ? await getEvents() : await getPublicEvents()
       setEvents(data)
     } catch {
       setEvents([])
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, []) // no user dep — isAuthed passed as argument so this never re-creates
 
   useEffect(() => {
-    if (!authLoading) loadEvents()
-  }, [authLoading, loadEvents])
+    if (!authLoading) loadEvents(!!user)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading]) // only run once when auth resolves, not on every user object change
 
   /* RSVP / cancel */
   const handleAttend = async (ev) => {
@@ -133,7 +132,7 @@ export default function EventsPage({ lang = 'en' }) {
       try {
         await cancelRsvp(ev.id)
         showToast(t.cancelSuccess)
-        loadEvents()
+        loadEvents(true)
       } catch {
         showToast(t.error, 'error')
       } finally {
@@ -146,7 +145,7 @@ export default function EventsPage({ lang = 'en' }) {
     try {
       await rsvp(ev.id)
       showToast(t.rsvpSuccess)
-      loadEvents()
+      loadEvents(true)
     } catch (err) {
       const msg = err?.response?.data?.detail || t.error
       showToast(msg, 'error')
