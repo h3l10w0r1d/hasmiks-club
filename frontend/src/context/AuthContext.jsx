@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { getMe } from '../api/members'
 import { refreshToken } from '../api/auth'
 
@@ -16,21 +16,24 @@ function parseJwtExp(token) {
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const refreshTimerRef = useRef(null)
 
   const silentRefresh = useCallback(async (token) => {
     const exp = parseJwtExp(token)
     if (!exp) return
     const msUntilExpiry = exp - Date.now()
-    // If less than 1 day left, refresh now; otherwise schedule refresh 1 day before expiry
+    // Schedule refresh 1 day before expiry; if already within 1 day, refresh now
     const refreshIn = Math.max(msUntilExpiry - 86400000, 0)
-    setTimeout(async () => {
+    refreshTimerRef.current = setTimeout(async () => {
+      // Bail out if user already signed out (token gone)
+      if (!localStorage.getItem('hc_token')) return
       try {
         const data = await refreshToken()
         localStorage.setItem('hc_token', data.access_token)
         setUser(data.user)
         silentRefresh(data.access_token)
       } catch {
-        // token truly expired, let 401 interceptor handle logout
+        // token truly expired — 401 interceptor handles redirect
       }
     }, refreshIn)
   }, [])
@@ -57,6 +60,9 @@ export function AuthProvider({ children }) {
   }
 
   const signOut = () => {
+    // Cancel any pending silent-refresh so it can't put the token back
+    clearTimeout(refreshTimerRef.current)
+    refreshTimerRef.current = null
     localStorage.removeItem('hc_token')
     setUser(null)
   }

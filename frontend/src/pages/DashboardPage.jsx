@@ -118,18 +118,21 @@ export default function DashboardPage({ lang }) {
   }
 
   useEffect(() => {
+    let alive = true
     getMe().then(fresh => {
+      if (!alive) return
       setUser(fresh)
       setProfileForm({ full_name: fresh.full_name, photo_url: fresh.photo_url || '', show_in_directory: fresh.show_in_directory ?? true })
       if (!fresh.onboarding_completed) setShowOnboarding(true)
     }).catch(() => {})
-    getPublicSettings().then(s => setTelegramUrl(s.telegram_invite_url || '')).catch(() => {})
+    getPublicSettings().then(s => { if (alive) setTelegramUrl(s.telegram_invite_url || '') }).catch(() => {})
+    return () => { alive = false }
   }, [])
 
   // handle ?verified=ok in URL
   useEffect(() => {
     const v = searchParams.get('verified')
-    if (v === 'ok') { setMsg(t.verifyOk); getMe().then(fresh => { setUser(fresh) }) }
+    if (v === 'ok') { setMsg(t.verifyOk); getMe().then(fresh => { setUser(fresh) }).catch(() => {}) }
   }, [])
 
   useEffect(() => {
