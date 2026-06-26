@@ -31,3 +31,4 @@ __pycache__/
 *.pyc
 backend/venv/
 backend/.env
+.claude/

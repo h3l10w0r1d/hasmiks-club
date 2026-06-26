@@ -37,13 +37,15 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   border-bottom:1px solid var(--sand);
 }
 .gh-brand{
+  display:flex;align-items:center;gap:10px;
   font-family:var(--font-serif);
   font-size:19px;font-weight:600;
   color:var(--deep);letter-spacing:0.04em;
   text-decoration:none;
   flex-shrink:0;
 }
-.gh-brand span{color:var(--rose)}
+.gh-logo{height:32px;width:auto;display:block}
+.gh-brand-text span{color:var(--rose)}
 
 .gh-links{
   display:flex;align-items:center;gap:2px;

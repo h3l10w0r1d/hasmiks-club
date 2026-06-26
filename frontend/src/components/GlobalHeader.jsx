@@ -41,7 +41,8 @@ export default function GlobalHeader({ lang = 'en', setLang }) {
     <header className="gh">
       {/* ── brand ─────────────────────────────────────── */}
       <Link to="/" className="gh-brand">
-        Hasmik's <span>Club</span>
+        <img src="/logo-h.png" alt="" className="gh-logo" aria-hidden="true" />
+        <span className="gh-brand-text">Hasmik's <span>Club</span></span>
       </Link>
 
       {/* ── centre nav links ──────────────────────────── */}
