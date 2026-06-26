@@ -108,13 +108,13 @@ export default function DashboardPage({ lang }) {
     resendVerify:lang === 'hy' ? 'Կրկին ուղարկել' : 'Resend verification email',
     verifyOk:    lang === 'hy' ? 'Էլ. հասցեն հաստատված է ✓' : 'Email verified ✓',
     forum:        lang === 'hy' ? 'Ֆորում' : 'Forum',
-    newTopic:     lang === 'hy' ? 'Նոր թема' : 'New Topic',
+    newTopic:     lang === 'hy' ? 'Նոր թեմա' : 'New Topic',
     reply:        lang === 'hy' ? 'Պատասխանել' : 'Reply',
     post:         lang === 'hy' ? 'Հրապարակել' : 'Post',
     cancel:       lang === 'hy' ? 'Չեղարկել' : 'Cancel',
     topicTitle:   lang === 'hy' ? 'Վերնագիր' : 'Title',
     topicBody:    lang === 'hy' ? 'Բովանդակություն' : 'Content',
-    noTopics:     lang === 'hy' ? 'Թеমаներ դեռ չկան' : 'No topics yet — start a conversation!',
+    noTopics:     lang === 'hy' ? 'Թեմաներ դեռ չկան' : 'No topics yet — start a conversation!',
   }
 
   useEffect(() => {

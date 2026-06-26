@@ -16,7 +16,7 @@ export default function FinalCta({ lang }) {
         </p>
         <h2 className="final-h">
           {hy
-            ? <>Ayн kanayk, um <em>p&apos;ntrum eir</em>, ardyen aystеgh en.</>
+            ? <>Այն կանայք, ում <em>փնտրում էիր</em>, արդեն այստեղ են։</>
             : <>The women you have been <em>looking for</em> are already here.</>
           }
         </h2>

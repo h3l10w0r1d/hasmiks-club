@@ -25,7 +25,7 @@ export default function Hero({ lang }) {
 
         <h1 className="hero-h1">
           {hy
-            ? <>Միацir ми шrjapatи, orтеgh қеzʻ <em>хасkunum еn, yndunum еn yev spasum еn.</em></>
+            ? <>Միացիր մի շրջապատի, որտեղ քեզ <em>հասկանում են, ընդունում են և սպասում են։</em></>
             : <>A circle of <em>Armenian women</em> — meeting, sharing, belonging.</>
           }
         </h1>

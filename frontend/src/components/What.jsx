@@ -11,7 +11,7 @@ export default function What({ lang }) {
         </div>
         <h2 className="sec-h" style={{ textAlign: 'center' }}>
           {hy
-            ? <>Ինchʼ е ستanums <em>yurakanchyur</em> andam</>
+            ? <>Ինչ է ստանում <em>յուրաքանչյուր</em> անդամ</>
             : <>What every member <em>receives</em></>
           }
         </h2>

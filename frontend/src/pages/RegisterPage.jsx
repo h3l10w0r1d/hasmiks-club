@@ -41,7 +41,7 @@ export default function RegisterPage({ lang }) {
     login:       lang === 'hy' ? 'Մուտք գործել' : 'Sign In',
     errDef:      lang === 'hy' ? 'Գրանցման սխալ' : 'Registration failed. Try again.',
     errEmail:    lang === 'hy' ? 'Այս էլ. հասցեն արդեն գրանցված է' : 'Email already registered',
-    pendingInfo: lang === 'hy' ? 'Ձեր դիմումն ընդունված է: Ադմինիստրատորն ամենաշուտ կразберется:' : 'Your application has been received and is pending review. You\'ll hear from us soon!',
+    pendingInfo: lang === 'hy' ? 'Ձեր դիմումն ընդունված է: Ադմինիստրատորն ամենաշուտ կպատասխանի:' : 'Your application has been received and is pending review. You\'ll hear from us soon!',
     continue:    lang === 'hy' ? 'Շարունակել →' : 'Continue →',
     back:        lang === 'hy' ? '← Վերադառնալ' : '← Back',
   }

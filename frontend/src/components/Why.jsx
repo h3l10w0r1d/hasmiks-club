@@ -41,7 +41,7 @@ export default function Why({ lang }) {
         <img src={whyImg} alt="Hasmik with flowers" />
         <div className="why-quote">
           <p className="why-quote-t">{hy ? c.quoteHy : c.quoteEn}</p>
-          <cite className="why-quote-c">— Հasмик</cite>
+          <cite className="why-quote-c">— Հասմիկ</cite>
         </div>
       </div>
     </section>

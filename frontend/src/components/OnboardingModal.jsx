@@ -12,9 +12,9 @@ const STEPS = [
   },
   {
     emoji: '📅',
-    title: (lang) => lang === 'hy' ? 'Հանդիպումներ ու催vent' : 'Gatherings & Events',
+    title: (lang) => lang === 'hy' ? 'Հանդիպումներ և միջոցառումներ' : 'Gatherings & Events',
     body:  (lang) => lang === 'hy'
-      ? 'Ամեն ամիս անց են կացվում հանդիպումներ, արհեստագործական ateliers, և մշակութային urevent: RSVP-ն արագ կատարեք, քանի որ տեղերը սահմանափակ են:'
+      ? 'Ամեն ամիս անցկացվում են հանդիպումներ, արհեստագործական սեմինարներ և մշակութային միջոցառումներ: RSVP-ն արագ կատարեք, քանի որ տեղերը սահմանափակ են:'
       : 'Monthly gatherings, craft ateliers, and cultural events. RSVP early — seats fill fast!',
   },
   {
