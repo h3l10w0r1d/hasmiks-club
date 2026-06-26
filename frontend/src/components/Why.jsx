@@ -10,7 +10,7 @@ export default function Why({ lang }) {
         <div className="sec-tag">{hy ? c.tagHy : c.tagEn}</div>
         <h2 className="sec-h">
           {hy
-            ? <>50+ հայ կanants <em>hamayunk</em>՝ jermut'yan, shpman yev patkanel'u shurj.</>
+            ? <>50+ հայ կանանց <em>համայնք</em>՝ ջերմության, շփման և պատկանելու շուրջ։</>
             : <>The <em>#1</em> Armenian Women&apos;s Community for women 50+.</>
           }
         </h2>

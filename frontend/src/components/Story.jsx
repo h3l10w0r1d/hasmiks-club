@@ -17,7 +17,7 @@ export default function Story({ lang }) {
         <div className="sec-tag">{hy ? c.tagHy : c.tagEn}</div>
         <h2 className="story-h">
           {hy
-            ? <>72-um kayinkhy <em>avart</em> che.<br />Sa skizb e.</>
+            ? <>72-ում կյանքը <em>ավարտ</em> չէ։<br />Սա սկիզբ է։</>
             : <>Life at 72 is not an <em>ending</em>.<br />It is a beginning.</>
           }
         </h2>

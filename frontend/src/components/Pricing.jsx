@@ -11,7 +11,7 @@ export default function Pricing({ lang }) {
       </div>
       <h2 className="sec-h" style={{ textAlign: 'center', maxWidth: '500px', margin: '0 auto 12px' }}>
         {hy
-          ? <>Mek andamaktsut&apos;yun. <em>Amen inch nerarvvats e.</em></>
+          ? <>Մեկ անդամակցություն։ <em>Ամեն ինչ ներառված է։</em></>
           : <>One membership. <em>Everything included.</em></>
         }
       </h2>
