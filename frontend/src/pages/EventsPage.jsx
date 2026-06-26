@@ -299,7 +299,7 @@ const styles = {
   },
   brand: {
     textDecoration: 'none',
-    fontFamily: "'Cormorant Garamond', 'Noto Serif Armenian', Georgia, serif",
+    fontFamily: "'Cormorant Garamond', 'Noto Sans Armenian', Georgia, serif",
     fontSize: 22,
     color: '#7E3434',
     fontWeight: 700,
@@ -310,7 +310,7 @@ const styles = {
     background: 'linear-gradient(to bottom, #fff, #fff8f5)',
   },
   h1: {
-    fontFamily: "'Cormorant Garamond', 'Noto Serif Armenian', Georgia, serif",
+    fontFamily: "'Cormorant Garamond', 'Noto Sans Armenian', Georgia, serif",
     fontSize: 42,
     color: '#2c1a1a',
     margin: '0 0 12px',
@@ -354,7 +354,7 @@ const styles = {
     margin: '0 0 8px',
     fontSize: 22,
     color: '#2c1a1a',
-    fontFamily: "'Cormorant Garamond', 'Noto Serif Armenian', Georgia, serif",
+    fontFamily: "'Cormorant Garamond', 'Noto Sans Armenian', Georgia, serif",
     fontWeight: 600,
   },
   meta: {

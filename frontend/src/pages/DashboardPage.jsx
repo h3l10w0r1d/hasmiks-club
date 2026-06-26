@@ -275,10 +275,10 @@ export default function DashboardPage({ lang }) {
       <div style={{ minHeight: '100vh', background: '#fff8f5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', fontFamily: 'inherit' }}>
         <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' }}>
           <div style={{ fontSize: 52, marginBottom: 24 }}>🌸</div>
-          <h1 style={{ fontFamily: '"Cormorant Garamond", "Noto Serif Armenian", serif', fontSize: 34, fontWeight: 700, color: '#2c1a1a', margin: '0 0 16px', lineHeight: 1.2 }}>
+          <h1 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 34, fontWeight: 700, color: '#2c1a1a', margin: '0 0 16px', lineHeight: 1.2 }}>
             {greeting}, {user.full_name.split(' ')[0]}!
           </h1>
-          <h2 style={{ fontFamily: '"Cormorant Garamond", "Noto Serif Armenian", serif', fontSize: 24, fontWeight: 600, color: '#c0394b', margin: '0 0 20px' }}>
+          <h2 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 24, fontWeight: 600, color: '#c0394b', margin: '0 0 20px' }}>
             {lang === 'hy' ? 'Ձեր հայտը ուսումնասիրվում է 🌸' : 'Your application is under review 🌸'}
           </h2>
           <p style={{ fontSize: 15, color: '#2c1a1a', lineHeight: 1.75, marginBottom: 12 }}>
@@ -400,7 +400,7 @@ export default function DashboardPage({ lang }) {
 
               {/* Next event card */}
               <div style={{ marginBottom: 32 }}>
-                <h3 style={{ fontFamily: '"Cormorant Garamond", "Noto Serif Armenian", serif', fontSize: 20, fontWeight: 700, color: '#2c1a1a', marginBottom: 14 }}>
+                <h3 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 20, fontWeight: 700, color: '#2c1a1a', marginBottom: 14 }}>
                   {lang === 'hy' ? 'Հաջորդ հանդիպումը' : 'Next Event'}
                 </h3>
                 {nextEvent ? (
@@ -443,7 +443,7 @@ export default function DashboardPage({ lang }) {
 
               {/* Library preview */}
               <div style={{ marginBottom: 32 }}>
-                <h3 style={{ fontFamily: '"Cormorant Garamond", "Noto Serif Armenian", serif', fontSize: 20, fontWeight: 700, color: '#2c1a1a', marginBottom: 14 }}>
+                <h3 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 20, fontWeight: 700, color: '#2c1a1a', marginBottom: 14 }}>
                   {lang === 'hy' ? 'Գրադարանից' : 'From the Library'}
                 </h3>
                 {unlockedLibrary.length === 0 ? (
@@ -485,7 +485,7 @@ export default function DashboardPage({ lang }) {
               {/* Gallery preview */}
               {albums.length > 0 && albums[0].cover_url && (
                 <div style={{ marginBottom: 32 }}>
-                  <h3 style={{ fontFamily: '"Cormorant Garamond", "Noto Serif Armenian", serif', fontSize: 20, fontWeight: 700, color: '#2c1a1a', marginBottom: 14 }}>
+                  <h3 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 20, fontWeight: 700, color: '#2c1a1a', marginBottom: 14 }}>
                     {lang === 'hy' ? 'Ֆոտոսրահ' : 'Gallery'}
                   </h3>
                   <div
@@ -494,7 +494,7 @@ export default function DashboardPage({ lang }) {
                   >
                     <img src={albums[0].cover_url} alt={albums[0].title} style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }} />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(44,26,26,.6) 0%, transparent 50%)', display: 'flex', alignItems: 'flex-end', padding: '16px 20px' }}>
-                      <span style={{ fontFamily: '"Cormorant Garamond", "Noto Serif Armenian", serif', fontSize: 20, fontWeight: 700, color: '#fff' }}>{albums[0].title}</span>
+                      <span style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 20, fontWeight: 700, color: '#fff' }}>{albums[0].title}</span>
                     </div>
                   </div>
                 </div>
@@ -504,7 +504,7 @@ export default function DashboardPage({ lang }) {
               {directory.length > 0 && (
                 <div style={{ background: '#fff', border: '1px solid #f0dde0', borderRadius: 14, padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                   <div>
-                    <div style={{ fontFamily: '"Cormorant Garamond", "Noto Serif Armenian", serif', fontSize: 22, fontWeight: 700, color: '#2c1a1a' }}>
+                    <div style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 22, fontWeight: 700, color: '#2c1a1a' }}>
                       {directory.length} {lang === 'hy' ? 'անդամ համայնքում' : 'members in the community'}
                     </div>
                     <div style={{ fontSize: 13, color: '#9b6e6e', marginTop: 4 }}>
@@ -533,7 +533,7 @@ export default function DashboardPage({ lang }) {
 
               {!user.onboarding_completed && (
                 <div style={{ background: '#fff', border: '1px solid #f0dde0', borderRadius: 14, padding: '20px 24px', marginBottom: 28 }}>
-                  <p style={{ fontFamily: '"Cormorant Garamond", "Noto Serif Armenian",serif', fontSize: 18, fontWeight: 700, color: 'var(--deep)', marginBottom: 14 }}>
+                  <p style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian",serif', fontSize: 18, fontWeight: 700, color: 'var(--deep)', marginBottom: 14 }}>
                     {lang === 'hy' ? 'Ողջույն Hasmik\'s Club-ում 🌸' : 'Getting started 🌸'}
                   </p>
                   {[
@@ -753,7 +753,7 @@ export default function DashboardPage({ lang }) {
                           : <div style={{ width: '100%', height: 140, background: '#f5ece8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>🖼</div>
                         }
                         <div style={{ padding: '14px 16px' }}>
-                          <div style={{ fontFamily: '"Cormorant Garamond", "Noto Serif Armenian",serif', fontSize: 17, fontWeight: 700, color: 'var(--deep)' }}>{album.title}</div>
+                          <div style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian",serif', fontSize: 17, fontWeight: 700, color: 'var(--deep)' }}>{album.title}</div>
                           {album.description && <p style={{ fontSize: 12, color: 'var(--taupe)', lineHeight: 1.5, marginTop: 4 }}>{album.description}</p>}
                           <p style={{ fontSize: 11, color: '#aaa', marginTop: 6 }}>{album.photo_count} {t.photos}</p>
                         </div>
@@ -890,7 +890,7 @@ export default function DashboardPage({ lang }) {
                     onClick={e => e.stopPropagation()}>
                     <button onClick={() => setOpenTopic(null)} style={{ position:'absolute', top:14, right:16, background:'none', border:'none', fontSize:22, cursor:'pointer', color:'#bbb' }}>×</button>
                     <span style={{ fontSize:11, background:'#f5f5f5', color:'#888', borderRadius:6, padding:'2px 8px', marginBottom:12, display:'inline-block' }}>{openTopic.category}</span>
-                    <h2 style={{ fontFamily:'"Cormorant Garamond", "Noto Serif Armenian",serif', fontSize:22, color:'var(--deep)', marginBottom:8 }}>{openTopic.title}</h2>
+                    <h2 style={{ fontFamily:'"Cormorant Garamond", "Noto Sans Armenian",serif', fontSize:22, color:'var(--deep)', marginBottom:8 }}>{openTopic.title}</h2>
                     <p style={{ fontSize:13, color:'#888', marginBottom:16 }}>by {openTopic.author?.full_name} · {new Date(openTopic.created_at).toLocaleDateString()}</p>
                     <p style={{ fontSize:15, color:'#444', lineHeight:1.7, marginBottom:24, borderBottom:'1px solid var(--sand)', paddingBottom:20 }}>{openTopic.body}</p>
 
@@ -948,7 +948,7 @@ export default function DashboardPage({ lang }) {
                   {selectedMember.full_name.charAt(0)}
                 </div>
             }
-            <h2 style={{ fontFamily: '"Cormorant Garamond", "Noto Serif Armenian",serif', fontSize: 24, fontWeight: 700, color: '#2c1a1a', margin: '0 0 6px' }}>{selectedMember.full_name}</h2>
+            <h2 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian",serif', fontSize: 24, fontWeight: 700, color: '#2c1a1a', margin: '0 0 6px' }}>{selectedMember.full_name}</h2>
             <p style={{ fontSize: 12, color: '#aaa', marginBottom: selectedMember.bio ? 16 : 0 }}>
               {lang === 'hy' ? 'Անդամ' : 'Member since'} {new Date(selectedMember.joined_at).getFullYear()}
             </p>
@@ -966,7 +966,7 @@ export default function DashboardPage({ lang }) {
           <div style={{ width: '100%', maxWidth: 860, background: '#fff', borderRadius: 16, overflow: 'hidden', maxHeight: '90vh', overflowY: 'auto' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '18px 24px', borderBottom: '1px solid #f0e0e5' }}>
-              <h2 style={{ fontFamily: '"Cormorant Garamond", "Noto Serif Armenian",serif', fontSize: 22, fontWeight: 700, color: '#2c1a1a', margin: 0 }}>{openAlbum.title}</h2>
+              <h2 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian",serif', fontSize: 22, fontWeight: 700, color: '#2c1a1a', margin: 0 }}>{openAlbum.title}</h2>
               <button onClick={() => setOpenAlbum(null)} style={{ background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#bbb', lineHeight: 1, padding: 4 }}>×</button>
             </div>
             {openAlbum.description && <p style={{ padding: '12px 24px 0', color: '#888', fontSize: 14 }}>{openAlbum.description}</p>}
@@ -1016,7 +1016,7 @@ export default function DashboardPage({ lang }) {
               <div style={{ fontSize: 10, fontWeight: 500, letterSpacing: '0.18em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 8 }}>
                 {selectedContent.type === 'recipe' ? t.recipe : t.ebook}
               </div>
-              <h2 style={{ fontFamily: '"Cormorant Garamond", "Noto Serif Armenian", serif', fontSize: 26, fontWeight: 700, color: 'var(--deep)', margin: '0 0 14px', lineHeight: 1.25 }}>
+              <h2 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 26, fontWeight: 700, color: 'var(--deep)', margin: '0 0 14px', lineHeight: 1.25 }}>
                 {lang === 'hy' && selectedContent.title_hy ? selectedContent.title_hy : selectedContent.title}
               </h2>
               {(lang === 'hy' && selectedContent.description_hy ? selectedContent.description_hy : selectedContent.description) && (

@@ -79,7 +79,7 @@
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 .admin-sidebar-logo .brand {
-  font-family: 'Cormorant Garamond', 'Noto Serif Armenian', serif;
+  font-family: 'Cormorant Garamond', 'Noto Sans Armenian', serif;
   font-size: 18px;
   font-weight: 600;
   color: #F2E9DC;
@@ -258,12 +258,12 @@
 .admin-shell .font-serif,
 .admin-shell [class*="CardTitle"],
 .admin-shell [class*="card-title"] {
-  font-family: 'Cormorant Garamond', 'Noto Serif Armenian', serif !important;
+  font-family: 'Cormorant Garamond', 'Noto Sans Armenian', serif !important;
 }
 
 /* KPI number treatment */
 .admin-shell .text-4xl {
-  font-family: 'Cormorant Garamond', 'Noto Serif Armenian', serif;
+  font-family: 'Cormorant Garamond', 'Noto Sans Armenian', serif;
   font-weight: 500;
 }
 
