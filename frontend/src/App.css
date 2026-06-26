@@ -17,12 +17,12 @@
   --deep:    #180C04;   /* warm near-black */
 
   /* ── Typographic scale ── */
-  --font-serif: 'Cormorant Garamond', Georgia, serif;
-  --font-sans:  'Jost', system-ui, sans-serif;
+  --font-serif: 'Cormorant Garamond', 'Noto Serif Armenian', Georgia, serif;
+  --font-sans:  'Jost', 'Noto Sans Armenian', system-ui, sans-serif;
 }
 
 html{scroll-behavior:smooth}
-body{font-family:'Jost',sans-serif;background:#fff;color:var(--mocha);overflow-x:hidden}
+body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:var(--mocha);overflow-x:hidden}
 
 /* ═══════════════════════════════════════
    GLOBAL HEADER  (.gh-*)
@@ -152,7 +152,7 @@ body{font-family:'Jost',sans-serif;background:#fff;color:var(--mocha);overflow-x
   backdrop-filter:blur(8px);
   border-left:3px solid var(--rose);
   padding:14px 20px;
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-style:italic;font-size:15px;
   color:var(--deep);
   max-width:240px;line-height:1.5;
@@ -185,7 +185,7 @@ body{font-family:'Jost',sans-serif;background:#fff;color:var(--mocha);overflow-x
 }
 
 .hero-h1{
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-size:clamp(38px,4.2vw,60px);
   font-weight:300;line-height:1.1;
   color:var(--deep);margin-bottom:10px;
@@ -194,7 +194,7 @@ body{font-family:'Jost',sans-serif;background:#fff;color:var(--mocha);overflow-x
 .hero-h1 em{font-style:italic;color:var(--rose)}
 
 .hero-loc{
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-style:italic;font-size:14px;
   color:var(--stone);letter-spacing:0.08em;
   margin-bottom:26px;
@@ -232,7 +232,7 @@ body{font-family:'Jost',sans-serif;background:#fff;color:var(--mocha);overflow-x
 }
 .hstat:last-child{border-right:none}
 .hstat-n{
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-size:28px;font-weight:600;
   color:var(--rose);line-height:1;
 }
@@ -255,7 +255,7 @@ body{font-family:'Jost',sans-serif;background:#fff;color:var(--mocha);overflow-x
   flex-wrap:wrap;
 }
 .band-text{
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-style:italic;font-size:16px;
   color:var(--rose);
   letter-spacing:0.02em;
@@ -287,7 +287,7 @@ body{font-family:'Jost',sans-serif;background:#fff;color:var(--mocha);overflow-x
 }
 .sec-tag::before{content:'';display:block;width:24px;height:1px;background:var(--gold)}
 .sec-h{
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-size:clamp(26px,3vw,44px);
   font-weight:300;line-height:1.2;
   color:var(--deep);margin-bottom:22px;
@@ -324,7 +324,7 @@ body{font-family:'Jost',sans-serif;background:#fff;color:var(--mocha);overflow-x
   padding:20px 22px;max-width:220px;
 }
 .why-quote-t{
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-style:italic;font-size:14px;
   color:var(--deep);line-height:1.6;
 }
@@ -371,13 +371,13 @@ body{font-family:'Jost',sans-serif;background:#fff;color:var(--mocha);overflow-x
 .card:hover{box-shadow:0 8px 32px rgba(126,52,52,0.08);transform:translateY(-2px)}
 .card:hover::before{background:var(--rose)}
 .card-num{
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-size:48px;font-weight:300;
   color:rgba(126,52,52,0.18);line-height:1;
   margin-bottom:12px;
 }
 .card-title{
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-size:18px;font-weight:600;
   color:var(--deep);margin-bottom:10px;
 }
@@ -422,7 +422,7 @@ body{font-family:'Jost',sans-serif;background:#fff;color:var(--mocha);overflow-x
   border-left:1px solid #f0ece8;
 }
 .story-h{
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-size:clamp(26px,2.8vw,40px);
   font-weight:300;line-height:1.2;
   color:var(--deep);margin-bottom:24px;
@@ -431,7 +431,7 @@ body{font-family:'Jost',sans-serif;background:#fff;color:var(--mocha);overflow-x
 .story-body{font-size:14px;line-height:1.88;color:var(--taupe);margin-bottom:16px}
 .story-body strong{color:var(--mocha);font-weight:500}
 .story-sig{
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-style:italic;font-size:22px;
   color:var(--rose);margin-top:24px;
 }
@@ -485,7 +485,7 @@ body{font-family:'Jost',sans-serif;background:#fff;color:var(--mocha);overflow-x
 }
 .plan-name::before{content:'';display:block;width:16px;height:1px;background:var(--gold)}
 .plan-price{
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-size:72px;font-weight:600;
   color:var(--deep);line-height:1;
 }
@@ -570,7 +570,7 @@ body{font-family:'Jost',sans-serif;background:#fff;color:var(--mocha);overflow-x
   color:rgba(250,247,242,0.6);margin-bottom:20px;
 }
 .final-h{
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-size:clamp(30px,4vw,52px);
   font-weight:300;line-height:1.15;
   color:var(--cream);margin-bottom:18px;
@@ -607,7 +607,7 @@ footer{
   display:flex;justify-content:space-between;align-items:center;
 }
 .ft-logo{
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-size:18px;font-weight:600;color:var(--deep);
 }
 .ft-logo span{color:var(--rose)}
@@ -667,7 +667,7 @@ footer{
   letter-spacing:0.12em;text-transform:uppercase;
   cursor:pointer;border:none;background:transparent;
   color:var(--taupe);transition:all .2s;
-  font-family:'Jost',sans-serif;
+  font-family:'Jost', 'Noto Sans Armenian',sans-serif;
 }
 .lang-btn.active{background:var(--rose);color:var(--cream)}
 .lang-btn:not(.active):hover{background:var(--sand)}
@@ -1027,7 +1027,7 @@ footer{
     cursor: pointer;
     font-size: 10px;
     color: var(--stone);
-    font-family: 'Jost', sans-serif;
+    font-family: 'Jost', 'Noto Sans Armenian', sans-serif;
     font-weight: 500;
     letter-spacing: 0.03em;
     transition: color 0.15s;
@@ -1096,7 +1096,7 @@ footer{
 ═══════════════════════════════════════ */
 
 /* ── shell ── */
-.admin-shell{display:flex;min-height:100vh;background:#f0ebe4;font-family:'Jost',sans-serif}
+.admin-shell{display:flex;min-height:100vh;background:#f0ebe4;font-family:'Jost', 'Noto Sans Armenian',sans-serif}
 
 /* ── sidebar ── */
 .admin-sidebar{
@@ -1107,7 +1107,7 @@ footer{
 }
 .admin-sidebar-logo{
   padding:28px 24px 20px;
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-size:17px;font-weight:600;
   color:#f5ede0;letter-spacing:0.04em;
   border-bottom:1px solid rgba(255,255,255,0.07);
@@ -1115,7 +1115,7 @@ footer{
 }
 .admin-sidebar-logo span{color:var(--rose-lt)}
 .admin-sidebar-logo small{
-  font-family:'Jost',sans-serif;
+  font-family:'Jost', 'Noto Sans Armenian',sans-serif;
   font-size:9px;font-weight:500;
   letter-spacing:0.22em;text-transform:uppercase;
   color:rgba(255,255,255,0.3);margin-top:2px;
@@ -1131,7 +1131,7 @@ footer{
   font-size:12px;font-weight:500;letter-spacing:0.06em;
   color:rgba(255,255,255,0.45);
   background:none;border:none;cursor:pointer;
-  font-family:'Jost',sans-serif;
+  font-family:'Jost', 'Noto Sans Armenian',sans-serif;
   transition:background .15s,color .15s;
   text-align:left;width:100%;
 }
@@ -1166,7 +1166,7 @@ footer{
   font-size:11px;font-weight:500;letter-spacing:0.06em;
   color:rgba(255,255,255,0.3);
   background:none;border:1px solid rgba(255,255,255,0.08);cursor:pointer;
-  font-family:'Jost',sans-serif;
+  font-family:'Jost', 'Noto Sans Armenian',sans-serif;
   transition:all .15s;width:100%;
 }
 .admin-sidebar-back:hover{color:rgba(255,255,255,0.6);border-color:rgba(255,255,255,0.2)}
@@ -1176,7 +1176,7 @@ footer{
   font-size:11px;font-weight:500;letter-spacing:0.06em;
   color:rgba(200,80,80,0.6);
   background:none;border:1px solid rgba(200,80,80,0.15);cursor:pointer;
-  font-family:'Jost',sans-serif;
+  font-family:'Jost', 'Noto Sans Armenian',sans-serif;
   transition:all .15s;width:100%;
 }
 .admin-sidebar-signout:hover{color:#e08080;border-color:rgba(200,80,80,0.35)}
@@ -1209,11 +1209,11 @@ footer{
   margin-bottom:28px;gap:16px;flex-wrap:wrap;
 }
 .admin-page-title{
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-size:30px;font-weight:300;color:var(--deep);line-height:1.1;
 }
 .admin-page-title small{
-  display:block;font-family:'Jost',sans-serif;
+  display:block;font-family:'Jost', 'Noto Sans Armenian',sans-serif;
   font-size:11px;color:var(--stone);font-weight:400;
   letter-spacing:0.1em;text-transform:uppercase;margin-top:4px;
 }
@@ -1232,7 +1232,7 @@ footer{
   border:1px solid rgba(0,0,0,0.04);
 }
 .admin-kpi-val{
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-size:34px;font-weight:600;color:var(--deep);line-height:1;
 }
 .admin-kpi-val.rose{color:var(--rose)}
@@ -1319,7 +1319,7 @@ footer{
 /* ── actions ── */
 .admin-actions{display:flex;gap:6px;align-items:center}
 .admin-btn-sm{
-  font-family:'Jost',sans-serif;
+  font-family:'Jost', 'Noto Sans Armenian',sans-serif;
   font-size:11px;font-weight:500;letter-spacing:0.06em;
   padding:6px 14px;border-radius:6px;
   border:1px solid var(--sand);
@@ -1353,7 +1353,7 @@ footer{
   gap:16px;padding:20px 24px;
 }
 .admin-event-title{
-  font-family:'Cormorant Garamond',serif;
+  font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;
   font-size:18px;font-weight:600;color:var(--deep);margin-bottom:5px;
 }
 .admin-event-meta{font-size:12px;color:var(--stone);line-height:1.7}
@@ -1368,7 +1368,7 @@ footer{
   background:var(--sand);color:var(--taupe);
   font-size:11px;font-weight:500;
   padding:2px 8px;border-radius:20px;margin-left:8px;
-  font-family:'Jost',sans-serif;
+  font-family:'Jost', 'Noto Sans Armenian',sans-serif;
 }
 
 /* ── dash-section alias for analytics tab ── */
@@ -1389,7 +1389,7 @@ footer{
   background:var(--rose);color:var(--cream);
   padding:3px 8px;margin-left:10px;vertical-align:middle;
 }
-.admin-count{font-family:'Jost',sans-serif;font-size:14px;font-weight:400;color:var(--stone);margin-left:10px}
+.admin-count{font-family:'Jost', 'Noto Sans Armenian',sans-serif;font-size:14px;font-weight:400;color:var(--stone);margin-left:10px}
 .admin-flash{padding:12px 20px;margin-bottom:24px;font-size:13px;font-weight:500}
 .admin-flash.success{background:var(--rose-bg);color:var(--rose)}
 .admin-flash.error{background:#fde8e8;color:#b91c1c}
@@ -1397,7 +1397,7 @@ footer{
 .library-card{background:var(--linen);border:1px solid var(--sand);padding:24px;display:flex;flex-direction:column;gap:10px}
 .library-cover{width:100%;height:140px;object-fit:cover;display:block}
 .library-type{font-size:10px;font-weight:500;letter-spacing:0.18em;text-transform:uppercase;color:var(--gold)}
-.library-title{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:600;color:var(--deep)}
+.library-title{font-family:'Cormorant Garamond', 'Noto Serif Armenian',serif;font-size:18px;font-weight:600;color:var(--deep)}
 .library-desc{font-size:12px;color:var(--taupe);line-height:1.65}
 .library-dl{margin-top:auto;text-align:center;display:block;padding:10px}
 

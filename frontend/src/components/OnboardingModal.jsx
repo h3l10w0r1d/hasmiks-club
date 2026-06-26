@@ -81,7 +81,7 @@ export default function OnboardingModal({ lang, telegramUrl, onDone }) {
         </div>
 
         <div style={{ fontSize: 56, marginBottom: 20, lineHeight: 1 }}>{current.emoji}</div>
-        <h2 style={{ fontFamily: '"Cormorant Garamond",serif', fontSize: 26, fontWeight: 700, color: 'var(--deep)', marginBottom: 14, lineHeight: 1.3 }}>
+        <h2 style={{ fontFamily: '"Cormorant Garamond", "Noto Serif Armenian",serif', fontSize: 26, fontWeight: 700, color: 'var(--deep)', marginBottom: 14, lineHeight: 1.3 }}>
           {current.title(lang)}
         </h2>
         <p style={{ fontSize: 15, color: '#666', lineHeight: 1.7, marginBottom: 28 }}>
@@ -101,7 +101,7 @@ export default function OnboardingModal({ lang, telegramUrl, onDone }) {
           style={{
             width: '100%', background: 'var(--rose)', color: '#fff',
             border: 'none', borderRadius: 12, padding: '14px 0',
-            fontFamily: '"Jost",sans-serif', fontSize: 15, fontWeight: 700,
+            fontFamily: '"Jost", "Noto Sans Armenian",sans-serif', fontSize: 15, fontWeight: 700,
             cursor: 'pointer', transition: 'opacity 0.15s',
           }}
         >

@@ -79,7 +79,7 @@
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 .admin-sidebar-logo .brand {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Cormorant Garamond', 'Noto Serif Armenian', serif;
   font-size: 18px;
   font-weight: 600;
   color: #F2E9DC;
@@ -90,7 +90,7 @@
 .admin-sidebar-logo .badge-label {
   display: block;
   margin-top: 4px;
-  font-family: 'Jost', sans-serif;
+  font-family: 'Jost', 'Noto Sans Armenian', sans-serif;
   font-size: 8.5px;
   font-weight: 600;
   letter-spacing: 0.28em;
@@ -116,7 +116,7 @@
 .admin-sidebar-group:first-child { margin-top: 0; }
 .admin-sidebar-group-label {
   display: block;
-  font-family: 'Jost', sans-serif;
+  font-family: 'Jost', 'Noto Sans Armenian', sans-serif;
   font-size: 8px;
   font-weight: 700;
   letter-spacing: 0.3em;
@@ -146,7 +146,7 @@
   border: none;
   border-left: 2px solid transparent;
   cursor: pointer;
-  font-family: 'Jost', sans-serif;
+  font-family: 'Jost', 'Noto Sans Armenian', sans-serif;
   transition: color 0.14s, border-color 0.14s;
   text-align: left;
   width: 100%;
@@ -212,7 +212,7 @@
 .admin-sidebar-name {
   font-size: 11px;
   color: rgba(255,255,255,0.35);
-  font-family: 'Jost', sans-serif;
+  font-family: 'Jost', 'Noto Sans Armenian', sans-serif;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -227,7 +227,7 @@
   font-weight: 500;
   background: none;
   cursor: pointer;
-  font-family: 'Jost', sans-serif;
+  font-family: 'Jost', 'Noto Sans Armenian', sans-serif;
   transition: all 0.14s;
   width: 100%;
   text-align: left;
@@ -258,12 +258,12 @@
 .admin-shell .font-serif,
 .admin-shell [class*="CardTitle"],
 .admin-shell [class*="card-title"] {
-  font-family: 'Cormorant Garamond', serif !important;
+  font-family: 'Cormorant Garamond', 'Noto Serif Armenian', serif !important;
 }
 
 /* KPI number treatment */
 .admin-shell .text-4xl {
-  font-family: 'Cormorant Garamond', serif;
+  font-family: 'Cormorant Garamond', 'Noto Serif Armenian', serif;
   font-weight: 500;
 }
 
