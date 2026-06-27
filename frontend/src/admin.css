@@ -133,6 +133,18 @@
   background: rgba(255,255,255,0.05);
 }
 
+/* Nav group wrapper + label actually used by the panel */
+.admin-nav-group { display: flex; flex-direction: column; }
+.admin-nav-group-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: hsl(var(--muted-foreground));
+  padding: 14px 16px 4px;
+  opacity: 0.6;
+}
+.admin-nav-group:first-child .admin-nav-group-label { padding-top: 6px; }
+
 .admin-sidebar-item {
   display: flex;
   align-items: center;
@@ -288,15 +300,38 @@
 }
 
 @media (max-width: 860px) {
-  .admin-shell { flex-direction: column; }
-  .admin-sidebar { width: 100%; height: auto; position: relative; }
+  /* Let the page scroll instead of locking to 100vh */
+  .admin-shell { flex-direction: column; height: auto; overflow: visible; }
+
+  /* Sidebar becomes a sticky top bar with a horizontal, swipeable tab strip */
+  .admin-sidebar {
+    width: 100%; height: auto;
+    position: sticky; top: 0; z-index: 60;
+    border-right: none;
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
   .admin-sidebar::before { display: none; }
-  .admin-sidebar-nav { flex-direction: row; flex-wrap: wrap; padding: 6px 8px; }
-  .admin-sidebar-group { margin-top: 0; }
-  .admin-sidebar-group-label { display: none; }
+
+  /* Compact brand row */
+  .admin-sidebar-logo { padding: 12px 16px 10px; border-bottom: none; }
+  .admin-sidebar-logo .badge-label { display: none; }
+
+  /* One horizontal scrolling row of tabs */
+  .admin-sidebar-nav {
+    flex-direction: row; flex-wrap: nowrap;
+    overflow-x: auto; overflow-y: hidden;
+    padding: 0 8px 2px; gap: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* dissolve the group wrappers so their items flow inline */
+  .admin-nav-group { display: contents; }
+  .admin-nav-group-label { display: none; }
+
   .admin-sidebar-item {
-    flex-direction: column; gap: 3px;
-    padding: 7px 10px; font-size: 10px;
+    width: auto; flex: 0 0 auto;
+    flex-direction: row; gap: 6px;
+    padding: 9px 12px; font-size: 12px;
+    white-space: nowrap;
     border-left: none; border-bottom: 2px solid transparent;
   }
   .admin-sidebar-item.active {
@@ -304,9 +339,55 @@
     border-bottom-color: #7E3434;
     background: rgba(126,52,52,0.1);
   }
+  .admin-sidebar-badge { margin-left: 4px; }
+
+  /* Footer becomes an inline row under the brand */
   .admin-sidebar-footer {
-    flex-direction: row; flex-wrap: wrap;
-    border-top: none;
-    border-left: 1px solid rgba(255,255,255,0.06);
+    position: absolute; top: 10px; right: 12px;
+    flex-direction: row; gap: 6px;
+    padding: 0; border-top: none;
   }
+  .admin-sidebar-user { display: none; }
+  .admin-sidebar-btn { padding: 6px 10px; }
+  .admin-sidebar-btn.back span,
+  .admin-sidebar-btn span { display: inline; }
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   ROW ACTION MENU (⋯) — portaled to body, so use explicit palette
+═══════════════════════════════════════════════════════════════ */
+.admin-rowmenu-trigger {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 32px; height: 32px; border-radius: 6px;
+  border: 1px solid hsl(35 22% 80%);
+  background: #FDFAF7; color: #48301E; cursor: pointer;
+  transition: background .12s, border-color .12s;
+}
+.admin-rowmenu-trigger:hover { background: #F2E9DC; border-color: #C9B89A; }
+.admin-rowmenu-trigger[aria-expanded="true"] { background: #F2E9DC; border-color: #B89A6E; }
+
+.admin-rowmenu {
+  position: fixed; z-index: 9999; min-width: 208px;
+  background: #FDFAF7; border: 1px solid #E4D8C5; border-radius: 10px;
+  box-shadow: 0 14px 36px rgba(24,12,4,0.18);
+  padding: 6px; display: flex; flex-direction: column; gap: 1px;
+  font-family: 'Jost', 'Noto Sans Armenian', sans-serif;
+  animation: rowmenu-in .12s ease;
+}
+@keyframes rowmenu-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: none; }
+}
+.admin-rowmenu-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  text-align: left; padding: 9px 10px;
+  border: none; background: none; cursor: pointer; border-radius: 6px;
+  font-size: 13px; color: #2A1C10; line-height: 1.2;
+  transition: background .1s, color .1s;
+}
+.admin-rowmenu-item:hover { background: #F4ECE0; }
+.admin-rowmenu-item svg { opacity: 0.65; flex-shrink: 0; }
+.admin-rowmenu-item.danger { color: #A3261C; }
+.admin-rowmenu-item.danger:hover { background: #FBEAE7; }
+.admin-rowmenu-item.danger svg { opacity: 0.9; }
+.admin-rowmenu-sep { height: 1px; background: #EBE1D2; margin: 4px 2px; }

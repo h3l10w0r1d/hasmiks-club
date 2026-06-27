@@ -18,6 +18,7 @@ import { Input }        from '../components/ui/input'
 import { Textarea }     from '../components/ui/textarea'
 import { Label }        from '../components/ui/label'
 import { Skeleton }     from '../components/ui/skeleton'
+import { RowMenu }      from '../components/ui/RowMenu'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../components/ui/table'
@@ -264,8 +265,10 @@ export default function AdminPage() {
 
   const [eventForm,      setEventForm]      = useState(EMPTY_EVENT)
   const [editingEvent,   setEditingEvent]   = useState(null)
+  const [showEventForm,  setShowEventForm]  = useState(false)
   const [contentForm,    setContentForm]    = useState(EMPTY_CONTENT)
   const [editingContent, setEditingContent] = useState(null)
+  const [showContentForm, setShowContentForm] = useState(false)
   const [unlockTarget,   setUnlockTarget]   = useState({ contentId: '', userId: '' })
   const [broadcastForm,  setBroadcastForm]  = useState({ subject: '', body: '', segment: 'all' })
   const [broadcasting,   setBroadcasting]  = useState(false)
@@ -387,11 +390,12 @@ export default function AdminPage() {
         const created = await adminCreateEvent(payload)
         setEvents(es => [created, ...es]); flash('Event created')
       }
-      setEventForm(EMPTY_EVENT); setEditingEvent(null)
+      setEventForm(EMPTY_EVENT); setEditingEvent(null); setShowEventForm(false)
     } catch { flash('Failed to save event', true) }
   }
   const startEditEvent = (ev) => {
     setEditingEvent(ev)
+    setShowEventForm(true)
     setEventForm({ title: ev.title || '', title_hy: ev.title_hy || '', description: ev.description || '', description_hy: ev.description_hy || '', location: ev.location || '', event_date: ev.event_date ? ev.event_date.slice(0, 16) : '', max_seats: ev.max_seats, cover_url: ev.cover_url || '' })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -429,11 +433,12 @@ export default function AdminPage() {
         const created = await adminCreateContent(contentForm)
         setContent(cs => [created, ...cs]); flash('Content created')
       }
-      setContentForm(EMPTY_CONTENT); setEditingContent(null)
+      setContentForm(EMPTY_CONTENT); setEditingContent(null); setShowContentForm(false)
     } catch { flash('Failed to save content', true) }
   }
   const startEditContent = (item) => {
     setEditingContent(item)
+    setShowContentForm(true)
     setContentForm({ type: item.type, title: item.title || '', title_hy: item.title_hy || '', description: item.description || '', description_hy: item.description_hy || '', file_url: item.file_url || '', cover_url: item.cover_url || '' })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
@@ -643,10 +648,8 @@ export default function AdminPage() {
         </div>
         <div className="admin-sidebar-nav">
           {TAB_GROUPS.map(group => (
-            <Fragment key={group.label}>
-              <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.1em', color: 'hsl(var(--muted-foreground))', padding: '14px 16px 4px', opacity: 0.6 }}>
-                {group.label}
-              </div>
+            <div className="admin-nav-group" key={group.label}>
+              <div className="admin-nav-group-label">{group.label}</div>
               {group.keys.map(key => {
                 const t = TABS.find(x => x.key === key)
                 if (!t) return null
@@ -658,14 +661,12 @@ export default function AdminPage() {
                     <span className="si-icon"><Icon size={15} /></span>
                     {label}
                     {key === 'applications' && applications.length > 0 && (
-                      <span style={{ marginLeft: 'auto', background: 'hsl(var(--primary))', color: 'hsl(var(--primary-foreground))', borderRadius: '9999px', fontSize: 10, fontWeight: 700, padding: '1px 6px', lineHeight: '16px' }}>
-                        {applications.length}
-                      </span>
+                      <span className="admin-sidebar-badge">{applications.length}</span>
                     )}
                   </button>
                 )
               })}
-            </Fragment>
+            </div>
           ))}
         </div>
         <div className="admin-sidebar-footer">
@@ -847,7 +848,6 @@ export default function AdminPage() {
                       <TableHead>Email</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Joined</TableHead>
-                      <TableHead>Admin</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -855,15 +855,18 @@ export default function AdminPage() {
                     {isLoading('members')
                       ? <TableSkeleton cols={6} />
                       : filteredMembers.length === 0
-                        ? <TableRow><TableCell colSpan={6} className="text-center text-muted-foreground py-10">{memberSearch ? 'No matching members' : 'No members yet'}</TableCell></TableRow>
+                        ? <TableRow><TableCell colSpan={5} className="text-center text-muted-foreground py-10">{memberSearch ? 'No matching members' : 'No members yet'}</TableCell></TableRow>
                         : filteredMembers.map(m => (
-                          <>
-                            <TableRow key={m.id}>
+                          <Fragment key={m.id}>
+                            <TableRow>
                               <TableCell>
                                 <div className="flex items-center gap-2.5">
                                   <MemberAvatar name={m.full_name} />
                                   <div>
-                                    <div className="font-medium text-sm">{m.full_name}</div>
+                                    <div className="font-medium text-sm flex items-center gap-1.5">
+                                      {m.full_name}
+                                      {m.is_admin && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Admin</Badge>}
+                                    </div>
                                     {m.admin_notes && <div className="text-xs text-muted-foreground truncate max-w-[160px]">📝 {m.admin_notes}</div>}
                                   </div>
                                 </div>
@@ -874,26 +877,23 @@ export default function AdminPage() {
                               </TableCell>
                               <TableCell className="text-muted-foreground text-sm">{fmtDate(m.joined_at)}</TableCell>
                               <TableCell>
-                                <input type="checkbox" checked={m.is_admin} onChange={() => toggleAdmin(m)} className="h-4 w-4 cursor-pointer accent-primary" />
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex justify-end gap-1.5 flex-wrap">
+                                <div className="flex justify-end items-center gap-2">
                                   <Button variant={m.membership_status === 'active' ? 'outline' : 'success'} size="sm" onClick={() => toggleMembership(m)}>
                                     {m.membership_status === 'active' ? 'Deactivate' : 'Activate'}
                                   </Button>
-                                  <Button variant="outline" size="sm" title="Send Telegram invite" onClick={() => handleSendTelegram(m)}>
-                                    <SendHorizonal className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button variant="outline" size="sm" title="Notes" onClick={() => toggleNotes(m)}>
-                                    <StickyNote className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Button variant="destructive" size="sm" onClick={() => deleteMember(m)}>Delete</Button>
+                                  <RowMenu items={[
+                                    { icon: SendHorizonal, label: 'Send Telegram invite', onClick: () => handleSendTelegram(m) },
+                                    { icon: StickyNote, label: m.admin_notes ? 'Edit private notes' : 'Add private notes', onClick: () => toggleNotes(m) },
+                                    { icon: Shield, label: m.is_admin ? 'Revoke admin access' : 'Make admin', onClick: () => toggleAdmin(m) },
+                                    { separator: true },
+                                    { icon: Trash2, label: 'Delete member', danger: true, onClick: () => deleteMember(m) },
+                                  ]} />
                                 </div>
                               </TableCell>
                             </TableRow>
                             {expandedNotes[m.id] && (
-                              <TableRow key={`${m.id}-notes`} className="bg-muted/30">
-                                <TableCell colSpan={6} className="py-3 px-6">
+                              <TableRow className="bg-muted/30">
+                                <TableCell colSpan={5} className="py-3 px-6">
                                   <div className="flex gap-3 items-end">
                                     <div className="flex-1">
                                       <Label className="mb-1.5">Private notes for {m.full_name}</Label>
@@ -916,7 +916,7 @@ export default function AdminPage() {
                                 </TableCell>
                               </TableRow>
                             )}
-                          </>
+                          </Fragment>
                         ))
                     }
                   </TableBody>
@@ -928,7 +928,11 @@ export default function AdminPage() {
           {/* ══ EVENTS ══ */}
           {tab === 'events' && (
             <div className="space-y-6">
-              <SectionHeader title="Events" sub="Create and manage gathering events" />
+              <SectionHeader title="Events" sub="Create and manage gathering events">
+                <Button size="sm" variant={showEventForm ? 'outline' : 'default'} onClick={() => { setEditingEvent(null); setEventForm(EMPTY_EVENT); setShowEventForm(s => !s) }}>
+                  {showEventForm ? <><XCircle className="h-3.5 w-3.5" /> Close</> : <><Plus className="h-3.5 w-3.5" /> New Event</>}
+                </Button>
+              </SectionHeader>
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <KpiCard icon={CalendarDays} label="Total Events" value={events.length}    loading={isLoading('events')} />
@@ -936,6 +940,7 @@ export default function AdminPage() {
                 <KpiCard icon={Users}        label="Total RSVPs"  value={totalRsvps}       loading={isLoading('events')} valueClass="text-primary" />
               </div>
 
+              {showEventForm && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm">{editingEvent ? '✏️  Edit Event' : '＋  New Event'}</CardTitle>
@@ -966,11 +971,12 @@ export default function AdminPage() {
                     )}
                     <div className="flex gap-2">
                       <Button type="submit">{editingEvent ? 'Update Event' : 'Create Event'}</Button>
-                      {editingEvent && <Button type="button" variant="outline" onClick={() => { setEditingEvent(null); setEventForm(EMPTY_EVENT) }}>Cancel</Button>}
+                      <Button type="button" variant="outline" onClick={() => { setEditingEvent(null); setEventForm(EMPTY_EVENT); setShowEventForm(false) }}>Cancel</Button>
                     </div>
                   </form>
                 </CardContent>
               </Card>
+              )}
 
               {/* filter */}
               <div className="flex items-center gap-3 flex-wrap">
@@ -1062,7 +1068,11 @@ export default function AdminPage() {
           {/* ══ CONTENT ══ */}
           {tab === 'content' && (
             <div className="space-y-6">
-              <SectionHeader title="Content Library" sub="Manage recipes, e-books and member unlocks" />
+              <SectionHeader title="Content Library" sub="Manage recipes, e-books and member unlocks">
+                <Button size="sm" variant={showContentForm ? 'outline' : 'default'} onClick={() => { setEditingContent(null); setContentForm(EMPTY_CONTENT); setShowContentForm(s => !s) }}>
+                  {showContentForm ? <><XCircle className="h-3.5 w-3.5" /> Close</> : <><Plus className="h-3.5 w-3.5" /> Add Content</>}
+                </Button>
+              </SectionHeader>
 
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                 <KpiCard icon={BookOpen} label="Total"   value={content.length}                               loading={isLoading('content')} />
@@ -1070,6 +1080,7 @@ export default function AdminPage() {
                 <KpiCard icon={BookOpen} label="E-Books" value={content.filter(c => c.type === 'ebook').length}  loading={isLoading('content')} />
               </div>
 
+              {showContentForm && (
               <Card>
                 <CardHeader>
                   <CardTitle className="text-sm">{editingContent ? '✏️  Edit Item' : '＋  Add Content'}</CardTitle>
@@ -1105,11 +1116,12 @@ export default function AdminPage() {
                     <Field label="Description (ՀԱՅ)"><Textarea value={contentForm.description_hy} onChange={setCF('description_hy')} /></Field>
                     <div className="flex gap-2">
                       <Button type="submit">{editingContent ? 'Update' : 'Add Content'}</Button>
-                      {editingContent && <Button type="button" variant="outline" onClick={() => { setEditingContent(null); setContentForm(EMPTY_CONTENT) }}>Cancel</Button>}
+                      <Button type="button" variant="outline" onClick={() => { setEditingContent(null); setContentForm(EMPTY_CONTENT); setShowContentForm(false) }}>Cancel</Button>
                     </div>
                   </form>
                 </CardContent>
               </Card>
+              )}
 
               <Card>
                 <CardHeader>
