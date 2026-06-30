@@ -488,10 +488,11 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
 .plan-name::before{content:'';display:block;width:16px;height:1px;background:var(--gold)}
 .plan-price{
   font-family:'Cormorant Garamond', 'Noto Sans Armenian',serif;
-  font-size:72px;font-weight:600;
+  font-size:60px;font-weight:600;
   color:var(--deep);line-height:1;
+  white-space:nowrap;
 }
-.plan-price sup{font-size:26px;vertical-align:super;font-weight:300}
+.plan-price sup{font-size:24px;vertical-align:super;font-weight:300;margin-right:2px}
 .plan-mo{
   font-size:11px;color:var(--stone);
   letter-spacing:0.15em;text-transform:uppercase;

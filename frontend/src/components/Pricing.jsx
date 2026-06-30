@@ -22,7 +22,7 @@ export default function Pricing({ lang }) {
           <div className="plan-name">
             {hy ? c.planNameHy : c.planNameEn}
           </div>
-          <div className="plan-price"><sup>$</sup>40</div>
+          <div className="plan-price"><sup>֏</sup>40,000</div>
           <div className="plan-mo">
             {hy ? c.perMonthHy : c.perMonthEn}
           </div>
