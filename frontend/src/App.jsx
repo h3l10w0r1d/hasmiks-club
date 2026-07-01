@@ -19,6 +19,9 @@ import AdminPage from './pages/AdminPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import EventsPage from './pages/EventsPage'
+import AboutPage from './pages/AboutPage'
+import ContactPage from './pages/ContactPage'
+import TermsPage from './pages/TermsPage'
 
 const SITE_URL = 'https://hasmiks.club'
 const OG_IMAGE = `${SITE_URL}/og-image.jpg`
@@ -55,7 +58,7 @@ function LandingPage({ lang, setLang }) {
       <Story lang={lang} />
       <Pricing lang={lang} />
       <FinalCta lang={lang} />
-      <Footer />
+      <Footer lang={lang} />
     </>
   )
 }
@@ -94,6 +97,9 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPasswordPage lang={lang} />} />
       <Route path="/reset-password" element={<ResetPasswordPage lang={lang} />} />
       <Route path="/events" element={<EventsPage lang={lang} />} />
+      <Route path="/about" element={<AboutPage lang={lang} setLang={setLang} />} />
+      <Route path="/contact" element={<ContactPage lang={lang} setLang={setLang} />} />
+      <Route path="/terms" element={<TermsPage lang={lang} setLang={setLang} />} />
       <Route path="/verify-email" element={<ResetPasswordPage lang={lang} />} />
     </Routes>
   )

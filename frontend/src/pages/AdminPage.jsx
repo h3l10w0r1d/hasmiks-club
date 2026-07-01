@@ -123,7 +123,7 @@ const EMPTY_ALBUM = { title: '', description: '', event_id: '', cover_url: '' }
 const DEFAULT_SETTINGS = {
   telegram_invite_url: '', require_approval: 'false',
   membership_price_display: '', club_description: '',
-  club_instagram: '', club_location: '',
+  club_instagram: '', club_location: '', club_email: '',
   welcome_email_body: '', event_reminder_body: '', email_footer: '',
 }
 
@@ -1450,6 +1450,9 @@ export default function AdminPage() {
                         </Field>
                         <Field label="Instagram Handle">
                           <Input value={settingsForm.club_instagram} onChange={e => setSettingsForm(f => ({ ...f, club_instagram: e.target.value }))} placeholder="@hasmiks.club" />
+                        </Field>
+                        <Field label="Contact Email (shown on the Contact page)">
+                          <Input type="email" value={settingsForm.club_email} onChange={e => setSettingsForm(f => ({ ...f, club_email: e.target.value }))} placeholder="hello@hasmiks.club" />
                         </Field>
                         <Field label="Club Description (shown in community tab)">
                           <Textarea rows={3} value={settingsForm.club_description} onChange={e => setSettingsForm(f => ({ ...f, club_description: e.target.value }))} placeholder="A warm, intimate community for women in Yerevan..." />

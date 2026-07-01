@@ -608,13 +608,86 @@ footer{
   border-top:1px solid #f0ece8;
   padding:28px 60px;
   display:flex;justify-content:space-between;align-items:center;
+  gap:20px;flex-wrap:wrap;
 }
 .ft-logo{
   font-family:'Cormorant Garamond', 'Noto Sans Armenian',serif;
   font-size:18px;font-weight:600;color:var(--deep);
+  text-decoration:none;
 }
 .ft-logo span{color:var(--rose)}
 .ft-copy{font-size:11px;color:var(--stone);letter-spacing:0.06em}
+.ft-nav{display:flex;gap:22px;flex-wrap:wrap}
+.ft-nav a{
+  font-size:12px;font-weight:500;letter-spacing:0.04em;
+  color:var(--taupe);text-decoration:none;transition:color .15s;
+}
+.ft-nav a:hover{color:var(--rose)}
+
+/* ═══════════════════════════════════════
+   STATIC CONTENT PAGES — About / Contact / Terms
+═══════════════════════════════════════ */
+.page-shell{min-height:100vh;display:flex;flex-direction:column;background:#fff}
+.page-main{flex:1}
+.page-hero{max-width:780px;margin:0 auto;padding:72px 24px 28px;text-align:center}
+.page-eyebrow{
+  font-size:11px;font-weight:600;letter-spacing:0.25em;text-transform:uppercase;
+  color:var(--gold);margin-bottom:16px;
+}
+.page-title{
+  font-family:'Cormorant Garamond','Noto Sans Armenian',serif;
+  font-size:clamp(34px,5vw,52px);font-weight:300;line-height:1.12;color:var(--deep);
+}
+.page-sub{margin-top:16px;font-size:15px;line-height:1.75;color:var(--taupe)}
+.page-body{max-width:720px;margin:0 auto;padding:8px 24px 84px}
+.page-section{margin-top:34px}
+.page-section h2{
+  font-family:'Cormorant Garamond','Noto Sans Armenian',serif;
+  font-size:25px;font-weight:500;color:var(--deep);margin-bottom:10px;
+}
+.page-section p{font-size:15px;line-height:1.85;color:var(--mocha);margin-bottom:12px}
+.page-section ul{margin:6px 0 12px;padding-left:20px}
+.page-section li{font-size:15px;line-height:1.8;color:var(--mocha);margin-bottom:7px}
+.page-sig{
+  font-family:'Cormorant Garamond','Noto Sans Armenian',serif;
+  font-style:italic;font-size:19px;color:var(--rose);margin-top:22px;
+}
+.page-updated{font-size:13px;color:var(--stone);margin-top:6px}
+.page-cta{
+  display:inline-block;margin-top:14px;background:var(--rose);color:#fff;
+  padding:13px 34px;font-size:12px;font-weight:600;letter-spacing:0.12em;
+  text-transform:uppercase;text-decoration:none;border-radius:6px;transition:background .15s;
+}
+.page-cta:hover{background:var(--rose-lt)}
+
+/* Contact */
+.contact-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:6px}
+.contact-card{
+  display:flex;flex-direction:column;gap:6px;padding:22px;
+  border:1px solid #ece6dd;border-radius:8px;background:#fff;text-decoration:none;
+  transition:box-shadow .15s,border-color .15s,transform .15s;
+}
+.contact-card:hover{box-shadow:0 10px 30px rgba(24,12,4,0.06);border-color:#e0d6c6;transform:translateY(-2px)}
+.cc-label{font-size:11px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);font-weight:600}
+.cc-value{font-size:15px;color:var(--deep);font-weight:500;word-break:break-word}
+.contact-form{display:flex;flex-direction:column;gap:16px;margin-top:6px}
+.contact-form label{font-size:12px;font-weight:600;letter-spacing:0.04em;color:var(--taupe);text-transform:uppercase;display:block;margin-bottom:6px}
+.contact-form input,.contact-form textarea{
+  width:100%;padding:12px 14px;border:1px solid #e0d6c6;border-radius:6px;
+  font-family:inherit;font-size:15px;color:var(--deep);background:#fff;
+}
+.contact-form input:focus,.contact-form textarea:focus{outline:none;border-color:var(--rose);box-shadow:0 0 0 3px rgba(126,52,52,0.08)}
+.contact-form button{
+  align-self:flex-start;background:var(--rose);color:#fff;border:none;cursor:pointer;
+  padding:13px 32px;font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;
+  border-radius:6px;transition:background .15s;
+}
+.contact-form button:hover{background:var(--rose-lt)}
+@media(max-width:640px){
+  footer{flex-direction:column;gap:14px;text-align:center;padding:24px}
+  .ft-nav{justify-content:center}
+  .page-hero{padding-top:48px}
+}
 
 /* ═══════════════════════════════════════
    MOBILE
