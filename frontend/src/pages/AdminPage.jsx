@@ -8,7 +8,7 @@ import {
   TrendingUp, CheckCircle2, XCircle, Percent, Search, ImageUp,
   SendHorizonal, StickyNote, Filter, UserCheck,
   Inbox, GalleryHorizontal, Settings2, Trophy, Link2, Plus, Trash2, ExternalLink,
-  Shield,
+  Shield, MapPin, Pencil, Unlock,
 } from 'lucide-react'
 
 import { Button }       from '../components/ui/button'
@@ -791,7 +791,9 @@ export default function AdminPage() {
                                   <div className="flex items-start justify-between gap-3 mb-3 flex-wrap">
                                     <div>
                                       <p className="font-serif font-semibold text-base leading-tight">{ev.title}</p>
-                                      <p className="text-xs text-muted-foreground mt-0.5">📍 {ev.location} · 🗓 {fmtDateTime(ev.event_date)}</p>
+                                      <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1 flex-wrap">
+                                        <MapPin className="h-3 w-3" /> {ev.location} <span>·</span> <CalendarDays className="h-3 w-3" /> {fmtDateTime(ev.event_date)}
+                                      </p>
                                     </div>
                                     <Badge variant={pct >= 100 ? 'destructive' : pct >= 75 ? 'secondary' : 'success'}>
                                       {taken}/{max} seats
@@ -867,7 +869,11 @@ export default function AdminPage() {
                                       {m.full_name}
                                       {m.is_admin && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Admin</Badge>}
                                     </div>
-                                    {m.admin_notes && <div className="text-xs text-muted-foreground truncate max-w-[160px]">📝 {m.admin_notes}</div>}
+                                    {m.admin_notes && (
+                                      <div className="text-xs text-muted-foreground truncate max-w-[160px] flex items-center gap-1">
+                                        <StickyNote className="h-3 w-3 flex-shrink-0" /> {m.admin_notes}
+                                      </div>
+                                    )}
                                   </div>
                                 </div>
                               </TableCell>
@@ -943,7 +949,9 @@ export default function AdminPage() {
               {showEventForm && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">{editingEvent ? '✏️  Edit Event' : '＋  New Event'}</CardTitle>
+                  <CardTitle className="text-sm flex items-center gap-1.5">
+                    {editingEvent ? <><Pencil className="h-3.5 w-3.5" /> Edit Event</> : <><Plus className="h-3.5 w-3.5" /> New Event</>}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={submitEvent} className="space-y-4">
@@ -998,8 +1006,12 @@ export default function AdminPage() {
                       <div className="flex items-start justify-between gap-4 p-5 flex-wrap">
                         <div className="flex-1 min-w-0">
                           <p className="font-serif text-lg font-semibold text-foreground mb-1">{ev.title}</p>
-                          <p className="text-xs text-muted-foreground">
-                            📍 {ev.location} &nbsp;·&nbsp; 🗓 {fmtDateTime(ev.event_date)} &nbsp;·&nbsp; 👥 {ev.seats_taken ?? 0}/{ev.max_seats}
+                          <p className="text-xs text-muted-foreground flex items-center flex-wrap gap-x-1.5">
+                            <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {ev.location}</span>
+                            <span>·</span>
+                            <span className="flex items-center gap-1"><CalendarDays className="h-3 w-3" /> {fmtDateTime(ev.event_date)}</span>
+                            <span>·</span>
+                            <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {ev.seats_taken ?? 0}/{ev.max_seats}</span>
                           </p>
                         </div>
                         <div className="flex gap-2 flex-shrink-0">
@@ -1083,7 +1095,9 @@ export default function AdminPage() {
               {showContentForm && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">{editingContent ? '✏️  Edit Item' : '＋  Add Content'}</CardTitle>
+                  <CardTitle className="text-sm flex items-center gap-1.5">
+                    {editingContent ? <><Pencil className="h-3.5 w-3.5" /> Edit Item</> : <><Plus className="h-3.5 w-3.5" /> Add Content</>}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <form onSubmit={submitContent} className="space-y-4">
@@ -1125,7 +1139,7 @@ export default function AdminPage() {
 
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-sm">🔓 Unlock for Specific Member</CardTitle>
+                  <CardTitle className="text-sm flex items-center gap-1.5"><Unlock className="h-3.5 w-3.5" /> Unlock for Specific Member</CardTitle>
                   <CardDescription>Enter content ID and member ID to manually unlock.</CardDescription>
                 </CardHeader>
                 <CardContent>

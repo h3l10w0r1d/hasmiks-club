@@ -1,5 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
+import {
+  PartyPopper, Flower2, AlertTriangle, UserPlus, MapPin, CalendarDays,
+  Send, CheckCircle2, Circle, Lock, Image as ImageIcon, Pin, User, MessageCircle,
+  Home, BookOpen, GalleryHorizontal, Users,
+} from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum } from '../api/members'
 import { getEvents, rsvp, cancelRsvp, joinWaitlist, leaveWaitlist, getWaitlistPosition } from '../api/events'
@@ -19,8 +24,8 @@ function getCountdown(iso, lang) {
   if (diff < 0) return null
   const h = Math.floor(diff / 36e5)
   const d = Math.floor(diff / 864e5)
-  if (h < 3) return lang === 'hy' ? 'Այսօր! 🎉' : 'Today! 🎉'
-  if (d === 0) return lang === 'hy' ? 'Վաղը! 🌸' : 'Tomorrow! 🌸'
+  if (h < 3) return lang === 'hy' ? 'Այսօր!' : 'Today!'
+  if (d === 0) return lang === 'hy' ? 'Վաղը!' : 'Tomorrow!'
   if (d <= 7) return lang === 'hy' ? `${d} օրից` : `In ${d} days`
   return null
 }
@@ -274,12 +279,12 @@ export default function DashboardPage({ lang }) {
     return (
       <div style={{ minHeight: '100vh', background: '#fff8f5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', fontFamily: 'inherit' }}>
         <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' }}>
-          <div style={{ fontSize: 52, marginBottom: 24 }}>🌸</div>
+          <Flower2 size={44} strokeWidth={1.5} color="var(--rose)" style={{ marginBottom: 24 }} />
           <h1 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 34, fontWeight: 700, color: '#2c1a1a', margin: '0 0 16px', lineHeight: 1.2 }}>
             {greeting}, {user.full_name.split(' ')[0]}!
           </h1>
           <h2 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 24, fontWeight: 600, color: '#c0394b', margin: '0 0 20px' }}>
-            {lang === 'hy' ? 'Ձեր հայտը ուսումնասիրվում է 🌸' : 'Your application is under review 🌸'}
+            {lang === 'hy' ? 'Ձեր հայտը ուսումնասիրվում է' : 'Your application is under review'}
           </h2>
           <p style={{ fontSize: 15, color: '#2c1a1a', lineHeight: 1.75, marginBottom: 12 }}>
             {lang === 'hy'
@@ -332,7 +337,7 @@ export default function DashboardPage({ lang }) {
       {/* Email verification banner */}
       {!user.is_verified && (
         <div style={{ background: '#fff8e1', borderBottom: '1px solid #ffe082', padding: '10px 24px', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 14, color: '#795548' }}>⚠️ {t.verifyBanner}</span>
+          <span style={{ fontSize: 14, color: '#795548', display: 'flex', alignItems: 'center', gap: 6 }}><AlertTriangle size={15} /> {t.verifyBanner}</span>
           <button onClick={handleResendVerify} style={{ background: 'none', border: '1px solid #795548', borderRadius: 6, padding: '4px 12px', cursor: 'pointer', fontSize: 13, color: '#795548' }}>
             {t.resendVerify}
           </button>
@@ -370,15 +375,15 @@ export default function DashboardPage({ lang }) {
           {/* ── HOME ── */}
           {tab === 'home' && (
             <div className="dash-section">
-              <h2 className="dash-section-title">
-                {greeting}, {user.full_name.split(' ')[0]}! 🌸
+              <h2 className="dash-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                {greeting}, {user.full_name.split(' ')[0]}! <Flower2 size={20} strokeWidth={1.5} color="var(--rose)" />
               </h2>
 
               {/* Referral link — prominent, first card */}
               {user.referral_code && (
                 <div style={{ background: '#fff', border: '1px solid #f0dde0', borderRadius: 14, padding: '20px 24px', marginBottom: 28 }}>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--deep)', marginBottom: 8 }}>
-                    {lang === 'hy' ? '👯 Հրավիրե՛ք ընկերուհի' : '👯 Invite a friend'}
+                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--deep)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <UserPlus size={16} /> {lang === 'hy' ? 'Հրավիրե՛ք ընկերուհի' : 'Invite a friend'}
                   </p>
                   <p style={{ fontSize: 13, color: '#888', marginBottom: 12 }}>
                     {lang === 'hy' ? 'Կիսե՛ք հղումը՝ ընկերուհուն հրավիրելու համար:' : "Share your link and your friend's application will be linked to you."}
@@ -409,8 +414,8 @@ export default function DashboardPage({ lang }) {
                       <div>
                         <div className="event-title">{lang === 'hy' && nextEvent.title_hy ? nextEvent.title_hy : nextEvent.title}</div>
                         <div className="event-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          📍 {nextEvent.location} &nbsp;·&nbsp;
-                          🗓 {new Date(nextEvent.event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} /> {nextEvent.location}</span> ·
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CalendarDays size={13} /> {new Date(nextEvent.event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                           {getCountdown(nextEvent.event_date, lang) && (
                             <span style={{ background: '#fff0f2', color: '#c0394b', borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 600, marginLeft: 4 }}>
                               {getCountdown(nextEvent.event_date, lang)}
@@ -426,7 +431,7 @@ export default function DashboardPage({ lang }) {
                     </div>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                       {rsvpDone[nextEvent.id] ? (
-                        <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14 }}>You're going! 🎉</span>
+                        <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
                       ) : nextEvent.user_has_rsvp ? (
                         <button className="plan-btn plan-btn-outline" onClick={() => handleRsvp(nextEvent)}>{t.cancelRsvp}</button>
                       ) : nextEvent.seats_available > 0 ? (
@@ -533,8 +538,8 @@ export default function DashboardPage({ lang }) {
 
               {!user.onboarding_completed && (
                 <div style={{ background: '#fff', border: '1px solid #f0dde0', borderRadius: 14, padding: '20px 24px', marginBottom: 28 }}>
-                  <p style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian",serif', fontSize: 18, fontWeight: 700, color: 'var(--deep)', marginBottom: 14 }}>
-                    {lang === 'hy' ? 'Ողջույն Hasmik\'s Club-ում 🌸' : 'Getting started 🌸'}
+                  <p style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian",serif', fontSize: 18, fontWeight: 700, color: 'var(--deep)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    {lang === 'hy' ? 'Ողջույն Hasmik\'s Club-ում' : 'Getting started'} <Flower2 size={17} strokeWidth={1.5} color="var(--rose)" />
                   </p>
                   {[
                     { done: !!profileForm.photo_url, label: lang === 'hy' ? 'Ավելացրե՛ք ձեր լուսանկարը' : 'Add a profile photo', action: null },
@@ -542,7 +547,7 @@ export default function DashboardPage({ lang }) {
                     { done: user.is_verified, label: lang === 'hy' ? 'Հաստատե՛ք ձեր էլ. հասցեն' : 'Verify your email', action: null },
                   ].map((step, i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                      <span style={{ fontSize: 16 }}>{step.done ? '✅' : '⬜'}</span>
+                      <span style={{ display: 'flex', color: step.done ? '#2e7d32' : '#ccc' }}>{step.done ? <CheckCircle2 size={17} /> : <Circle size={17} />}</span>
                       <span style={{ fontSize: 14, color: step.done ? '#aaa' : 'var(--deep)', textDecoration: step.done ? 'line-through' : 'none' }}>
                         {step.label}
                       </span>
@@ -558,15 +563,15 @@ export default function DashboardPage({ lang }) {
 
               {isActive && telegramUrl && (
                 <a href={telegramUrl} target="_blank" rel="noreferrer" className="btn-rose auth-submit"
-                  style={{ display: 'inline-block', textDecoration: 'none', marginBottom: '24px', maxWidth: '280px' }}>
-                  ✈️ {t.joinTelegram}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, textDecoration: 'none', marginBottom: '24px', maxWidth: '280px' }}>
+                  <Send size={15} /> {t.joinTelegram}
                 </a>
               )}
 
               {user.referral_code && (
                 <div style={{ background: '#fff', border: '1px solid #f0dde0', borderRadius: 14, padding: '16px 20px', marginBottom: 24 }}>
-                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--deep)', marginBottom: 8 }}>
-                    {lang === 'hy' ? '👯 Հրավիրե՛ք ընկերուհի' : '👯 Invite a friend'}
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--deep)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <UserPlus size={15} /> {lang === 'hy' ? 'Հրավիրե՛ք ընկերուհի' : 'Invite a friend'}
                   </p>
                   <p style={{ fontSize: 12, color: '#888', marginBottom: 10 }}>
                     {lang === 'hy' ? 'Կիսե՛ք հղումը՝ ընկերուհուն հրավիրելու համար:' : 'Share your link and your friend\'s application will be linked to you.'}
@@ -638,8 +643,8 @@ export default function DashboardPage({ lang }) {
                         <div>
                           <div className="event-title">{lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title}</div>
                           <div className="event-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            📍 {ev.location} &nbsp;·&nbsp;
-                            🗓 {new Date(ev.event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} /> {ev.location}</span> ·
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CalendarDays size={13} /> {new Date(ev.event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
                             {countdown && (
                               <span style={{ background: '#fff0f2', color: '#c0394b', borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 600, marginLeft: 4 }}>
                                 {countdown}
@@ -659,7 +664,7 @@ export default function DashboardPage({ lang }) {
 
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                         {rsvpDone[ev.id] ? (
-                          <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14 }}>You're going! 🎉</span>
+                          <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
                         ) : ev.user_has_rsvp ? (
                           <button className="plan-btn plan-btn-outline" onClick={() => handleRsvp(ev)}>{t.cancelRsvp}</button>
                         ) : ev.seats_available > 0 ? (
@@ -715,7 +720,7 @@ export default function DashboardPage({ lang }) {
                             <div style={{ position: 'relative' }}>
                               {item.cover_url && <img src={item.cover_url} alt={item.title} className="library-cover" style={{ filter: 'blur(2px)', opacity: 0.5 }} />}
                               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,248,245,.8)' }}>
-                                <span style={{ fontSize: 28 }}>🔒</span>
+                                <Lock size={26} strokeWidth={1.5} color="#c0394b" />
                                 <p style={{ fontSize: 12, color: '#c0394b', fontWeight: 600, marginTop: 6, textAlign: 'center', padding: '0 8px' }}>
                                   {lang === 'hy' ? 'Ակտիվ անդամության համար' : 'Available with active membership'}
                                 </p>
@@ -750,7 +755,7 @@ export default function DashboardPage({ lang }) {
                         }}>
                         {album.cover_url
                           ? <img src={album.cover_url} alt={album.title} style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }} />
-                          : <div style={{ width: '100%', height: 140, background: '#f5ece8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 32 }}>🖼</div>
+                          : <div style={{ width: '100%', height: 140, background: '#f5ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImageIcon size={28} strokeWidth={1.5} color="#c9a8a8" /></div>
                         }
                         <div style={{ padding: '14px 16px' }}>
                           <div style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian",serif', fontSize: 17, fontWeight: 700, color: 'var(--deep)' }}>{album.title}</div>
@@ -868,14 +873,14 @@ export default function DashboardPage({ lang }) {
                     onMouseEnter={e => e.currentTarget.style.boxShadow='0 4px 16px rgba(168,92,90,0.12)'}
                     onMouseLeave={e => e.currentTarget.style.boxShadow='none'}>
                     <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:6 }}>
-                      {topic.pinned && <span style={{ fontSize:11, background:'var(--rose-bg)', color:'var(--rose)', borderRadius:6, padding:'2px 8px', fontWeight:700 }}>📌 Pinned</span>}
+                      {topic.pinned && <span style={{ fontSize:11, background:'var(--rose-bg)', color:'var(--rose)', borderRadius:6, padding:'2px 8px', fontWeight:700, display:'flex', alignItems:'center', gap:4 }}><Pin size={11} /> Pinned</span>}
                       <span style={{ fontSize:11, background:'#f5f5f5', color:'#888', borderRadius:6, padding:'2px 8px' }}>{topic.category}</span>
                     </div>
                     <p style={{ fontWeight:700, fontSize:15, color:'var(--deep)', marginBottom:4 }}>{topic.title}</p>
                     <p style={{ fontSize:13, color:'#666', marginBottom:8, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{topic.body}</p>
                     <div style={{ display:'flex', gap:16, fontSize:12, color:'#aaa' }}>
-                      <span>👤 {topic.author?.full_name}</span>
-                      <span>💬 {topic.post_count} {lang === 'hy' ? 'պատ.' : 'replies'}</span>
+                      <span style={{ display:'flex', alignItems:'center', gap:4 }}><User size={12} /> {topic.author?.full_name}</span>
+                      <span style={{ display:'flex', alignItems:'center', gap:4 }}><MessageCircle size={12} /> {topic.post_count} {lang === 'hy' ? 'պատ.' : 'replies'}</span>
                       <span>{new Date(topic.created_at).toLocaleDateString()}</span>
                     </div>
                   </div>
@@ -925,10 +930,11 @@ export default function DashboardPage({ lang }) {
       {/* ── Mobile bottom navigation ── */}
       <nav className="dash-bottom-nav">
         {TABS.map(k => {
-          const icons = { home: '🏠', profile: '👤', events: '📅', library: '📚', gallery: '🖼', community: '👯', forum: '💬' }
+          const icons = { home: Home, profile: User, events: CalendarDays, library: BookOpen, gallery: GalleryHorizontal, community: Users, forum: MessageCircle }
+          const Icon = icons[k]
           return (
             <button key={k} className={`dash-bottom-nav-item${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>
-              <span className="nav-icon">{icons[k]}</span>
+              <span className="nav-icon"><Icon size={20} strokeWidth={1.75} /></span>
               {t[k]}
             </button>
           )
@@ -1041,7 +1047,7 @@ export default function DashboardPage({ lang }) {
                   </a>
                 </>
               ) : (
-                <p style={{ textAlign: 'center', color: '#aaa', fontSize: 13, marginTop: 8 }}>🔒 {t.lockedLib}</p>
+                <p style={{ textAlign: 'center', color: '#aaa', fontSize: 13, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><Lock size={13} /> {t.lockedLib}</p>
               )}
             </div>
           </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Bell } from 'lucide-react'
 import { getNotifications, markRead, markAllRead } from '../api/notifications'
 
 function timeAgo(iso) {
@@ -59,11 +60,12 @@ export default function NotificationBell() {
         onClick={() => setOpen(o => !o)}
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
-          fontSize: 20, position: 'relative', padding: '4px 8px',
+          display: 'flex', alignItems: 'center',
+          position: 'relative', padding: '4px 8px', color: 'var(--deep, #221c16)',
         }}
         aria-label="Notifications"
       >
-        🔔
+        <Bell size={20} strokeWidth={1.75} />
         {data.unread_count > 0 && (
           <span style={{
             position: 'absolute', top: 0, right: 0,

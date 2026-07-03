@@ -1,6 +1,9 @@
+import { Handshake, MessageCircle, Flower2 } from 'lucide-react'
 import { whyImg } from '../data/images'
 import t from '../data/content'
 import Reveal from './Reveal'
+
+const PT_ICONS = { handshake: Handshake, chat: MessageCircle, flower: Flower2 }
 
 export default function Why({ lang }) {
   const c = t.why
@@ -26,15 +29,18 @@ export default function Why({ lang }) {
         </p>
 
         <div className="pts">
-          {c.pts.map((pt, i) => (
+          {c.pts.map((pt, i) => {
+            const Icon = PT_ICONS[pt.ico]
+            return (
             <Reveal as="div" className="pt" key={i} delay={i * 90}>
-              <div className="pt-ico">{pt.ico}</div>
+              <div className="pt-ico"><Icon size={17} strokeWidth={1.75} /></div>
               <div>
                 <div className="pt-title">{hy ? pt.titleHy : pt.titleEn}</div>
                 <div className="pt-body">{hy ? pt.bodyHy : pt.bodyEn}</div>
               </div>
             </Reveal>
-          ))}
+            )
+          })}
         </div>
       </Reveal>
 

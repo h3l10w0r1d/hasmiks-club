@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
+import { Flower2, MapPin, CalendarDays } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getPublicEvents, getEvents, rsvp, cancelRsvp } from '../api/events'
 import { createCheckout } from '../api/payments'
@@ -208,7 +209,7 @@ export default function EventsPage({ lang = 'en' }) {
 
         {!loading && events.length === 0 && (
           <div style={styles.emptyState}>
-            <span style={{ fontSize: 40 }}>🌸</span>
+            <Flower2 size={36} strokeWidth={1.5} color="var(--rose)" />
             <p style={{ marginTop: 12, color: '#888' }}>{t.noEvents}</p>
           </div>
         )}
@@ -234,9 +235,9 @@ export default function EventsPage({ lang = 'en' }) {
                   <div style={{ flex: 1 }}>
                     <h2 style={styles.cardTitle}>{title}</h2>
                     <div style={styles.meta}>
-                      <span>📍 {ev.location}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><MapPin size={13} /> {ev.location}</span>
                       <span style={{ color: '#ddd' }}>·</span>
-                      <span>🗓 {formatDate(ev.event_date, lang)}</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><CalendarDays size={13} /> {formatDate(ev.event_date, lang)}</span>
                     </div>
                     {desc && <p style={styles.desc}>{desc}</p>}
                   </div>

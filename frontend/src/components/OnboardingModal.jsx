@@ -1,31 +1,32 @@
 import { useState } from 'react'
+import { Flower2, CalendarDays, BookOpen, MessageCircle, Send, PartyPopper } from 'lucide-react'
 import { updateMe } from '../api/members'
 import { useAuth } from '../context/AuthContext'
 
 const STEPS = [
   {
-    emoji: '🌸',
+    icon: Flower2,
     title: (lang) => lang === 'hy' ? 'Բարի գալուստ Hasmik\'s Club!' : 'Welcome to Hasmik\'s Club!',
     body:  (lang) => lang === 'hy'
       ? 'Դուք միացել եք Երևանի ամենաջերմ կանացի համայնքին: Ահա թե ինչ է սպասվում ձեզ:'
       : 'You\'ve joined the warmest women\'s circle in Yerevan. Here\'s what awaits you:',
   },
   {
-    emoji: '📅',
+    icon: CalendarDays,
     title: (lang) => lang === 'hy' ? 'Հանդիպումներ և միջոցառումներ' : 'Gatherings & Events',
     body:  (lang) => lang === 'hy'
       ? 'Ամեն ամիս անցկացվում են հանդիպումներ, արհեստագործական սեմինարներ և մշակութային միջոցառումներ: RSVP-ն արագ կատարեք, քանի որ տեղերը սահմանափակ են:'
       : 'Monthly gatherings, craft ateliers, and cultural events. RSVP early — seats fill fast!',
   },
   {
-    emoji: '📚',
+    icon: BookOpen,
     title: (lang) => lang === 'hy' ? 'Բացառիկ բովանդակություն' : 'Exclusive Library',
     body:  (lang) => lang === 'hy'
       ? 'Ձեր անդամությունը բացում է բաղադրատոմսեր, eBook-ներ, և ռեսուրսներ, որոնք ստեղծվել են հատուկ ձեզ համար:'
       : 'Your membership unlocks recipes, ebooks, and curated resources created just for this circle.',
   },
   {
-    emoji: '💬',
+    icon: MessageCircle,
     title: (lang) => lang === 'hy' ? 'Կապ Telegram-ի միջոցով' : 'Connect on Telegram',
     body:  (lang, telegramUrl) => lang === 'hy'
       ? 'Միացե՛ք մեր Telegram խմբին՝ ամենաթարմ նորություններն ու կապն ունենալու համար:'
@@ -80,7 +81,13 @@ export default function OnboardingModal({ lang, telegramUrl, onDone }) {
           ))}
         </div>
 
-        <div style={{ fontSize: 56, marginBottom: 20, lineHeight: 1 }}>{current.emoji}</div>
+        <div style={{
+          width: 64, height: 64, margin: '0 auto 20px',
+          borderRadius: '50%', background: 'var(--rose-bg)', color: 'var(--rose)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <current.icon size={28} strokeWidth={1.75} />
+        </div>
         <h2 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian",serif', fontSize: 26, fontWeight: 700, color: 'var(--deep)', marginBottom: 14, lineHeight: 1.3 }}>
           {current.title(lang)}
         </h2>
@@ -90,8 +97,8 @@ export default function OnboardingModal({ lang, telegramUrl, onDone }) {
 
         {current.isTelegram && telegramUrl && (
           <a href={telegramUrl} target="_blank" rel="noreferrer"
-            style={{ display: 'block', background: '#0088cc', color: '#fff', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 15, textDecoration: 'none', marginBottom: 16 }}>
-            ✈️ {lang === 'hy' ? 'Միանալ Telegram-ին' : 'Join Telegram Group'}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: '#0088cc', color: '#fff', borderRadius: 12, padding: '12px 0', fontWeight: 700, fontSize: 15, textDecoration: 'none', marginBottom: 16 }}>
+            <Send size={16} /> {lang === 'hy' ? 'Միանալ Telegram-ին' : 'Join Telegram Group'}
           </a>
         )}
 
@@ -103,10 +110,11 @@ export default function OnboardingModal({ lang, telegramUrl, onDone }) {
             border: 'none', borderRadius: 12, padding: '14px 0',
             fontFamily: '"Jost", "Noto Sans Armenian",sans-serif', fontSize: 15, fontWeight: 700,
             cursor: 'pointer', transition: 'opacity 0.15s',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
           }}
         >
           {loading ? '…' : isLast
-            ? (lang === 'hy' ? 'Շնորհակալ եմ, ուրախ եմ!' : 'Let\'s go! 🎉')
+            ? <>{lang === 'hy' ? 'Շնորհակալ եմ, ուրախ եմ!' : 'Let\'s go!'} <PartyPopper size={16} /></>
             : (lang === 'hy' ? 'Հաջորդ →' : 'Next →')
           }
         </button>
