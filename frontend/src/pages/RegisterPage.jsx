@@ -75,17 +75,8 @@ export default function RegisterPage({ lang }) {
   }
 
   const stepIndicator = (
-    <div style={{ display: 'flex', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
-      <div style={{
-        width: 32, height: 8, borderRadius: 4,
-        background: step === 1 ? '#e11d48' : '#e5e7eb',
-        transition: 'background 0.2s',
-      }} />
-      <div style={{
-        width: 32, height: 8, borderRadius: 4,
-        background: step === 2 ? '#e11d48' : '#e5e7eb',
-        transition: 'background 0.2s',
-      }} />
+    <div className="auth-progress">
+      <div className="auth-progress-fill" style={{ width: step === 1 ? '50%' : '100%' }} />
     </div>
   )
 
@@ -97,7 +88,6 @@ export default function RegisterPage({ lang }) {
         <div className="auth-logo">Hasmik's <span>Club</span></div>
         <span className="auth-logo-sub">{lang === 'hy' ? 'Անդամության հայտ' : 'Membership Application'}</span>
         <h1 className="auth-title">{t.title}</h1>
-        <div className="auth-divider" />
 
         {stepIndicator}
 

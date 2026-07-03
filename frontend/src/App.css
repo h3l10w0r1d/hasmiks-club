@@ -821,6 +821,16 @@ footer{
   height:1px;background:linear-gradient(to right, var(--sand), transparent);
   margin:0 0 28px;
 }
+.auth-progress{
+  height:4px;border-radius:999px;overflow:hidden;
+  background:var(--sand);
+  margin:16px 0 28px;
+}
+.auth-progress-fill{
+  height:100%;border-radius:999px;
+  background:linear-gradient(to right, var(--gold), var(--rose));
+  transition:width .35s ease;
+}
 .auth-form{display:flex;flex-direction:column;gap:18px}
 .auth-label{
   display:flex;flex-direction:column;gap:7px;
