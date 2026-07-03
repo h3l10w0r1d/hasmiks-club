@@ -71,7 +71,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   display:flex;align-items:center;
   background:var(--linen);
   border:1px solid var(--sand);
-  border-radius:4px;
+  border-radius:999px;
   overflow:hidden;
   margin-right:4px;
 }
@@ -93,7 +93,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   font-size:11px;font-weight:600;
   letter-spacing:0.08em;text-transform:uppercase;
   text-decoration:none;
-  border-radius:4px;
+  border-radius:999px;
   cursor:pointer;border:none;
   transition:background .15s,color .15s,border-color .15s;
   white-space:nowrap;
@@ -247,6 +247,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   letter-spacing:0.14em;text-transform:uppercase;
   text-decoration:none;align-self:flex-start;
   position:relative;z-index:1;
+  border-radius:999px;
   transition:background .2s,transform .2s;
 }
 .btn-rose:hover{background:var(--rose-lt);transform:translateY(-2px)}
@@ -555,6 +556,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   font-size:11px;font-weight:500;
   letter-spacing:0.13em;text-transform:uppercase;
   text-decoration:none;cursor:pointer;
+  border-radius:999px;
   transition:all .2s;
 }
 .plan-btn-outline{
@@ -622,6 +624,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   font-size:11px;font-weight:600;
   letter-spacing:0.15em;text-transform:uppercase;
   text-decoration:none;
+  border-radius:999px;
   transition:background .2s,transform .2s;
 }
 .btn-cream:hover{background:var(--linen);transform:translateY(-2px)}
@@ -687,7 +690,7 @@ footer{
 .page-cta{
   display:inline-block;margin-top:14px;background:var(--rose);color:#fff;
   padding:13px 34px;font-size:12px;font-weight:600;letter-spacing:0.12em;
-  text-transform:uppercase;text-decoration:none;border-radius:6px;transition:background .15s;
+  text-transform:uppercase;text-decoration:none;border-radius:999px;transition:background .15s;
 }
 .page-cta:hover{background:var(--rose-lt)}
 
@@ -711,7 +714,7 @@ footer{
 .contact-form button{
   align-self:flex-start;background:var(--rose);color:#fff;border:none;cursor:pointer;
   padding:13px 32px;font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;
-  border-radius:6px;transition:background .15s;
+  border-radius:999px;transition:background .15s;
 }
 .contact-form button:hover{background:var(--rose-lt)}
 @media(max-width:640px){
