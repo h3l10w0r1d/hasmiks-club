@@ -1,12 +1,13 @@
 import { whyImg } from '../data/images'
 import t from '../data/content'
+import Reveal from './Reveal'
 
 export default function Why({ lang }) {
   const c = t.why
   const hy = lang === 'hy'
   return (
     <section className="why">
-      <div className="why-text-col">
+      <Reveal as="div" className="why-text-col">
         <div className="sec-tag">{hy ? c.tagHy : c.tagEn}</div>
         <h2 className="sec-h">
           {hy
@@ -26,24 +27,24 @@ export default function Why({ lang }) {
 
         <div className="pts">
           {c.pts.map((pt, i) => (
-            <div className="pt" key={i}>
+            <Reveal as="div" className="pt" key={i} delay={i * 90}>
               <div className="pt-ico">{pt.ico}</div>
               <div>
                 <div className="pt-title">{hy ? pt.titleHy : pt.titleEn}</div>
                 <div className="pt-body">{hy ? pt.bodyHy : pt.bodyEn}</div>
               </div>
-            </div>
+            </Reveal>
           ))}
         </div>
-      </div>
+      </Reveal>
 
-      <div className="why-img-col">
+      <Reveal as="div" className="why-img-col" delay={120}>
         <img src={whyImg} alt="Hasmik with flowers" />
         <div className="why-quote">
           <p className="why-quote-t">{hy ? c.quoteHy : c.quoteEn}</p>
           <cite className="why-quote-c">— Հասմիկ</cite>
         </div>
-      </div>
+      </Reveal>
     </section>
   )
 }

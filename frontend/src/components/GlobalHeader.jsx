@@ -15,12 +15,21 @@ export default function GlobalHeader({ lang = 'en', setLang }) {
   const { user } = useAuth()
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
 
   const isActive = (path) => pathname === path
   const close = () => setMenuOpen(false)
 
   // close the mobile menu whenever the route changes
   useEffect(() => { setMenuOpen(false) }, [pathname])
+
+  // give the header a subtle shadow once the page has scrolled
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 8)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [])
 
   const t = {
     en: {
@@ -65,7 +74,7 @@ export default function GlobalHeader({ lang = 'en', setLang }) {
   )
 
   return (
-    <header className="gh">
+    <header className={`gh${scrolled ? ' gh--scrolled' : ''}`}>
       {/* ── brand ─────────────────────────────────────── */}
       <Link to="/" className="gh-brand" onClick={close}>
         <img src="/logo-h.png" alt="" className="gh-logo" aria-hidden="true" />

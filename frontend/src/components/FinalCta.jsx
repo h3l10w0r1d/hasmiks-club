@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { heroImg } from '../data/images'
 import t from '../data/content'
+import Reveal from './Reveal'
 
 export default function FinalCta({ lang }) {
   const c = t.finalCta
@@ -10,7 +11,7 @@ export default function FinalCta({ lang }) {
       <div className="final-bg">
         <img src={heroImg} alt="Hasmik" />
       </div>
-      <div className="final-content">
+      <Reveal as="div" className="final-content">
         <p className="final-eyebrow">
           {hy ? c.eyebrowHy : c.eyebrowEn}
         </p>
@@ -29,7 +30,7 @@ export default function FinalCta({ lang }) {
         <p className="final-tiny">
           {hy ? c.tinyHy : c.tinyEn}
         </p>
-      </div>
+      </Reveal>
     </section>
   )
 }

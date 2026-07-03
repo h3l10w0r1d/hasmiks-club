@@ -1,19 +1,20 @@
 import { storyImg } from '../data/images'
 import t from '../data/content'
+import Reveal from './Reveal'
 
 export default function Story({ lang }) {
   const c = t.story
   const hy = lang === 'hy'
   return (
     <section className="story">
-      <div className="story-img">
+      <Reveal as="div" className="story-img">
         <img src={storyImg} alt="Hasmik outside" />
         <div className="story-label">
           {hy ? c.labelHy : c.labelEn}
         </div>
-      </div>
+      </Reveal>
 
-      <div className="story-text-col">
+      <Reveal as="div" className="story-text-col" delay={120}>
         <div className="sec-tag">{hy ? c.tagHy : c.tagEn}</div>
         <h2 className="story-h">
           {hy
@@ -42,7 +43,7 @@ export default function Story({ lang }) {
         <div className="story-sig">
           {hy ? c.sigHy : c.sigEn}
         </div>
-      </div>
+      </Reveal>
     </section>
   )
 }

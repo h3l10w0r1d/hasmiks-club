@@ -1,24 +1,27 @@
 import { Link } from 'react-router-dom'
 import t from '../data/content'
+import Reveal from './Reveal'
 
 export default function Pricing({ lang }) {
   const c = t.pricing
   const hy = lang === 'hy'
   return (
     <section className="pricing" id="pricing">
-      <div className="sec-tag" style={{ justifyContent: 'center' }}>
-        {hy ? c.tagHy : c.tagEn}
-      </div>
-      <h2 className="sec-h" style={{ textAlign: 'center', maxWidth: '500px', margin: '0 auto 12px' }}>
-        {hy
-          ? <>Մեկ անդամակցություն։ <em>Ամեն ինչ ներառված է։</em></>
-          : <>One membership. <em>Everything included.</em></>
-        }
-      </h2>
-      <p className="pricing-sub">{c.subEn}</p>
+      <Reveal as="div">
+        <div className="sec-tag" style={{ justifyContent: 'center' }}>
+          {hy ? c.tagHy : c.tagEn}
+        </div>
+        <h2 className="sec-h" style={{ textAlign: 'center', maxWidth: '500px', margin: '0 auto 12px' }}>
+          {hy
+            ? <>Մեկ անդամակցություն։ <em>Ամեն ինչ ներառված է։</em></>
+            : <>One membership. <em>Everything included.</em></>
+          }
+        </h2>
+        <p className="pricing-sub">{c.subEn}</p>
+      </Reveal>
 
       <div className="plans">
-        <div className="plan hero-plan">
+        <Reveal as="div" className="plan hero-plan" delay={120}>
           <div className="plan-name">
             {hy ? c.planNameHy : c.planNameEn}
           </div>
@@ -35,7 +38,7 @@ export default function Pricing({ lang }) {
           <Link to="/register" className="plan-btn plan-btn-fill">
             {hy ? c.btnHy : c.btnEn}
           </Link>
-        </div>
+        </Reveal>
       </div>
 
       <p className="plan-note">
