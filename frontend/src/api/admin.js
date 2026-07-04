@@ -78,3 +78,4 @@ export const adminGetPayments         = ()           => client.get('/admin/payme
 export const adminRefreshPayment      = (id)         => client.post(`/admin/payments/${id}/refresh`).then(r => r.data)
 export const adminRefundPayment       = (id, amount) => client.post(`/admin/payments/${id}/refund`, { amount }).then(r => r.data)
 export const adminCancelPayment       = (id)         => client.post(`/admin/payments/${id}/cancel`).then(r => r.data)
+export const adminGetPaymentLogs      = (id)         => client.get(`/admin/payments/${id}/logs`).then(r => r.data)

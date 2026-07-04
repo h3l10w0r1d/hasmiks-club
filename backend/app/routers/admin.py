@@ -1,5 +1,6 @@
 import csv
 import io
+import json
 from datetime import datetime, timezone
 from typing import List
 
@@ -12,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.ameria_payment import AmeriaPayment
+from app.models.ameria_payment_log import AmeriaPaymentLog
 from app.models.audit_log import AuditLog
 from app.models.content import ContentItem, MemberContent
 from app.models.event import Event
@@ -27,6 +29,7 @@ from app.core import notify
 from app.core.audit import log as audit_log
 from app.core.config import settings
 from app.core.deps import get_current_user, get_current_admin, require_permission, ALL_PERMISSIONS, ROLE_PERMISSIONS, get_user_permissions
+from app.core.payment_log import log_payment_event
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -560,9 +563,11 @@ def _get_payment_row(payment_row_id: int, db: Session) -> AmeriaPayment:
 @router.post("/payments/{payment_row_id}/refresh")
 def refresh_payment(payment_row_id: int, db: Session = Depends(get_db), _: User = Depends(require_permission('manage_payments'))):
     row = _get_payment_row(payment_row_id, db)
+    req = {"PaymentID": row.payment_id}
     try:
         details = ameriabank.get_payment_details(row.payment_id)
     except ameriabank.AmeriaBankError as exc:
+        log_payment_event(db, row.id, "admin_refresh", request_payload=req, response_payload={"error": str(exc)}, success=False)
         raise HTTPException(status_code=502, detail=str(exc))
 
     row.response_code = details.get("ResponseCode")
@@ -573,6 +578,7 @@ def refresh_payment(payment_row_id: int, db: Session = Depends(get_db), _: User 
     order_status = details.get("OrderStatus")
     row.status = _PAYMENT_STATUS_MAP.get(order_status, row.status)
     db.commit()
+    log_payment_event(db, row.id, "admin_refresh", request_payload=req, response_payload=details, success=True)
     return _serialize_payment(row)
 
 
@@ -580,11 +586,15 @@ def refresh_payment(payment_row_id: int, db: Session = Depends(get_db), _: User 
 def refund_payment(payment_row_id: int, body: dict, db: Session = Depends(get_db), _: User = Depends(require_permission('manage_payments'))):
     row = _get_payment_row(payment_row_id, db)
     amount = body.get("amount", float(row.amount))
+    req = {"PaymentID": row.payment_id, "Amount": amount}
     try:
         resp = ameriabank.refund_payment(row.payment_id, amount)
     except ameriabank.AmeriaBankError as exc:
+        log_payment_event(db, row.id, "admin_refund", request_payload=req, response_payload={"error": str(exc)}, success=False)
         raise HTTPException(status_code=502, detail=str(exc))
-    if not ameriabank.is_success_code(resp.get("ResponseCode")):
+    ok = ameriabank.is_success_code(resp.get("ResponseCode"))
+    log_payment_event(db, row.id, "admin_refund", request_payload=req, response_payload=resp, success=ok)
+    if not ok:
         raise HTTPException(status_code=502, detail=resp.get("ResponseMessage") or "Refund failed")
     row.status = "refunded"
     db.commit()
@@ -594,12 +604,40 @@ def refund_payment(payment_row_id: int, body: dict, db: Session = Depends(get_db
 @router.post("/payments/{payment_row_id}/cancel")
 def cancel_payment(payment_row_id: int, db: Session = Depends(get_db), _: User = Depends(require_permission('manage_payments'))):
     row = _get_payment_row(payment_row_id, db)
+    req = {"PaymentID": row.payment_id}
     try:
         resp = ameriabank.cancel_payment(row.payment_id)
     except ameriabank.AmeriaBankError as exc:
+        log_payment_event(db, row.id, "admin_cancel", request_payload=req, response_payload={"error": str(exc)}, success=False)
         raise HTTPException(status_code=502, detail=str(exc))
-    if not ameriabank.is_success_code(resp.get("ResponseCode")):
+    ok = ameriabank.is_success_code(resp.get("ResponseCode"))
+    log_payment_event(db, row.id, "admin_cancel", request_payload=req, response_payload=resp, success=ok)
+    if not ok:
         raise HTTPException(status_code=502, detail=resp.get("ResponseMessage") or "Cancel failed")
     row.status = "void"
     db.commit()
     return _serialize_payment(row)
+
+
+@router.get("/payments/{payment_row_id}/logs")
+def get_payment_logs(payment_row_id: int, db: Session = Depends(get_db), _: User = Depends(require_permission('manage_payments'))):
+    row = db.query(AmeriaPayment).filter(AmeriaPayment.id == payment_row_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    logs = (
+        db.query(AmeriaPaymentLog)
+        .filter(AmeriaPaymentLog.payment_row_id == payment_row_id)
+        .order_by(AmeriaPaymentLog.created_at.asc(), AmeriaPaymentLog.id.asc())
+        .all()
+    )
+    return [
+        {
+            "id": lg.id,
+            "event": lg.event,
+            "success": lg.success,
+            "request_payload": json.loads(lg.request_payload) if lg.request_payload else None,
+            "response_payload": json.loads(lg.response_payload) if lg.response_payload else None,
+            "created_at": lg.created_at.isoformat() if lg.created_at else None,
+        }
+        for lg in logs
+    ]

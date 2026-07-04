@@ -8,7 +8,7 @@ import {
   TrendingUp, CheckCircle2, XCircle, Percent, Search, ImageUp,
   SendHorizonal, StickyNote, Filter, UserCheck,
   Inbox, GalleryHorizontal, Settings2, Trophy, Link2, Plus, Trash2, ExternalLink,
-  Shield, MapPin, Pencil, Unlock, CreditCard, RotateCcw, Ban,
+  Shield, MapPin, Pencil, Unlock, CreditCard, RotateCcw, Ban, ScrollText,
 } from 'lucide-react'
 
 import { Button }       from '../components/ui/button'
@@ -41,7 +41,7 @@ import {
   adminBroadcast, adminExportCsv, adminGetAuditLog,
   adminGetSettings, adminSaveSettings,
   adminGetRoles, adminUpdateRole,
-  adminGetPayments, adminRefreshPayment, adminRefundPayment, adminCancelPayment,
+  adminGetPayments, adminRefreshPayment, adminRefundPayment, adminCancelPayment, adminGetPaymentLogs,
 } from '../api/admin'
 
 // ── permissions ───────────────────────────────────────────────────────────────
@@ -285,6 +285,9 @@ export default function AdminPage() {
 
   const [payments,        setPayments]        = useState([])
   const [paymentActionId,  setPaymentActionId] = useState(null)
+  const [logsPayment,     setLogsPayment]      = useState(null)   // payment row whose logs are shown, or null
+  const [logsData,        setLogsData]         = useState([])
+  const [logsLoading,     setLogsLoading]      = useState(false)
 
   const flash = (msg, isErr = false) => {
     setToast({ msg, type: isErr ? 'error' : 'success' })
@@ -541,6 +544,18 @@ export default function AdminPage() {
         finally { setPaymentActionId(null) }
       },
     })
+  }
+  const handleViewLogs = async (p) => {
+    setLogsPayment(p)
+    setLogsLoading(true)
+    try {
+      setLogsData(await adminGetPaymentLogs(p.id))
+    } catch {
+      flash('Failed to load payment logs', true)
+      setLogsData([])
+    } finally {
+      setLogsLoading(false)
+    }
   }
 
   // ── gallery ──
@@ -1814,6 +1829,8 @@ export default function AdminPage() {
                               <TableCell>
                                 <div className="flex justify-end">
                                   <RowMenu items={[
+                                    { icon: ScrollText, label: 'View logs', onClick: () => handleViewLogs(p) },
+                                    { separator: true },
                                     { icon: RefreshCw, label: paymentActionId === p.id ? 'Refreshing…' : 'Refresh status', onClick: () => handleRefreshPayment(p) },
                                     { separator: true },
                                     { icon: RotateCcw, label: 'Refund', onClick: () => handleRefundPayment(p) },
@@ -1860,6 +1877,63 @@ export default function AdminPage() {
                 {deleteTarget.confirmLabel || 'Delete'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ PAYMENT LOGS MODAL ══ */}
+      {logsPayment && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
+          onClick={() => setLogsPayment(null)}
+        >
+          <div
+            style={{ background: '#fff', borderRadius: 16, padding: '24px 28px', maxWidth: 720, width: '100%', maxHeight: '80vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 4 }}>
+              <p style={{ fontSize: 16, fontWeight: 700, color: '#2c1a1a' }}>
+                Payment Logs — Order #{logsPayment.order_id ?? '—'}
+              </p>
+              <button onClick={() => setLogsPayment(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999', fontSize: 22, lineHeight: 1, padding: 0 }}>×</button>
+            </div>
+            <p style={{ fontSize: 12, color: '#999', marginBottom: 20, wordBreak: 'break-all' }}>{logsPayment.payment_id || 'No PaymentID yet'}</p>
+
+            {logsLoading ? (
+              <p style={{ textAlign: 'center', color: '#999', padding: '24px 0' }}>Loading…</p>
+            ) : logsData.length === 0 ? (
+              <p style={{ textAlign: 'center', color: '#999', padding: '24px 0' }}>No log entries yet</p>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                {logsData.map(lg => (
+                  <div key={lg.id} style={{ border: '1px solid #eee', borderRadius: 10, padding: '14px 16px', background: lg.success ? '#f7fdf9' : '#fdf7f7' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap', gap: 6 }}>
+                      <span style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#2c1a1a' }}>
+                        {lg.event.replace(/_/g, ' ')}
+                      </span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: lg.success ? '#e3f6ea' : '#fbe9e9', color: lg.success ? '#1a7a44' : '#c0392b' }}>
+                          {lg.success ? 'success' : 'failed'}
+                        </span>
+                        <span style={{ fontSize: 11, color: '#999' }}>{lg.created_at ? new Date(lg.created_at).toLocaleString() : ''}</span>
+                      </div>
+                    </div>
+                    {lg.request_payload && (
+                      <div style={{ marginBottom: 8 }}>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#999', textTransform: 'uppercase', marginBottom: 2 }}>Request</div>
+                        <pre style={{ margin: 0, fontSize: 11, background: '#f7f5f2', borderRadius: 6, padding: '8px 10px', overflowX: 'auto' }}>{JSON.stringify(lg.request_payload, null, 2)}</pre>
+                      </div>
+                    )}
+                    {lg.response_payload && (
+                      <div>
+                        <div style={{ fontSize: 10, fontWeight: 700, color: '#999', textTransform: 'uppercase', marginBottom: 2 }}>Response</div>
+                        <pre style={{ margin: 0, fontSize: 11, background: '#f7f5f2', borderRadius: 6, padding: '8px 10px', overflowX: 'auto' }}>{JSON.stringify(lg.response_payload, null, 2)}</pre>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}

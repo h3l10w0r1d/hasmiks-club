@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core import ameriabank
 from app.core.config import settings
 from app.core.deps import get_current_user
+from app.core.payment_log import log_payment_event
 from app.database import get_db
 from app.models.ameria_payment import AmeriaPayment
 from app.models.user import User
@@ -55,6 +56,7 @@ def create_checkout(
     row.order_id = _next_order_id(row.id)
     db.commit()
 
+    init_request = {"OrderID": row.order_id, "Amount": float(amount), "Currency": row.currency, "BackURL": settings.AMERIABANK_BACK_URL}
     try:
         resp = ameriabank.init_payment(
             order_id=row.order_id,
@@ -66,10 +68,13 @@ def create_checkout(
         row.status = "error"
         row.response_message = str(exc)
         db.commit()
+        log_payment_event(db, row.id, "init_payment", request_payload=init_request, response_payload={"error": str(exc)}, success=False)
         raise HTTPException(status_code=502, detail="Could not start payment — please try again shortly") from exc
 
     # InitPayment uses an INTEGER response code — successful == 1 (distinct from every other endpoint's "00" string).
-    if resp.get("ResponseCode") != 1:
+    init_ok = resp.get("ResponseCode") == 1
+    log_payment_event(db, row.id, "init_payment", request_payload=init_request, response_payload=resp, success=init_ok)
+    if not init_ok:
         row.status = "error"
         row.response_message = resp.get("ResponseMessage")
         db.commit()
@@ -109,10 +114,12 @@ async def payment_callback(request: Request, db: Session = Depends(get_db)):
 
     outcome = "failed"
     if row and row.payment_id:
+        verify_request = {"PaymentID": row.payment_id}
         try:
             details = ameriabank.get_payment_details(row.payment_id)
-        except ameriabank.AmeriaBankError:
+        except ameriabank.AmeriaBankError as exc:
             details = None
+            log_payment_event(db, row.id, "verify_callback", request_payload=verify_request, response_payload={"error": str(exc)}, success=False)
 
         if details:
             row.response_code = details.get("ResponseCode")
@@ -122,7 +129,8 @@ async def payment_callback(request: Request, db: Session = Depends(get_db)):
             row.rrn = details.get("rrn")
 
             order_status = details.get("OrderStatus")
-            if order_status in SUCCESS_ORDER_STATUSES:
+            is_success = order_status in SUCCESS_ORDER_STATUSES
+            if is_success:
                 row.status = "deposited" if order_status == 2 else "approved"
                 user = db.query(User).filter(User.id == row.user_id).first()
                 if user:
@@ -131,6 +139,7 @@ async def payment_callback(request: Request, db: Session = Depends(get_db)):
             else:
                 row.status = "declined"
             db.commit()
+            log_payment_event(db, row.id, "verify_callback", request_payload=verify_request, response_payload=details, success=is_success)
 
     target = settings.AMERIABANK_SUCCESS_URL if outcome == "success" else settings.AMERIABANK_CANCEL_URL
     return RedirectResponse(url=f"{target}?payment={outcome}")
