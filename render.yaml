@@ -39,13 +39,14 @@ services:
         value: https://hasmiks.club/dashboard
       - key: STRIPE_CANCEL_URL
         value: https://hasmiks.club/events
-      # Cloudinary (photo uploads)
+      # Cloudinary (photo uploads) — set these as secrets in the Render dashboard.
+      # sync:false keeps dashboard values from being wiped on each deploy.
       - key: CLOUDINARY_CLOUD_NAME
-        value: ""
+        sync: false
       - key: CLOUDINARY_API_KEY
-        value: ""
+        sync: false
       - key: CLOUDINARY_API_SECRET
-        value: ""
+        sync: false
 
 databases:
   - name: hasmiks-club-db
