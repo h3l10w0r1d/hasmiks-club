@@ -1593,3 +1593,7 @@ footer{
   .admin-topbar{padding:0 20px}
   .admin-kpi-row{grid-template-columns:repeat(2,1fr)}
 }
+
+/* forum: spinner utility */
+@keyframes spin { to { transform: rotate(360deg); } }
+.spin { animation: spin 0.9s linear infinite; }

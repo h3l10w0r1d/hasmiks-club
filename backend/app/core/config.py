@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     CLOUDINARY_API_KEY: str = ""
     CLOUDINARY_API_SECRET: str = ""
 
+    # Giphy (forum GIF picker) — free key from developers.giphy.com
+    GIPHY_API_KEY: str = ""
+
     # Ameriabank vPOS (https://servicestest.ameriabank.am for the test environment)
     AMERIABANK_CLIENT_ID: str = ""
     AMERIABANK_USERNAME: str = ""

@@ -47,6 +47,9 @@ services:
         sync: false
       - key: CLOUDINARY_API_SECRET
         sync: false
+      # Giphy forum GIF picker — free key from developers.giphy.com
+      - key: GIPHY_API_KEY
+        sync: false
 
 databases:
   - name: hasmiks-club-db
