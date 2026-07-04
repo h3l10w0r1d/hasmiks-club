@@ -322,57 +322,52 @@ export default function DashboardPage({ lang }) {
     )
   }
 
-  // Approved, but not yet a paying member — every account lands here until Ameriabank
-  // checkout completes. Covers first-time signup, a closed/abandoned payment page, and
-  // a failed payment (searchParams.payment === 'failed', set by the /payments/callback redirect).
-  if (user.application_status === 'approved' && user.membership_status !== 'active') {
-    const paymentFailed = searchParams.get('payment') === 'failed'
-    return (
-      <div style={{ minHeight: '100vh', background: '#fff8f5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', fontFamily: 'inherit' }}>
-        <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' }}>
-          <CreditCard size={44} strokeWidth={1.5} color="var(--rose)" style={{ marginBottom: 24 }} />
-          <h1 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 34, fontWeight: 700, color: '#2c1a1a', margin: '0 0 16px', lineHeight: 1.2 }}>
-            {lang === 'hy' ? `Բարի գալուստ, ${user.full_name.split(' ')[0]}!` : `Welcome, ${user.full_name.split(' ')[0]}!`}
-          </h1>
-          <h2 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 24, fontWeight: 600, color: '#c0394b', margin: '0 0 20px' }}>
-            {lang === 'hy' ? 'Ակտիվացրե՛ք ձեր անդամակցությունը' : 'Activate your membership'}
-          </h2>
-          <p style={{ fontSize: 15, color: '#2c1a1a', lineHeight: 1.75, marginBottom: 28 }}>
-            {lang === 'hy'
-              ? 'Ձեր հաշիվը ստեղծված է, բայց դուք դեռ ամբողջական անդամ չեք: Ավարտե՛ք ամսական բաժանորդագրությունը՝ հանդիպումներին մասնակցելու, բովանդակությունը բացելու և համայնքին միանալու համար:'
-              : "Your account is created, but you're not a full member yet. Complete your monthly subscription to RSVP to gatherings, unlock content, and join the community."}
+  const isActive = user.membership_status === 'active'
+  const paymentFailed = searchParams.get('payment') === 'failed'
+
+  // Ghost view: approved accounts that skipped or haven't completed payment can
+  // still browse the dashboard, but aren't visible in the directory, can't post
+  // in the forum, and can't RSVP to events (all enforced server-side too) until
+  // they subscribe. This banner is their one persistent, always-visible path
+  // back to checkout — shown on every tab, not a full-page block.
+  const membershipBanner = !isActive && (
+    <div style={{
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
+      background: paymentFailed ? '#fdecea' : '#fff8f5',
+      border: `1px solid ${paymentFailed ? '#f3c6c0' : '#f5ddd0'}`,
+      borderRadius: 14, padding: '16px 20px', marginBottom: 28,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <CreditCard size={22} strokeWidth={1.5} color={paymentFailed ? '#c0392b' : 'var(--rose)'} style={{ flexShrink: 0 }} />
+        <div>
+          <p style={{ fontSize: 14, fontWeight: 700, color: paymentFailed ? '#c0392b' : '#2c1a1a', margin: 0 }}>
+            {paymentFailed
+              ? (lang === 'hy' ? 'Վերջին վճարման փորձը չհաջողվեց' : 'Your last payment attempt failed')
+              : (lang === 'hy' ? 'Դուք դիտում եք որպես հյուր' : "You're browsing as a guest")}
           </p>
-          {paymentFailed && (
-            <p style={{ background: '#fdecea', color: '#c0392b', borderRadius: 10, padding: '12px 16px', fontSize: 13.5, marginBottom: 20 }}>
-              {lang === 'hy' ? 'Վերջին վճարման փորձը չհաջողվեց: Խնդրում ենք փորձել կրկին:' : 'Your last payment attempt failed. Please try again.'}
-            </p>
-          )}
-          {msg && (
-            <p style={{ background: '#fdecea', color: '#c0392b', borderRadius: 10, padding: '12px 16px', fontSize: 13.5, marginBottom: 20 }}>{msg}</p>
-          )}
-          <button
-            onClick={handleSubscribe}
-            disabled={checkoutLoading}
-            style={{ background: '#c0394b', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 36px', cursor: checkoutLoading ? 'default' : 'pointer', fontSize: 15, fontWeight: 700, letterSpacing: '0.02em', opacity: checkoutLoading ? 0.7 : 1 }}
-          >
-            {checkoutLoading
-              ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…')
-              : (lang === 'hy' ? 'Բաժանորդագրվել — ֏40,000/ամիս' : 'Subscribe — ֏40,000/month')}
-          </button>
-          <div style={{ marginTop: 20 }}>
-            <button
-              onClick={handleSignOut}
-              style={{ background: 'none', border: 'none', color: '#9b6e6e', cursor: 'pointer', fontSize: 13.5, textDecoration: 'underline' }}
-            >
-              {t.signOut}
-            </button>
-          </div>
+          <p style={{ fontSize: 12.5, color: '#8a746a', margin: '2px 0 0' }}>
+            {paymentFailed
+              ? (lang === 'hy' ? 'Կրկին փորձեք, կամ կապվեք մեզ հետ, եթե խնդիրը կրկնվում է:' : 'Try again, or contact us if this keeps happening.')
+              : (lang === 'hy'
+                  ? 'Բաժանորդագրվեք՝ ֆորումում գրելու, հանդիպումներին գրանցվելու և համայնքին տեսանելի լինելու համար:'
+                  : 'Subscribe to post in the forum, RSVP to gatherings, and be visible to the community.')}
+          </p>
+          {msg && <p style={{ fontSize: 12.5, color: '#c0392b', margin: '4px 0 0' }}>{msg}</p>}
         </div>
       </div>
-    )
-  }
-
-  const isActive = user.membership_status === 'active'
+      <button
+        onClick={handleSubscribe}
+        disabled={checkoutLoading}
+        style={{ background: '#c0394b', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 22px', cursor: checkoutLoading ? 'default' : 'pointer', fontSize: 13, fontWeight: 700, letterSpacing: '0.02em', opacity: checkoutLoading ? 0.7 : 1, whiteSpace: 'nowrap', flexShrink: 0 }}
+      >
+        {checkoutLoading
+          ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…')
+          : paymentFailed
+            ? (lang === 'hy' ? 'Կրկին փորձել' : 'Try Again')
+            : (lang === 'hy' ? 'Բաժանորդագրվել' : 'Subscribe Now')}
+      </button>
+    </div>
+  )
 
   // Home tab helpers
   const now = new Date()
@@ -436,6 +431,7 @@ export default function DashboardPage({ lang }) {
 
         <main className="dash-main">
           <div key={tab} className="dash-tab-content">
+          {membershipBanner}
 
           {/* ── HOME ── */}
           {tab === 'home' && (
@@ -500,7 +496,9 @@ export default function DashboardPage({ lang }) {
                       ) : nextEvent.user_has_rsvp ? (
                         <button className="plan-btn plan-btn-outline" onClick={() => handleRsvp(nextEvent)}>{t.cancelRsvp}</button>
                       ) : nextEvent.seats_available > 0 ? (
-                        <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(nextEvent)}>{t.rsvpBtn}</button>
+                        isActive
+                          ? <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(nextEvent)}>{t.rsvpBtn}</button>
+                          : <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Բաժանորդագրվեք՝ գրանցվելու համար' : 'Subscribe to RSVP'}</button>
                       ) : null}
                     </div>
                   </div>
@@ -730,6 +728,8 @@ export default function DashboardPage({ lang }) {
                       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                         {rsvpDone[ev.id] ? (
                           <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
+                        ) : !isActive ? (
+                          <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Բաժանորդագրվեք՝ գրանցվելու համար' : 'Subscribe to RSVP'}</button>
                         ) : ev.user_has_rsvp ? (
                           <button className="plan-btn plan-btn-outline" onClick={() => handleRsvp(ev)}>{t.cancelRsvp}</button>
                         ) : ev.seats_available > 0 ? (
@@ -879,9 +879,10 @@ export default function DashboardPage({ lang }) {
                   {lang === 'hy' ? 'Ֆորում' : 'Forum'}
                 </h2>
                 <button
-                  onClick={() => setShowNewTopic(v => !v)}
+                  onClick={() => isActive ? setShowNewTopic(v => !v) : handleSubscribe()}
+                  disabled={!isActive && checkoutLoading}
                   style={{ background:'var(--rose)', color:'#fff', border:'none', borderRadius:10, padding:'8px 18px', fontSize:13, fontWeight:700, cursor:'pointer' }}>
-                  + {t.newTopic}
+                  {isActive ? `+ ${t.newTopic}` : (lang === 'hy' ? 'Բաժանորդագրվեք՝ գրելու համար' : 'Subscribe to post')}
                 </button>
               </div>
 
@@ -974,13 +975,27 @@ export default function DashboardPage({ lang }) {
                     ))}
 
                     <div style={{ marginTop:20 }}>
-                      <textarea value={replyBody} onChange={e => setReplyBody(e.target.value)}
-                        placeholder={lang === 'hy' ? 'Ձեր պատասխանը...' : 'Your reply…'}
-                        style={{ width:'100%', minHeight:80, padding:'10px 12px', borderRadius:8, border:'1px solid var(--sand)', fontSize:14, resize:'vertical', boxSizing:'border-box', marginBottom:10 }} />
-                      <button onClick={handleReply} disabled={postingReply || !replyBody.trim()}
-                        style={{ background:'var(--rose)', color:'#fff', border:'none', borderRadius:8, padding:'9px 20px', fontWeight:700, fontSize:13, cursor:'pointer' }}>
-                        {postingReply ? '…' : t.reply}
-                      </button>
+                      {isActive ? (
+                        <>
+                          <textarea value={replyBody} onChange={e => setReplyBody(e.target.value)}
+                            placeholder={lang === 'hy' ? 'Ձեր պատասխանը...' : 'Your reply…'}
+                            style={{ width:'100%', minHeight:80, padding:'10px 12px', borderRadius:8, border:'1px solid var(--sand)', fontSize:14, resize:'vertical', boxSizing:'border-box', marginBottom:10 }} />
+                          <button onClick={handleReply} disabled={postingReply || !replyBody.trim()}
+                            style={{ background:'var(--rose)', color:'#fff', border:'none', borderRadius:8, padding:'9px 20px', fontWeight:700, fontSize:13, cursor:'pointer' }}>
+                            {postingReply ? '…' : t.reply}
+                          </button>
+                        </>
+                      ) : (
+                        <div style={{ background:'#fff8f5', border:'1px solid #f5ddd0', borderRadius:10, padding:'14px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
+                          <span style={{ fontSize:13, color:'#8a746a' }}>
+                            {lang === 'hy' ? 'Բաժանորդագրվեք՝ ֆորումում պատասխանելու համար' : 'Subscribe to reply in the forum'}
+                          </span>
+                          <button onClick={handleSubscribe} disabled={checkoutLoading}
+                            style={{ background:'var(--rose)', color:'#fff', border:'none', borderRadius:8, padding:'8px 18px', fontWeight:700, fontSize:12.5, cursor:'pointer', whiteSpace:'nowrap' }}>
+                            {checkoutLoading ? '…' : (lang === 'hy' ? 'Բաժանորդագրվել' : 'Subscribe')}
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

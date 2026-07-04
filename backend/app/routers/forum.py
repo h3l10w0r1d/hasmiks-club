@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from app.core.deps import get_current_user, require_permission
+from app.core.deps import get_current_user, get_current_active_member, require_permission
 from app.database import get_db
 from app.models.forum import ForumTopic, ForumPost
 from app.models.user import User
@@ -79,7 +79,7 @@ def list_topics(category: Optional[str] = None, db: Session = Depends(get_db),
 
 @router.post("", response_model=TopicOut, status_code=201)
 def create_topic(body: TopicIn, db: Session = Depends(get_db),
-                 user: User = Depends(get_current_user)):
+                 user: User = Depends(get_current_active_member)):
     if body.category not in CATEGORIES:
         raise HTTPException(400, f"Invalid category. Valid: {CATEGORIES}")
     topic = ForumTopic(user_id=user.id, **body.model_dump())
@@ -95,7 +95,7 @@ def get_topic(topic_id: int, db: Session = Depends(get_db),
 
 @router.post("/{topic_id}/posts", response_model=PostOut, status_code=201)
 def create_post(topic_id: int, body: PostIn, db: Session = Depends(get_db),
-                user: User = Depends(get_current_user)):
+                user: User = Depends(get_current_active_member)):
     topic = _topic_or_404(db, topic_id)
     post = ForumPost(topic_id=topic_id, user_id=user.id, body=body.body)
     db.add(post)

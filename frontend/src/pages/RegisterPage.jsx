@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { register } from '../api/auth'
-import { getPublicSettings, createCheckout } from '../api/payments'
+import { getPublicSettings } from '../api/payments'
 import { useAuth } from '../context/AuthContext'
 import GlobalHeader from '../components/GlobalHeader'
 
@@ -65,16 +65,10 @@ export default function RegisterPage({ lang }) {
       const data = await register(payload)
       signIn(data)
 
-      // Approved accounts (no manual review) aren't members yet until they pay —
-      // send them straight to checkout instead of dropping them on the dashboard.
-      if (data.user?.application_status !== 'pending') {
-        try {
-          const { url } = await createCheckout()
-          window.location.href = url
-          return
-        } catch { /* Ameriabank unavailable — fall through to dashboard, which shows its own subscribe gate */ }
-      }
-      navigate('/dashboard')
+      // Approved accounts (no manual review) see the membership proposal first —
+      // benefits + a real choice to subscribe now or skip for later. Pending
+      // (manual-review) accounts go straight to the dashboard's review screen.
+      navigate(data.user?.application_status !== 'pending' ? '/welcome' : '/dashboard')
     } catch (err) {
       const detail = err.response?.data?.detail
       if (detail === 'Email already registered') setError(t.errEmail)

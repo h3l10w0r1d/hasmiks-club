@@ -19,6 +19,7 @@ import AdminPage from './pages/AdminPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import EventsPage from './pages/EventsPage'
+import WelcomePage from './pages/WelcomePage'
 import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
 import TermsPage from './pages/TermsPage'
@@ -87,6 +88,11 @@ function AppRoutes() {
       <Route path="/dashboard" element={
         <ProtectedRoute>
           <DashboardPage lang={lang} />
+        </ProtectedRoute>
+      } />
+      <Route path="/welcome" element={
+        <ProtectedRoute>
+          <WelcomePage lang={lang} setLang={setLang} />
         </ProtectedRoute>
       } />
       <Route path="/admin" element={
