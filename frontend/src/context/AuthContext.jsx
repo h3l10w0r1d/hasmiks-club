@@ -22,8 +22,17 @@ export function AuthProvider({ children }) {
     const exp = parseJwtExp(token)
     if (!exp) return
     const msUntilExpiry = exp - Date.now()
-    // Schedule refresh 1 day before expiry; if already within 1 day, refresh now
-    const refreshIn = Math.max(msUntilExpiry - 86400000, 0)
+    if (msUntilExpiry <= 0) return // already expired — the 401 interceptor handles redirect on next request
+
+    // Refresh partway through the token's remaining lifetime, capped at 1 day
+    // ahead for long-lived tokens. A fixed 24h buffer subtracted from a token
+    // whose ACCESS_TOKEN_EXPIRE_MINUTES is configured under 24h would compute
+    // 0ms here — firing an immediate refresh that mints a new token with the
+    // same short lifetime, immediately refreshing again, forever. The 30s
+    // floor guarantees this can never tighten into a rapid loop regardless of
+    // how short the configured token lifetime is.
+    const buffer = Math.min(86400000, msUntilExpiry / 2)
+    const refreshIn = Math.max(msUntilExpiry - buffer, 30000)
     refreshTimerRef.current = setTimeout(async () => {
       // Bail out if user already signed out (token gone)
       if (!localStorage.getItem('hc_token')) return
