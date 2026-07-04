@@ -72,3 +72,9 @@ export const adminSaveSettings        = (data)       => client.put('/admin/setti
 export const adminGetRoles            = ()           => client.get('/admin/roles').then(r => r.data)
 export const adminUpdateRole          = (userId, payload) => client.put(`/admin/roles/${userId}`, payload).then(r => r.data)
 export const adminGetPermissionDefaults = ()         => client.get('/admin/permissions/defaults').then(r => r.data)
+
+// payments (Ameriabank vPOS)
+export const adminGetPayments         = ()           => client.get('/admin/payments').then(r => r.data)
+export const adminRefreshPayment      = (id)         => client.post(`/admin/payments/${id}/refresh`).then(r => r.data)
+export const adminRefundPayment       = (id, amount) => client.post(`/admin/payments/${id}/refund`, { amount }).then(r => r.data)
+export const adminCancelPayment       = (id)         => client.post(`/admin/payments/${id}/cancel`).then(r => r.data)

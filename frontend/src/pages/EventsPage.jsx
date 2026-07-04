@@ -115,7 +115,7 @@ export default function EventsPage({ lang = 'en' }) {
       navigate('/login', { state: { from: '/events' } })
       return
     }
-    // No active subscription → send to Stripe checkout
+    // No active subscription → send to Ameriabank checkout
     if (user.membership_status !== 'active') {
       setCheckoutLoading(true)
       try {

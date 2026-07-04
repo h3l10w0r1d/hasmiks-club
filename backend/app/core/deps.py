@@ -11,7 +11,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 ALL_PERMISSIONS = [
     'manage_members', 'manage_events', 'manage_content', 'manage_gallery',
     'manage_applications', 'manage_settings', 'broadcast', 'view_analytics',
-    'view_audit', 'manage_roles',
+    'view_audit', 'manage_roles', 'manage_payments',
 ]
 
 ROLE_PERMISSIONS: dict[str, list[str]] = {

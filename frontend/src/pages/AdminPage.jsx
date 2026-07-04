@@ -8,7 +8,7 @@ import {
   TrendingUp, CheckCircle2, XCircle, Percent, Search, ImageUp,
   SendHorizonal, StickyNote, Filter, UserCheck,
   Inbox, GalleryHorizontal, Settings2, Trophy, Link2, Plus, Trash2, ExternalLink,
-  Shield, MapPin, Pencil, Unlock,
+  Shield, MapPin, Pencil, Unlock, CreditCard, RotateCcw, Ban,
 } from 'lucide-react'
 
 import { Button }       from '../components/ui/button'
@@ -41,13 +41,14 @@ import {
   adminBroadcast, adminExportCsv, adminGetAuditLog,
   adminGetSettings, adminSaveSettings,
   adminGetRoles, adminUpdateRole,
+  adminGetPayments, adminRefreshPayment, adminRefundPayment, adminCancelPayment,
 } from '../api/admin'
 
 // ── permissions ───────────────────────────────────────────────────────────────
 const ALL_PERMISSIONS = [
   'manage_members', 'manage_events', 'manage_content', 'manage_gallery',
   'manage_applications', 'manage_settings', 'broadcast', 'view_analytics',
-  'view_audit', 'manage_roles',
+  'view_audit', 'manage_roles', 'manage_payments',
 ]
 
 const ROLE_PERMISSIONS = {
@@ -67,6 +68,7 @@ const PERMISSION_LABELS = {
   view_analytics:      'View Analytics',
   view_audit:          'View Audit Log',
   manage_roles:        'Manage Roles & Permissions',
+  manage_payments:     'Manage Payments',
 }
 
 function getUserPermissions(user) {
@@ -90,6 +92,7 @@ const TABS = [
   { key: 'content',      icon: BookOpen,          label: 'Content'      },
   { key: 'gallery',      icon: GalleryHorizontal, label: 'Gallery'      },
   { key: 'analytics',    icon: BarChart3,         label: 'Analytics'    },
+  { key: 'payments',     icon: CreditCard,        label: 'Payments'     },
   { key: 'broadcast',    icon: Mail,              label: 'Broadcast'    },
   { key: 'audit',        icon: ClipboardList,     label: 'Audit Log'    },
   { key: 'settings',     icon: Settings2,         label: 'Settings'     },
@@ -99,7 +102,7 @@ const TAB_GROUPS = [
   { label: 'OVERVIEW', keys: ['today'] },
   { label: 'PEOPLE',   keys: ['members', 'applications', 'roles'] },
   { label: 'CONTENT',  keys: ['events', 'content', 'gallery'] },
-  { label: 'INSIGHTS', keys: ['analytics'] },
+  { label: 'INSIGHTS', keys: ['analytics', 'payments'] },
   { label: 'OUTREACH', keys: ['broadcast'] },
   { label: 'CONFIG',   keys: ['audit', 'settings'] },
 ]
@@ -112,6 +115,7 @@ const TAB_PERMISSION_MAP = {
   content:      'manage_content',
   gallery:      'manage_gallery',
   analytics:    'view_analytics',
+  payments:     'manage_payments',
   broadcast:    'broadcast',
   audit:        'view_audit',
   settings:     'manage_settings',
@@ -279,6 +283,9 @@ export default function AdminPage() {
   const [roleForm,    setRoleForm]    = useState({ role: 'member', permissions: null })
   const [savingRole,  setSavingRole]  = useState(false)
 
+  const [payments,        setPayments]        = useState([])
+  const [paymentActionId,  setPaymentActionId] = useState(null)
+
   const flash = (msg, isErr = false) => {
     setToast({ msg, type: isErr ? 'error' : 'success' })
     setTimeout(() => setToast(null), 3200)
@@ -302,6 +309,7 @@ export default function AdminPage() {
   useEffect(() => { if (tab === 'settings')     load('settings')     }, [tab])
   useEffect(() => { if (tab === 'analytics')    load('referrals')    }, [tab])
   useEffect(() => { if (tab === 'roles')        load('roles')        }, [tab])
+  useEffect(() => { if (tab === 'payments')     load('payments')     }, [tab])
 
   const load = async (t) => {
     setLoad(t, true)
@@ -314,6 +322,7 @@ export default function AdminPage() {
       if (t === 'audit')        setAuditLog(await adminGetAuditLog())
       if (t === 'referrals')    setReferrals(await adminGetReferrals())
       if (t === 'roles')        setRoles(await adminGetRoles())
+      if (t === 'payments')     setPayments(await adminGetPayments())
       if (t === 'settings') {
         const s = await adminGetSettings()
         setAdminSettings(s)
@@ -489,6 +498,47 @@ export default function AdminPage() {
           setApplications(a => a.filter(x => x.id !== app.id))
           flash(`${app.full_name} declined`)
         } catch { flash('Failed to decline', true) }
+      },
+    })
+  }
+
+  // ── payments ──
+  const handleRefreshPayment = async (p) => {
+    setPaymentActionId(p.id)
+    try {
+      const updated = await adminRefreshPayment(p.id)
+      setPayments(ps => ps.map(x => x.id === p.id ? updated : x))
+      flash(`Status refreshed: ${updated.status}`)
+    } catch (err) { flash(err.response?.data?.detail || 'Failed to refresh payment', true) }
+    finally { setPaymentActionId(null) }
+  }
+  const handleRefundPayment = (p) => {
+    setDeleteTarget({
+      label: `Refund ${p.amount} ${p.currency === '051' ? 'AMD' : p.currency} for order #${p.order_id}?`,
+      confirmLabel: 'Refund',
+      onConfirm: async () => {
+        setPaymentActionId(p.id)
+        try {
+          const updated = await adminRefundPayment(p.id, p.amount)
+          setPayments(ps => ps.map(x => x.id === p.id ? updated : x))
+          flash('Payment refunded')
+        } catch (err) { flash(err.response?.data?.detail || 'Refund failed', true) }
+        finally { setPaymentActionId(null) }
+      },
+    })
+  }
+  const handleCancelPayment = (p) => {
+    setDeleteTarget({
+      label: `Cancel order #${p.order_id}? This only works within 72 hours of payment.`,
+      confirmLabel: 'Cancel Payment',
+      onConfirm: async () => {
+        setPaymentActionId(p.id)
+        try {
+          const updated = await adminCancelPayment(p.id)
+          setPayments(ps => ps.map(x => x.id === p.id ? updated : x))
+          flash('Payment cancelled')
+        } catch (err) { flash(err.response?.data?.detail || 'Cancel failed', true) }
+        finally { setPaymentActionId(null) }
       },
     })
   }
@@ -1709,6 +1759,77 @@ export default function AdminPage() {
               </Card>
             </div>
           )}
+
+          {/* ══ PAYMENTS ══ */}
+          {tab === 'payments' && (() => {
+            const depositedCount = payments.filter(p => p.status === 'deposited').length
+            const refundedCount  = payments.filter(p => p.status === 'refunded').length
+            const failedCount    = payments.filter(p => ['error', 'declined'].includes(p.status)).length
+            const STATUS_BADGE = {
+              deposited: 'success', approved: 'secondary', autoauthorized: 'secondary',
+              started: 'muted', error: 'destructive', declined: 'destructive',
+              refunded: 'secondary', void: 'muted',
+            }
+            return (
+              <div className="space-y-6">
+                <SectionHeader title="Payments" sub="Ameriabank vPOS — membership checkout attempts">
+                  <Button variant="outline" size="sm" onClick={() => load('payments')}>
+                    <RefreshCw className="h-3.5 w-3.5" /> Refresh List
+                  </Button>
+                </SectionHeader>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <KpiCard icon={CreditCard}   label="Total"      value={payments.length}  loading={isLoading('payments')} />
+                  <KpiCard icon={CheckCircle2} label="Deposited"  value={depositedCount}   loading={isLoading('payments')} valueClass="text-emerald-600" />
+                  <KpiCard icon={RotateCcw}    label="Refunded"   value={refundedCount}    loading={isLoading('payments')} />
+                  <KpiCard icon={XCircle}      label="Failed"     value={failedCount}      loading={isLoading('payments')} valueClass={failedCount > 0 ? 'text-amber-600' : ''} />
+                </div>
+
+                <Card>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Order</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Card</TableHead>
+                        <TableHead>Response</TableHead>
+                        <TableHead>Created</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading('payments')
+                        ? <TableSkeleton cols={7} />
+                        : payments.length === 0
+                          ? <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground py-12">No payment attempts yet</TableCell></TableRow>
+                          : payments.map(p => (
+                            <TableRow key={p.id}>
+                              <TableCell className="font-mono text-xs">#{p.order_id ?? '—'}</TableCell>
+                              <TableCell className="text-sm">{p.amount} {p.currency === '051' ? 'AMD' : p.currency}</TableCell>
+                              <TableCell><Badge variant={STATUS_BADGE[p.status] || 'muted'}>{p.status}</Badge></TableCell>
+                              <TableCell className="text-muted-foreground text-xs">{p.card_number || '—'}</TableCell>
+                              <TableCell className="text-muted-foreground text-xs max-w-[220px] truncate">{p.response_message || '—'}</TableCell>
+                              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">{p.created_at ? fmtDateTime(p.created_at) : '—'}</TableCell>
+                              <TableCell>
+                                <div className="flex justify-end">
+                                  <RowMenu items={[
+                                    { icon: RefreshCw, label: paymentActionId === p.id ? 'Refreshing…' : 'Refresh status', onClick: () => handleRefreshPayment(p) },
+                                    { separator: true },
+                                    { icon: RotateCcw, label: 'Refund', onClick: () => handleRefundPayment(p) },
+                                    { icon: Ban, label: 'Cancel payment', danger: true, onClick: () => handleCancelPayment(p) },
+                                  ]} />
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                      }
+                    </TableBody>
+                  </Table>
+                </Card>
+              </div>
+            )
+          })()}
 
         </main>
       </div>

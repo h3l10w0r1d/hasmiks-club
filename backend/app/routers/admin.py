@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.models.ameria_payment import AmeriaPayment
 from app.models.audit_log import AuditLog
 from app.models.content import ContentItem, MemberContent
 from app.models.event import Event
@@ -20,6 +21,7 @@ from app.models.user import User
 from app.schemas.content import ContentCreate, ContentOut
 from app.schemas.event import EventCreate, EventOut
 from app.schemas.user import UserOut, AdminUserUpdate
+from app.core import ameriabank
 from app.core import email as mailer
 from app.core import notify
 from app.core.audit import log as audit_log
@@ -517,3 +519,87 @@ def get_permission_defaults(_: User = Depends(get_current_admin)):
         "all_permissions": ALL_PERMISSIONS,
         "role_defaults": ROLE_PERMISSIONS,
     }
+
+
+# ── payments (Ameriabank vPOS) ──────────────────────────────────────────────
+
+_PAYMENT_STATUS_MAP = {0: "started", 1: "approved", 2: "deposited", 3: "void", 4: "refunded", 5: "autoauthorized", 6: "declined"}
+
+
+def _serialize_payment(r: AmeriaPayment) -> dict:
+    return {
+        "id": r.id,
+        "order_id": r.order_id,
+        "payment_id": r.payment_id,
+        "user_id": r.user_id,
+        "amount": float(r.amount) if r.amount is not None else None,
+        "currency": r.currency,
+        "status": r.status,
+        "response_code": r.response_code,
+        "response_message": r.response_message,
+        "card_number": r.card_number,
+        "approval_code": r.approval_code,
+        "rrn": r.rrn,
+        "created_at": r.created_at.isoformat() if r.created_at else None,
+    }
+
+
+@router.get("/payments")
+def list_payments(db: Session = Depends(get_db), _: User = Depends(require_permission('manage_payments'))):
+    rows = db.query(AmeriaPayment).order_by(AmeriaPayment.id.desc()).limit(200).all()
+    return [_serialize_payment(r) for r in rows]
+
+
+def _get_payment_row(payment_row_id: int, db: Session) -> AmeriaPayment:
+    row = db.query(AmeriaPayment).filter(AmeriaPayment.id == payment_row_id).first()
+    if not row or not row.payment_id:
+        raise HTTPException(status_code=404, detail="Payment not found")
+    return row
+
+
+@router.post("/payments/{payment_row_id}/refresh")
+def refresh_payment(payment_row_id: int, db: Session = Depends(get_db), _: User = Depends(require_permission('manage_payments'))):
+    row = _get_payment_row(payment_row_id, db)
+    try:
+        details = ameriabank.get_payment_details(row.payment_id)
+    except ameriabank.AmeriaBankError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+
+    row.response_code = details.get("ResponseCode")
+    row.response_message = details.get("ResponseMessage")
+    row.card_number = details.get("CardNumber")
+    row.approval_code = details.get("ApprovalCode")
+    row.rrn = details.get("rrn")
+    order_status = details.get("OrderStatus")
+    row.status = _PAYMENT_STATUS_MAP.get(order_status, row.status)
+    db.commit()
+    return _serialize_payment(row)
+
+
+@router.post("/payments/{payment_row_id}/refund")
+def refund_payment(payment_row_id: int, body: dict, db: Session = Depends(get_db), _: User = Depends(require_permission('manage_payments'))):
+    row = _get_payment_row(payment_row_id, db)
+    amount = body.get("amount", float(row.amount))
+    try:
+        resp = ameriabank.refund_payment(row.payment_id, amount)
+    except ameriabank.AmeriaBankError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    if resp.get("ResponseCode") != "00":
+        raise HTTPException(status_code=502, detail=resp.get("ResponseMessage") or "Refund failed")
+    row.status = "refunded"
+    db.commit()
+    return _serialize_payment(row)
+
+
+@router.post("/payments/{payment_row_id}/cancel")
+def cancel_payment(payment_row_id: int, db: Session = Depends(get_db), _: User = Depends(require_permission('manage_payments'))):
+    row = _get_payment_row(payment_row_id, db)
+    try:
+        resp = ameriabank.cancel_payment(row.payment_id)
+    except ameriabank.AmeriaBankError as exc:
+        raise HTTPException(status_code=502, detail=str(exc))
+    if resp.get("ResponseCode") != "00":
+        raise HTTPException(status_code=502, detail=resp.get("ResponseMessage") or "Cancel failed")
+    row.status = "void"
+    db.commit()
+    return _serialize_payment(row)

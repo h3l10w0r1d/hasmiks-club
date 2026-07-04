@@ -13,4 +13,3 @@ pydantic-settings==2.6.1
 cloudinary==1.42.1
 httpx==0.28.1
 APScheduler==3.10.4
-stripe==11.1.1

@@ -22,7 +22,6 @@ class User(Base):
     photo_url = Column(String, nullable=True)
     lang_pref = Column(String, default="en")
     membership_status = Column(String, default=MembershipStatus.inactive)
-    stripe_customer_id = Column(String, nullable=True)
     is_admin = Column(Boolean, default=False, nullable=False, server_default='false')
     role = Column(String(20), nullable=False, default='member', server_default='member')
     permissions = Column(Text, nullable=True)  # JSON list of strings, overrides role defaults if set
