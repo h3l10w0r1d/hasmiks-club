@@ -3,13 +3,13 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import {
   PartyPopper, Flower2, AlertTriangle, UserPlus, MapPin, CalendarDays,
   Send, CheckCircle2, Circle, Lock, Image as ImageIcon, Pin, User, MessageCircle,
-  Home, BookOpen, GalleryHorizontal, Users,
+  Home, BookOpen, GalleryHorizontal, Users, CreditCard,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum } from '../api/members'
 import { getEvents, rsvp, cancelRsvp, joinWaitlist, leaveWaitlist, getWaitlistPosition } from '../api/events'
 import { getLibrary } from '../api/content'
-import { getPublicSettings } from '../api/payments'
+import { getPublicSettings, createCheckout } from '../api/payments'
 import { refreshToken as apiRefresh } from '../api/auth'
 import NotificationBell from '../components/NotificationBell'
 import OnboardingModal from '../components/OnboardingModal'
@@ -43,6 +43,7 @@ export default function DashboardPage({ lang }) {
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const [rsvpError, setRsvpError] = useState('')
+  const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [telegramUrl, setTelegramUrl] = useState('')
   const [photoUploading, setPhotoUploading] = useState(false)
   const [selectedContent, setSelectedContent] = useState(null)
@@ -188,7 +189,10 @@ export default function DashboardPage({ lang }) {
       setProfileForm(f => ({ ...f, photo_url: updated.photo_url || '' }))
       setMsg(lang === 'hy' ? 'Լուսանկարը պահպանված է' : 'Photo updated!')
       setTimeout(() => setMsg(''), 2500)
-    } catch { setMsg(lang === 'hy' ? 'Վերբեռնումը ձախողվեց' : 'Upload failed') }
+    } catch (err) {
+      const detail = err.response?.data?.detail
+      setMsg(detail || (lang === 'hy' ? 'Վերբեռնումը ձախողվեց' : 'Upload failed'))
+    }
     finally { setPhotoUploading(false) }
   }
 
@@ -266,6 +270,17 @@ export default function DashboardPage({ lang }) {
 
   const handleSignOut = () => { signOut(); navigate('/') }
 
+  const handleSubscribe = async () => {
+    setCheckoutLoading(true)
+    try {
+      const { url } = await createCheckout()
+      window.location.href = url
+    } catch {
+      setMsg(lang === 'hy' ? 'Չհաջողվեց սկսել վճարումը: Փորձե՛ք կրկին:' : 'Could not start checkout. Please try again.')
+      setCheckoutLoading(false)
+    }
+  }
+
   if (!user) return null
 
   // Pending application screen
@@ -302,6 +317,56 @@ export default function DashboardPage({ lang }) {
           >
             {t.signOut}
           </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Approved, but not yet a paying member — every account lands here until Ameriabank
+  // checkout completes. Covers first-time signup, a closed/abandoned payment page, and
+  // a failed payment (searchParams.payment === 'failed', set by the /payments/callback redirect).
+  if (user.application_status === 'approved' && user.membership_status !== 'active') {
+    const paymentFailed = searchParams.get('payment') === 'failed'
+    return (
+      <div style={{ minHeight: '100vh', background: '#fff8f5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px', fontFamily: 'inherit' }}>
+        <div style={{ maxWidth: 480, width: '100%', textAlign: 'center' }}>
+          <CreditCard size={44} strokeWidth={1.5} color="var(--rose)" style={{ marginBottom: 24 }} />
+          <h1 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 34, fontWeight: 700, color: '#2c1a1a', margin: '0 0 16px', lineHeight: 1.2 }}>
+            {lang === 'hy' ? `Բարի գալուստ, ${user.full_name.split(' ')[0]}!` : `Welcome, ${user.full_name.split(' ')[0]}!`}
+          </h1>
+          <h2 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 24, fontWeight: 600, color: '#c0394b', margin: '0 0 20px' }}>
+            {lang === 'hy' ? 'Ակտիվացրե՛ք ձեր անդամակցությունը' : 'Activate your membership'}
+          </h2>
+          <p style={{ fontSize: 15, color: '#2c1a1a', lineHeight: 1.75, marginBottom: 28 }}>
+            {lang === 'hy'
+              ? 'Ձեր հաշիվը ստեղծված է, բայց դուք դեռ ամբողջական անդամ չեք: Ավարտե՛ք ամսական բաժանորդագրությունը՝ հանդիպումներին մասնակցելու, բովանդակությունը բացելու և համայնքին միանալու համար:'
+              : "Your account is created, but you're not a full member yet. Complete your monthly subscription to RSVP to gatherings, unlock content, and join the community."}
+          </p>
+          {paymentFailed && (
+            <p style={{ background: '#fdecea', color: '#c0392b', borderRadius: 10, padding: '12px 16px', fontSize: 13.5, marginBottom: 20 }}>
+              {lang === 'hy' ? 'Վերջին վճարման փորձը չհաջողվեց: Խնդրում ենք փորձել կրկին:' : 'Your last payment attempt failed. Please try again.'}
+            </p>
+          )}
+          {msg && (
+            <p style={{ background: '#fdecea', color: '#c0392b', borderRadius: 10, padding: '12px 16px', fontSize: 13.5, marginBottom: 20 }}>{msg}</p>
+          )}
+          <button
+            onClick={handleSubscribe}
+            disabled={checkoutLoading}
+            style={{ background: '#c0394b', color: '#fff', border: 'none', borderRadius: 10, padding: '13px 36px', cursor: checkoutLoading ? 'default' : 'pointer', fontSize: 15, fontWeight: 700, letterSpacing: '0.02em', opacity: checkoutLoading ? 0.7 : 1 }}
+          >
+            {checkoutLoading
+              ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…')
+              : (lang === 'hy' ? 'Բաժանորդագրվել — ֏40,000/ամիս' : 'Subscribe — ֏40,000/month')}
+          </button>
+          <div style={{ marginTop: 20 }}>
+            <button
+              onClick={handleSignOut}
+              style={{ background: 'none', border: 'none', color: '#9b6e6e', cursor: 'pointer', fontSize: 13.5, textDecoration: 'underline' }}
+            >
+              {t.signOut}
+            </button>
+          </div>
         </div>
       </div>
     )
