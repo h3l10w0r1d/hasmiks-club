@@ -80,3 +80,38 @@ def is_success_code(response_code) -> bool:
     fails on a real success. Use this for ConfirmPayment/CancelPayment/
     RefundPayment responses, which don't carry an OrderStatus to fall back on."""
     return str(response_code or "").strip().startswith("00")
+
+
+# Table 2 (Payment State Values). CRITICAL: the live API returns OrderStatus as
+# a STRING ("2"), not the integer the docs imply — an `x in {2,5}` int check
+# silently fails on a real payment, marking it declined. status_from_details()
+# coerces it, and falls back to the named PaymentState ("payment_deposited").
+_ORDER_STATUS_LABELS = {0: "started", 1: "approved", 2: "deposited", 3: "void", 4: "refunded", 5: "autoauthorized", 6: "declined"}
+
+# For single-step (immediate-capture) membership payments, "the buyer paid"
+# means deposited or autoauthorized-via-ACS — NOT merely "approved" (a two-step
+# hold that hasn't been captured). Matches the proven reference integration.
+PAID_STATUSES = {"deposited", "autoauthorized"}
+
+
+def status_from_details(details: dict) -> str:
+    """Normalize a GetPaymentDetails response to a plain status label
+    (started/approved/deposited/void/refunded/autoauthorized/declined),
+    handling OrderStatus arriving as either an int or a string, and falling
+    back to the named PaymentState field."""
+    raw = details.get("OrderStatus")
+    try:
+        label = _ORDER_STATUS_LABELS.get(int(raw))
+        if label:
+            return label
+    except (TypeError, ValueError):
+        pass
+    state = str(details.get("PaymentState") or "").strip().lower()
+    if state.startswith("payment_"):
+        state = state[len("payment_"):]
+    return state or "unknown"
+
+
+def is_paid(details: dict) -> bool:
+    """True if a GetPaymentDetails response shows the buyer actually paid."""
+    return status_from_details(details) in PAID_STATUSES

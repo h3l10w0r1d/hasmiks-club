@@ -526,8 +526,6 @@ def get_permission_defaults(_: User = Depends(get_current_admin)):
 
 # ── payments (Ameriabank vPOS) ──────────────────────────────────────────────
 
-_PAYMENT_STATUS_MAP = {0: "started", 1: "approved", 2: "deposited", 3: "void", 4: "refunded", 5: "autoauthorized", 6: "declined"}
-
 
 def _serialize_payment(r: AmeriaPayment) -> dict:
     return {
@@ -575,8 +573,14 @@ def refresh_payment(payment_row_id: int, db: Session = Depends(get_db), _: User 
     row.card_number = details.get("CardNumber")
     row.approval_code = details.get("ApprovalCode")
     row.rrn = details.get("rrn")
-    order_status = details.get("OrderStatus")
-    row.status = _PAYMENT_STATUS_MAP.get(order_status, row.status)
+    row.status = ameriabank.status_from_details(details)
+    # If the bank now shows this as paid but the buyer's membership was never
+    # activated (e.g. an earlier callback misread the status), fix it here —
+    # this makes "Refresh status" the one-click recovery for a stuck payment.
+    if ameriabank.is_paid(details):
+        user = db.query(User).filter(User.id == row.user_id).first()
+        if user and user.membership_status != "active":
+            user.membership_status = "active"
     db.commit()
     log_payment_event(db, row.id, "admin_refresh", request_payload=req, response_payload=details, success=True)
     return _serialize_payment(row)

@@ -16,14 +16,6 @@ router = APIRouter(prefix="/payments", tags=["payments"])
 
 LANG_MAP = {"en": "en", "hy": "am", "ru": "ru"}
 
-# Table 2 (Payment State Values) — OrderStatus is a clean integer enum, unlike
-# ResponseCode which the bank sometimes formats as "00 : Payment Successfully
-# Completed" (seen in the GetTransactionList/SOAP sample) rather than a bare
-# "00" — an exact-string match on ResponseCode silently fails on a real
-# successful payment. OrderStatus 1 (approved/preauthorized), 2 (deposited),
-# and 5 (autoauthorized) all count as "the buyer paid".
-SUCCESS_ORDER_STATUSES = {1, 2, 5}
-
 
 def _next_order_id(row_id: int) -> int:
     order_id = settings.AMERIABANK_ORDER_ID_START + row_id - 1
@@ -128,16 +120,13 @@ async def payment_callback(request: Request, db: Session = Depends(get_db)):
             row.approval_code = details.get("ApprovalCode")
             row.rrn = details.get("rrn")
 
-            order_status = details.get("OrderStatus")
-            is_success = order_status in SUCCESS_ORDER_STATUSES
+            row.status = ameriabank.status_from_details(details)
+            is_success = ameriabank.is_paid(details)
             if is_success:
-                row.status = "deposited" if order_status == 2 else "approved"
                 user = db.query(User).filter(User.id == row.user_id).first()
                 if user:
                     user.membership_status = "active"
                 outcome = "success"
-            else:
-                row.status = "declined"
             db.commit()
             log_payment_event(db, row.id, "verify_callback", request_payload=verify_request, response_payload=details, success=is_success)
 
