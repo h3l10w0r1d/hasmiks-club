@@ -34,8 +34,12 @@ class Settings(BaseSettings):
     AMERIABANK_TEST_MODE: bool = True
     AMERIABANK_TEST_AMOUNT: float = 10  # AMD — bank's required test amount while AMERIABANK_TEST_MODE=True
     AMERIABANK_BACK_URL: str = "https://hasmiks-club.onrender.com/payments/callback"
-    AMERIABANK_SUCCESS_URL: str = "https://hasmiks.club/dashboard"
-    AMERIABANK_CANCEL_URL: str = "https://hasmiks.club/events"
+    # NOTE: hasmiks.club currently has no DNS record at all (NXDOMAIN) — using the
+    # working Vercel URL until the custom domain is actually connected. If
+    # AMERIABANK_SUCCESS_URL/CANCEL_URL are set as env vars on Render, update
+    # those too — a code default change here won't override an explicit env var.
+    AMERIABANK_SUCCESS_URL: str = "https://hasmiks-club.vercel.app/dashboard"
+    AMERIABANK_CANCEL_URL: str = "https://hasmiks-club.vercel.app/events"
 
     class Config:
         env_file = ".env"

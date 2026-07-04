@@ -71,3 +71,12 @@ def refund_payment(payment_id: str, amount: float) -> dict:
 
 def payment_page_url(payment_id: str, lang: str = "en") -> str:
     return f"{settings.AMERIABANK_BASE_URL}/Payments/Pay?id={payment_id}&lang={lang}"
+
+
+def is_success_code(response_code) -> bool:
+    """Table 1's "successful" code is "00", but the bank sometimes formats it
+    as "00 : Payment Successfully Completed" rather than a bare "00" (seen in
+    the GetTransactionList/SOAP sample) — an exact `== "00"` match silently
+    fails on a real success. Use this for ConfirmPayment/CancelPayment/
+    RefundPayment responses, which don't carry an OrderStatus to fall back on."""
+    return str(response_code or "").strip().startswith("00")

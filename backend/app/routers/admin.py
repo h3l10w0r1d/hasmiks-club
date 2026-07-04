@@ -584,7 +584,7 @@ def refund_payment(payment_row_id: int, body: dict, db: Session = Depends(get_db
         resp = ameriabank.refund_payment(row.payment_id, amount)
     except ameriabank.AmeriaBankError as exc:
         raise HTTPException(status_code=502, detail=str(exc))
-    if resp.get("ResponseCode") != "00":
+    if not ameriabank.is_success_code(resp.get("ResponseCode")):
         raise HTTPException(status_code=502, detail=resp.get("ResponseMessage") or "Refund failed")
     row.status = "refunded"
     db.commit()
@@ -598,7 +598,7 @@ def cancel_payment(payment_row_id: int, db: Session = Depends(get_db), _: User =
         resp = ameriabank.cancel_payment(row.payment_id)
     except ameriabank.AmeriaBankError as exc:
         raise HTTPException(status_code=502, detail=str(exc))
-    if resp.get("ResponseCode") != "00":
+    if not ameriabank.is_success_code(resp.get("ResponseCode")):
         raise HTTPException(status_code=502, detail=resp.get("ResponseMessage") or "Cancel failed")
     row.status = "void"
     db.commit()
