@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async'
 import { Flower2, MapPin, CalendarDays } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getPublicEvents, getEvents, rsvp, cancelRsvp } from '../api/events'
+import { getMe } from '../api/members'
 import { createCheckout } from '../api/payments'
 import GlobalHeader from '../components/GlobalHeader'
 
@@ -75,7 +76,7 @@ function SeatsBadge({ ev, t }) {
 
 /* ─── main component ─────────────────────────────────────────────────────── */
 export default function EventsPage({ lang = 'en' }) {
-  const { user, loading: authLoading } = useAuth()
+  const { user, setUser, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const t = copy[lang] ?? copy.en
 
@@ -107,6 +108,16 @@ export default function EventsPage({ lang = 'en' }) {
     if (!authLoading) loadEvents(!!user)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authLoading]) // only run once when auth resolves, not on every user object change
+
+  // Refresh membership_status on mount — e.g. arriving here right after a
+  // successful Ameriabank payment shouldn't show a stale "inactive" state
+  // just because AuthContext hasn't been touched since an earlier page load.
+  useEffect(() => {
+    if (!authLoading && user) {
+      getMe().then(setUser).catch(() => {})
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading])
 
   /* RSVP / cancel */
   const handleAttend = async (ev) => {
