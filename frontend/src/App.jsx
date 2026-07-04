@@ -23,7 +23,7 @@ import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
 import TermsPage from './pages/TermsPage'
 
-const SITE_URL = 'https://hasmiks.club'
+const SITE_URL = 'https://www.hasmiksclub.am'
 const OG_IMAGE = `${SITE_URL}/og-image.jpg`
 
 function LandingPage({ lang, setLang }) {

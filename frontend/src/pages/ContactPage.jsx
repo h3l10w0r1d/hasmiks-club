@@ -63,7 +63,7 @@ export default function ContactPage({ lang = 'en', setLang }) {
       <Helmet>
         <title>{c.metaTitle}</title>
         <meta name="description" content={c.metaDesc} />
-        <link rel="canonical" href="https://hasmiks.club/contact" />
+        <link rel="canonical" href="https://www.hasmiksclub.am/contact" />
       </Helmet>
       <GlobalHeader lang={lang} setLang={setLang} />
 

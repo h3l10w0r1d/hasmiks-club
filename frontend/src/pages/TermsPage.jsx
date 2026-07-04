@@ -52,7 +52,7 @@ export default function TermsPage({ lang = 'en', setLang }) {
       <Helmet>
         <title>{c.metaTitle}</title>
         <meta name="description" content={c.metaDesc} />
-        <link rel="canonical" href="https://hasmiks.club/terms" />
+        <link rel="canonical" href="https://www.hasmiksclub.am/terms" />
       </Helmet>
       <GlobalHeader lang={lang} setLang={setLang} />
 

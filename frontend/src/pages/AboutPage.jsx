@@ -81,7 +81,7 @@ export default function AboutPage({ lang = 'en', setLang }) {
       <Helmet>
         <title>{c.metaTitle}</title>
         <meta name="description" content={c.metaDesc} />
-        <link rel="canonical" href="https://hasmiks.club/about" />
+        <link rel="canonical" href="https://www.hasmiksclub.am/about" />
       </Helmet>
       <GlobalHeader lang={lang} setLang={setLang} />
 

@@ -90,7 +90,7 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
     user.verification_token = vtoken
     user.verification_token_expires = datetime.now(timezone.utc) + timedelta(hours=24)
     db.commit()
-    verify_url = f"https://hasmiks-club.vercel.app/verify-email?token={vtoken}"
+    verify_url = f"https://www.hasmiksclub.am/verify-email?token={vtoken}"
     mailer.send_verification(user.email, user.full_name, verify_url)
 
     if app_status == "pending":
@@ -123,15 +123,15 @@ def refresh_token(db: Session = Depends(get_db), current_user: User = Depends(ge
 def verify_email(token: str, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.verification_token == token).first()
     if not user:
-        return RedirectResponse("https://hasmiks-club.vercel.app/dashboard?verified=invalid")
+        return RedirectResponse("https://www.hasmiksclub.am/dashboard?verified=invalid")
     expires = user.verification_token_expires
     if expires and expires.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
-        return RedirectResponse("https://hasmiks-club.vercel.app/dashboard?verified=expired")
+        return RedirectResponse("https://www.hasmiksclub.am/dashboard?verified=expired")
     user.is_verified = True
     user.verification_token = None
     user.verification_token_expires = None
     db.commit()
-    return RedirectResponse("https://hasmiks-club.vercel.app/dashboard?verified=ok")
+    return RedirectResponse("https://www.hasmiksclub.am/dashboard?verified=ok")
 
 
 @router.post("/resend-verification", status_code=status.HTTP_202_ACCEPTED)
@@ -142,7 +142,7 @@ def resend_verification(db: Session = Depends(get_db), current_user: User = Depe
     current_user.verification_token = vtoken
     current_user.verification_token_expires = datetime.now(timezone.utc) + timedelta(hours=24)
     db.commit()
-    verify_url = f"https://hasmiks-club.vercel.app/verify-email?token={vtoken}"
+    verify_url = f"https://www.hasmiksclub.am/verify-email?token={vtoken}"
     mailer.send_verification(current_user.email, current_user.full_name, verify_url)
     return {"detail": "Verification email sent"}
 
@@ -161,7 +161,7 @@ def forgot_password(payload: ForgotPasswordRequest, db: Session = Depends(get_db
     expires = datetime.now(timezone.utc) + timedelta(hours=1)
     db.add(PasswordResetToken(user_id=user.id, token=token, expires_at=expires))
     db.commit()
-    reset_url = f"https://hasmiks-club.vercel.app/reset-password?token={token}"
+    reset_url = f"https://www.hasmiksclub.am/reset-password?token={token}"
     mailer.send_password_reset(user.email, user.full_name, reset_url)
     return {"detail": "If that email exists, a reset link was sent"}
 

@@ -116,7 +116,7 @@ def send_welcome(to: str, name: str) -> None:
     <h2>Welcome, {name}! 🌸</h2>
     <p>We're so happy you joined Hasmik's Club — a warm, intimate community for Armenian women.</p>
     <p>Your account is ready. Visit your dashboard to explore upcoming events and exclusive content.</p>
-    <a href="https://hasmiks-club.vercel.app/dashboard" class="btn">Go to my dashboard</a>
+    <a href="https://www.hasmiksclub.am/dashboard" class="btn">Go to my dashboard</a>
     <p>With love,<br><strong>The Hasmik's Club team</strong></p>
     """)
     send_async(to, name, "Welcome to Hasmik's Club 🌸", html)
@@ -141,7 +141,7 @@ def send_rsvp_cancelled(to: str, name: str, event_title: str) -> None:
     <h2>RSVP cancelled</h2>
     <p>Hi {name}, your RSVP for <strong>{event_title}</strong> has been cancelled.</p>
     <p>You can always re-register if plans change.</p>
-    <a href="https://hasmiks-club.vercel.app/dashboard" class="btn">View events</a>
+    <a href="https://www.hasmiksclub.am/dashboard" class="btn">View events</a>
     """)
     send_async(to, name, f"RSVP Cancelled: {event_title}", html)
 
@@ -225,7 +225,7 @@ def send_application_approved(to: str, name: str) -> None:
     html = _wrap(f"""
     <h2>You're in, {name}! 🌸</h2>
     <p>Your application to join Hasmik's Club has been approved. Welcome to our community!</p>
-    <a href="https://hasmiks-club.vercel.app/dashboard" class="btn">Go to my dashboard</a>
+    <a href="https://www.hasmiksclub.am/dashboard" class="btn">Go to my dashboard</a>
     <p>With love,<br><strong>The Hasmik's Club team</strong></p>
     """)
     send_async(to, name, "You've been approved — Hasmik's Club 🌸", html)

@@ -1513,10 +1513,10 @@ export default function AdminPage() {
                           <Input value={settingsForm.club_location} onChange={e => setSettingsForm(f => ({ ...f, club_location: e.target.value }))} placeholder="e.g. Yerevan, Armenia" />
                         </Field>
                         <Field label="Instagram Handle">
-                          <Input value={settingsForm.club_instagram} onChange={e => setSettingsForm(f => ({ ...f, club_instagram: e.target.value }))} placeholder="@hasmiks.club" />
+                          <Input value={settingsForm.club_instagram} onChange={e => setSettingsForm(f => ({ ...f, club_instagram: e.target.value }))} placeholder="@hasmiksclub.am" />
                         </Field>
                         <Field label="Contact Email (shown on the Contact page)">
-                          <Input type="email" value={settingsForm.club_email} onChange={e => setSettingsForm(f => ({ ...f, club_email: e.target.value }))} placeholder="hello@hasmiks.club" />
+                          <Input type="email" value={settingsForm.club_email} onChange={e => setSettingsForm(f => ({ ...f, club_email: e.target.value }))} placeholder="hello@hasmiksclub.am" />
                         </Field>
                         <Field label="Club Description (shown in community tab)">
                           <Textarea rows={3} value={settingsForm.club_description} onChange={e => setSettingsForm(f => ({ ...f, club_description: e.target.value }))} placeholder="A warm, intimate community for women in Yerevan..." />
