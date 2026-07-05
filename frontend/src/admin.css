@@ -3,6 +3,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Tailwind's preflight is disabled globally (corePlugins.preflight:false) so it
+   doesn't reset the member-facing site. But shadcn buttons rely on preflight to
+   zero the browser's default 2px button border — without it, every non-outline
+   variant (secondary/destructive/default/ghost) renders a stray black box.
+   Replicate just preflight's border reset, scoped to admin and placed BEFORE all
+   custom rules below so both Tailwind utilities (e.g. the outline variant's
+   `border`, higher specificity) and admin.css's own borders still win. */
+.admin-shell *,
+.admin-shell ::before,
+.admin-shell ::after {
+  border-width: 0;
+  border-style: solid;
+  border-color: hsl(var(--border));
+}
+
 /* ═══════════════════════════════════════════════════════════════
    shadcn CSS variables — La Maison palette, scoped to .admin-shell
 ═══════════════════════════════════════════════════════════════ */
