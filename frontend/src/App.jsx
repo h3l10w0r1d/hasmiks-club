@@ -106,7 +106,6 @@ function AppRoutes() {
       <Route path="/about" element={<AboutPage lang={lang} setLang={setLang} />} />
       <Route path="/contact" element={<ContactPage lang={lang} setLang={setLang} />} />
       <Route path="/terms" element={<TermsPage lang={lang} setLang={setLang} />} />
-      <Route path="/verify-email" element={<ResetPasswordPage lang={lang} />} />
     </Routes>
   )
 }

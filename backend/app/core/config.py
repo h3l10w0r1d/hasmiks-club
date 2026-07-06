@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
     ADMIN_EMAIL: str = ""
+    API_BASE_URL: str = "https://hasmiks-club.onrender.com"  # this backend's own public URL
 
     # Brevo — CRM contact sync only (transactional email now goes through Resend)
     BREVO_API_KEY: str = ""

@@ -90,7 +90,7 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
     user.verification_token = vtoken
     user.verification_token_expires = datetime.now(timezone.utc) + timedelta(hours=24)
     db.commit()
-    verify_url = f"https://www.hasmiksclub.am/verify-email?token={vtoken}"
+    verify_url = f"{settings.API_BASE_URL}/auth/verify-email?token={vtoken}"
     mailer.send_verification(user.email, user.full_name, verify_url)
 
     if app_status == "pending":
@@ -142,7 +142,7 @@ def resend_verification(db: Session = Depends(get_db), current_user: User = Depe
     current_user.verification_token = vtoken
     current_user.verification_token_expires = datetime.now(timezone.utc) + timedelta(hours=24)
     db.commit()
-    verify_url = f"https://www.hasmiksclub.am/verify-email?token={vtoken}"
+    verify_url = f"{settings.API_BASE_URL}/auth/verify-email?token={vtoken}"
     mailer.send_verification(current_user.email, current_user.full_name, verify_url)
     return {"detail": "Verification email sent"}
 
