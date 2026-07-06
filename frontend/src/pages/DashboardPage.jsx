@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import {
   PartyPopper, Flower2, AlertTriangle, UserPlus, MapPin, CalendarDays,
   Send, CheckCircle2, Circle, Lock, Image as ImageIcon, User, MessageCircle,
-  Home, BookOpen, GalleryHorizontal, Users, CreditCard,
+  Home, BookOpen, GalleryHorizontal, Users, CreditCard, Phone, ExternalLink,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum, addProfilePhoto, deleteProfilePhoto, getMemberProfile } from '../api/members'
@@ -657,83 +657,93 @@ export default function DashboardPage({ lang }) {
               {msg && <p className="auth-success" style={{ marginBottom: 16 }}>{msg}</p>}
 
               <form onSubmit={handleSave} className="profile-form">
-                <label className="auth-label">{t.fullName}
-                  <input className="auth-input" value={profileForm.full_name}
-                    onChange={e => setProfileForm(f => ({ ...f, full_name: e.target.value }))} />
-                </label>
-
-                <div style={{ marginBottom: '16px' }}>
-                  {profileForm.photo_url && <img src={profileForm.photo_url} alt="avatar" className="profile-avatar" />}
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <button type="button" className="plan-btn plan-btn-outline" style={{ fontSize: '13px', padding: '8px 16px' }}
+                <div className="profile-card">
+                  <div className="profile-avatar-row">
+                    {profileForm.photo_url
+                      ? <img src={profileForm.photo_url} alt="avatar" className="profile-avatar" />
+                      : <div className="profile-avatar-placeholder">{profileForm.full_name.charAt(0) || '?'}</div>
+                    }
+                    <button type="button" className="plan-btn plan-btn-outline" style={{ fontSize: 13, padding: '8px 16px' }}
                       onClick={() => fileInputRef.current?.click()} disabled={photoUploading}>
                       {photoUploading ? '...' : t.uploadPhoto}
                     </button>
                     <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
                   </div>
+
+                  <div className="profile-field">
+                    <label>{t.fullName}</label>
+                    <input value={profileForm.full_name}
+                      onChange={e => setProfileForm(f => ({ ...f, full_name: e.target.value }))} />
+                  </div>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '20px 0', cursor: 'pointer', fontSize: 14, color: '#555' }}>
+                    <input type="checkbox" checked={profileForm.show_in_directory}
+                      onChange={e => setProfileForm(f => ({ ...f, show_in_directory: e.target.checked }))} />
+                    {t.showInDir}
+                  </label>
+
+                  <button className="btn-rose auth-submit" type="submit" disabled={saving} style={{ width: '100%' }}>
+                    {saving ? '...' : t.save}
+                  </button>
                 </div>
 
-                <label className="auth-label">{t.bio}
-                  <textarea className="auth-input" value={profileForm.bio} placeholder={t.bioPh} rows={3}
-                    style={{ resize: 'vertical', minHeight: 70, fontFamily: 'inherit' }}
-                    onChange={e => setProfileForm(f => ({ ...f, bio: e.target.value }))} />
-                </label>
+                <div>
+                  <div className="profile-card">
+                    <p className="profile-card-title">{t.bio}</p>
+                    <div className="profile-field">
+                      <textarea value={profileForm.bio} placeholder={t.bioPh} rows={4}
+                        style={{ resize: 'vertical', minHeight: 90, fontFamily: 'inherit' }}
+                        onChange={e => setProfileForm(f => ({ ...f, bio: e.target.value }))} />
+                    </div>
+                  </div>
 
-                <div style={{ marginBottom: 16 }}>
-                  <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--deep)', marginBottom: 10 }}>{t.contactInfo}</p>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
-                    <label className="auth-label">{t.facebook}
-                      <input className="auth-input" placeholder="https://facebook.com/…" value={profileForm.facebook_url}
-                        onChange={e => setProfileForm(f => ({ ...f, facebook_url: e.target.value }))} />
-                    </label>
-                    <label className="auth-label">{t.telegram}
-                      <input className="auth-input" placeholder="@username" value={profileForm.telegram_username}
-                        onChange={e => setProfileForm(f => ({ ...f, telegram_username: e.target.value }))} />
-                    </label>
-                    <label className="auth-label">{t.phone}
-                      <input className="auth-input" placeholder="+374 …" value={profileForm.phone}
-                        onChange={e => setProfileForm(f => ({ ...f, phone: e.target.value }))} />
-                    </label>
-                    <label className="auth-label">{t.whatsapp}
-                      <input className="auth-input" placeholder="+374 …" value={profileForm.whatsapp}
-                        onChange={e => setProfileForm(f => ({ ...f, whatsapp: e.target.value }))} />
-                    </label>
+                  <div className="profile-card">
+                    <p className="profile-card-title">{t.contactInfo}</p>
+                    <div className="profile-contact-grid">
+                      <div className="profile-field">
+                        <label><ExternalLink size={12} /> {t.facebook}</label>
+                        <input placeholder="https://facebook.com/…" value={profileForm.facebook_url}
+                          onChange={e => setProfileForm(f => ({ ...f, facebook_url: e.target.value }))} />
+                      </div>
+                      <div className="profile-field">
+                        <label><Send size={12} /> {t.telegram}</label>
+                        <input placeholder="@username" value={profileForm.telegram_username}
+                          onChange={e => setProfileForm(f => ({ ...f, telegram_username: e.target.value }))} />
+                      </div>
+                      <div className="profile-field">
+                        <label><Phone size={12} /> {t.phone}</label>
+                        <input placeholder="+374 …" value={profileForm.phone}
+                          onChange={e => setProfileForm(f => ({ ...f, phone: e.target.value }))} />
+                      </div>
+                      <div className="profile-field">
+                        <label><MessageCircle size={12} /> {t.whatsapp}</label>
+                        <input placeholder="+374 …" value={profileForm.whatsapp}
+                          onChange={e => setProfileForm(f => ({ ...f, whatsapp: e.target.value }))} />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="profile-card">
+                    <p className="profile-card-title">{t.myPhotos}</p>
+                    <p style={{ fontSize: 12, color: '#aaa', marginTop: -10, marginBottom: 14 }}>{t.photoLimit}</p>
+                    <div className="profile-photo-grid">
+                      {profilePhotos.map(p => (
+                        <div key={p.id} className="profile-photo-tile">
+                          <img src={p.url} alt="" />
+                          <button type="button" className="profile-photo-remove" onClick={() => handleGalleryDelete(p.id)}>×</button>
+                        </div>
+                      ))}
+                      {profilePhotos.length < 6 && (
+                        <button type="button" className="profile-photo-add"
+                          onClick={() => galleryInputRef.current?.click()} disabled={galleryUploading}>
+                          {galleryUploading ? '…' : '+'}
+                        </button>
+                      )}
+                    </div>
+                    <input ref={galleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleGalleryAdd} />
                   </div>
                 </div>
-
-                <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, cursor: 'pointer', fontSize: 14, color: '#555' }}>
-                  <input type="checkbox" checked={profileForm.show_in_directory}
-                    onChange={e => setProfileForm(f => ({ ...f, show_in_directory: e.target.checked }))} />
-                  {t.showInDir}
-                </label>
-
-                <button className="btn-rose auth-submit" type="submit" disabled={saving}>
-                  {saving ? '...' : t.save}
-                </button>
               </form>
-
-              <div style={{ marginTop: 28 }}>
-                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--deep)', marginBottom: 4 }}>{t.myPhotos}</p>
-                <p style={{ fontSize: 12, color: '#aaa', marginBottom: 12 }}>{t.photoLimit}</p>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 10 }}>
-                  {profilePhotos.map(p => (
-                    <div key={p.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: 10, overflow: 'hidden' }}>
-                      <img src={p.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                      <button type="button" onClick={() => handleGalleryDelete(p.id)}
-                        style={{ position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,.6)', color: '#fff', cursor: 'pointer', fontSize: 13, lineHeight: 1 }}>
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                  {profilePhotos.length < 6 && (
-                    <button type="button" onClick={() => galleryInputRef.current?.click()} disabled={galleryUploading}
-                      style={{ aspectRatio: '1', borderRadius: 10, border: '2px dashed var(--sand)', background: 'transparent', color: '#b3a9a3', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>
-                      {galleryUploading ? '…' : '+'}
-                    </button>
-                  )}
-                </div>
-                <input ref={galleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleGalleryAdd} />
-              </div>
             </div>
           )}
 

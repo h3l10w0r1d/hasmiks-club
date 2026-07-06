@@ -23,11 +23,19 @@ services:
         value: https://hasmiks.club,https://www.hasmiks.club
       - key: ADMIN_EMAIL
         value: ""
-      # Brevo (email)
+      # Brevo — CRM contact sync only. Set in the Render dashboard (sync:false so it
+      # survives deploys instead of being wiped by a blueprint value:"").
       - key: BREVO_API_KEY
-        value: ""
+        sync: false
       - key: BREVO_SENDER_EMAIL
-        value: ""
+        sync: false
+      # Resend — transactional email. Set in the Render dashboard.
+      - key: RESEND_API_KEY
+        sync: false
+      - key: RESEND_SENDER_EMAIL
+        sync: false
+      - key: RESEND_SENDER_NAME
+        sync: false
       # Stripe (payments)
       - key: STRIPE_SECRET_KEY
         value: ""

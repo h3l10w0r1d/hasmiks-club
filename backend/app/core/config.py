@@ -8,11 +8,16 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 10080  # 7 days
     ADMIN_EMAIL: str = ""
 
-    # Brevo CRM
+    # Brevo — CRM contact sync only (transactional email now goes through Resend)
     BREVO_API_KEY: str = ""
     BREVO_SENDER_EMAIL: str = ""
     BREVO_SENDER_NAME: str = "Hasmik's Club"
     BREVO_LIST_ID: int = 0  # Brevo contact list ID for members
+
+    # Resend — transactional email (welcome, RSVP, verification, broadcasts, etc.)
+    RESEND_API_KEY: str = ""
+    RESEND_SENDER_EMAIL: str = "onboarding@resend.dev"  # replace once a domain is verified in Resend
+    RESEND_SENDER_NAME: str = "Hasmik's Club"
 
     # Telegram
     TELEGRAM_INVITE_URL: str = ""

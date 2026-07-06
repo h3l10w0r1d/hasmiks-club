@@ -1,15 +1,16 @@
 """
-All outbound email + Brevo CRM contact management.
-Uses Brevo's REST API directly via httpx — no SDK needed.
+All outbound transactional email (via Resend) + Brevo CRM contact management.
+Both talk to their REST APIs directly via httpx — no SDKs needed.
 """
 import threading
 import httpx
 from app.core.config import settings
 
 _BREVO = "https://api.brevo.com/v3"
+_RESEND = "https://api.resend.com/emails"
 
 
-def _headers() -> dict:
+def _brevo_headers() -> dict:
     return {
         "api-key": settings.BREVO_API_KEY,
         "Content-Type": "application/json",
@@ -17,19 +18,23 @@ def _headers() -> dict:
     }
 
 
-# ── transactional email ────────────────────────────────────────────────────────
+# ── transactional email (Resend) ───────────────────────────────────────────────
 
 def _send(to_email: str, to_name: str, subject: str, html: str) -> None:
-    if not settings.BREVO_API_KEY or not settings.BREVO_SENDER_EMAIL:
+    if not settings.RESEND_API_KEY:
         return
     payload = {
-        "sender": {"name": settings.BREVO_SENDER_NAME, "email": settings.BREVO_SENDER_EMAIL},
-        "to": [{"email": to_email, "name": to_name}],
+        "from": f"{settings.RESEND_SENDER_NAME} <{settings.RESEND_SENDER_EMAIL}>",
+        "to": [to_email],
         "subject": subject,
-        "htmlContent": html,
+        "html": html,
+    }
+    headers = {
+        "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+        "Content-Type": "application/json",
     }
     try:
-        httpx.post(f"{_BREVO}/smtp/email", json=payload, headers=_headers(), timeout=10)
+        httpx.post(_RESEND, json=payload, headers=headers, timeout=10)
     except Exception:
         pass
 
@@ -38,7 +43,7 @@ def send_async(to_email: str, to_name: str, subject: str, html: str) -> None:
     threading.Thread(target=_send, args=(to_email, to_name, subject, html), daemon=True).start()
 
 
-# ── contact management ─────────────────────────────────────────────────────────
+# ── contact management (Brevo CRM) ─────────────────────────────────────────────
 
 def _sync_contact(email: str, name: str, membership_status: str) -> None:
     if not settings.BREVO_API_KEY:
@@ -56,7 +61,7 @@ def _sync_contact(email: str, name: str, membership_status: str) -> None:
     if settings.BREVO_LIST_ID:
         payload["listIds"] = [settings.BREVO_LIST_ID]
     try:
-        httpx.post(f"{_BREVO}/contacts", json=payload, headers=_headers(), timeout=10)
+        httpx.post(f"{_BREVO}/contacts", json=payload, headers=_brevo_headers(), timeout=10)
     except Exception:
         pass
 
@@ -74,7 +79,7 @@ def update_contact_status(email: str, membership_status: str) -> None:
             httpx.put(
                 f"{_BREVO}/contacts/{email}",
                 json={"attributes": {"MEMBERSHIP_STATUS": membership_status}},
-                headers=_headers(),
+                headers=_brevo_headers(),
                 timeout=10,
             )
         except Exception:
