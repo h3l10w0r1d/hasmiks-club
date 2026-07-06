@@ -2,9 +2,12 @@
 All outbound transactional email (via Resend) + Brevo CRM contact management.
 Both talk to their REST APIs directly via httpx — no SDKs needed.
 """
+import logging
 import threading
 import httpx
 from app.core.config import settings
+
+logger = logging.getLogger(__name__)
 
 _BREVO = "https://api.brevo.com/v3"
 _RESEND = "https://api.resend.com/emails"
@@ -22,6 +25,7 @@ def _brevo_headers() -> dict:
 
 def _send(to_email: str, to_name: str, subject: str, html: str) -> None:
     if not settings.RESEND_API_KEY:
+        logger.warning("Email to %s ('%s') not sent — RESEND_API_KEY is not set", to_email, subject)
         return
     payload = {
         "from": f"{settings.RESEND_SENDER_NAME} <{settings.RESEND_SENDER_EMAIL}>",
@@ -34,9 +38,14 @@ def _send(to_email: str, to_name: str, subject: str, html: str) -> None:
         "Content-Type": "application/json",
     }
     try:
-        httpx.post(_RESEND, json=payload, headers=headers, timeout=10)
+        resp = httpx.post(_RESEND, json=payload, headers=headers, timeout=10)
+        if resp.status_code >= 400:
+            logger.error(
+                "Resend rejected email to %s ('%s'): %s %s",
+                to_email, subject, resp.status_code, resp.text,
+            )
     except Exception:
-        pass
+        logger.exception("Failed to send email to %s ('%s')", to_email, subject)
 
 
 def send_async(to_email: str, to_name: str, subject: str, html: str) -> None:
