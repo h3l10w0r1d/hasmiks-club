@@ -47,6 +47,7 @@ export default function DashboardPage({ lang }) {
   const [saveStatus, setSaveStatus] = useState('idle') // idle | saving | saved
   const lastSavedProfileRef = useRef(null)
   const [msg, setMsg] = useState('')
+  const [verifiedToast, setVerifiedToast] = useState(false)
   const [rsvpError, setRsvpError] = useState('')
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [telegramUrl, setTelegramUrl] = useState('')
@@ -155,8 +156,17 @@ export default function DashboardPage({ lang }) {
   // handle ?verified=ok in URL
   useEffect(() => {
     const v = searchParams.get('verified')
-    if (v === 'ok') { setMsg(t.verifyOk); getMe().then(fresh => { setUser(fresh) }).catch(() => {}) }
+    if (v === 'ok') {
+      setVerifiedToast(true)
+      getMe().then(fresh => { setUser(fresh) }).catch(() => {})
+    }
   }, [])
+
+  useEffect(() => {
+    if (!verifiedToast) return
+    const timer = setTimeout(() => setVerifiedToast(false), 5000)
+    return () => clearTimeout(timer)
+  }, [verifiedToast])
 
   useEffect(() => {
     if (tab === 'home' && !homeLoaded.current) {
@@ -1072,6 +1082,23 @@ export default function DashboardPage({ lang }) {
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Email-verified toast ── */}
+      {verifiedToast && (
+        <div className="toast-slide-in" style={{
+          position: 'fixed', top: 20, right: 20, zIndex: 10001,
+          display: 'flex', alignItems: 'center', gap: 10,
+          background: '#fff', border: '1px solid var(--sand)', borderRadius: 14,
+          padding: '14px 16px', boxShadow: '0 10px 32px rgba(44,26,26,.16)', maxWidth: 340,
+        }}>
+          <span style={{ display: 'flex', color: '#2e7d32', flexShrink: 0 }}><CheckCircle2 size={22} /></span>
+          <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--deep)' }}>{t.verifyOk}</p>
+          <button onClick={() => setVerifiedToast(false)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#bbb', fontSize: 18, lineHeight: 1, marginLeft: 4, flexShrink: 0 }}>
+            ×
+          </button>
         </div>
       )}
     </div>

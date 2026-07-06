@@ -1642,3 +1642,10 @@ footer{
 /* forum: spinner utility */
 @keyframes spin { to { transform: rotate(360deg); } }
 .spin { animation: spin 0.9s linear infinite; }
+
+/* toast: slide in from top-right */
+@keyframes toast-slide-in {
+  from { transform: translateX(24px); opacity: 0; }
+  to   { transform: translateX(0); opacity: 1; }
+}
+.toast-slide-in { animation: toast-slide-in 0.3s ease-out; }
