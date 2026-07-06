@@ -1,6 +1,6 @@
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 
 
 class UserRegister(BaseModel):
@@ -24,7 +24,17 @@ class UserUpdate(BaseModel):
     lang_pref: Optional[str] = None
     show_in_directory: Optional[bool] = None
     bio: Optional[str] = None
+    facebook_url: Optional[str] = None
+    telegram_username: Optional[str] = None
+    phone: Optional[str] = None
+    whatsapp: Optional[str] = None
     onboarding_completed: Optional[bool] = None
+
+
+class ProfilePhotoOut(BaseModel):
+    id: int
+    url: str
+    model_config = {"from_attributes": True}
 
 
 class UserOut(BaseModel):
@@ -39,6 +49,10 @@ class UserOut(BaseModel):
     show_in_directory: bool = True
     admin_notes: Optional[str] = None
     bio: Optional[str] = None
+    facebook_url: Optional[str] = None
+    telegram_username: Optional[str] = None
+    phone: Optional[str] = None
+    whatsapp: Optional[str] = None
     referral_code: Optional[str] = None
     referred_by_id: Optional[int] = None
     application_status: str = "approved"
@@ -46,6 +60,7 @@ class UserOut(BaseModel):
     joined_at: datetime
     role: str = 'member'
     permissions: Optional[str] = None
+    profile_photos: List[ProfilePhotoOut] = []
 
     model_config = {"from_attributes": True}
 
@@ -72,5 +87,46 @@ class MemberDirectoryOut(BaseModel):
     bio: Optional[str] = None
     joined_at: datetime
     referral_code: Optional[str] = None
+
+    model_config = {"from_attributes": True}
+
+
+class MemberEventOut(BaseModel):
+    id: int
+    title: str
+    event_date: datetime
+
+
+class MemberLibraryOut(BaseModel):
+    id: int
+    title: str
+    type: str
+
+
+class MemberForumActivityOut(BaseModel):
+    kind: str  # 'topic' | 'post'
+    topic_id: int
+    title: str
+    snippet: str
+    created_at: datetime
+
+
+class MemberProfileOut(BaseModel):
+    """Public-facing member profile — deliberately excludes email, admin_notes,
+    permissions, application_status, referral_code, etc. Anything added here is
+    visible to every other active member via the community directory."""
+    id: int
+    full_name: str
+    photo_url: Optional[str] = None
+    bio: Optional[str] = None
+    joined_at: datetime
+    facebook_url: Optional[str] = None
+    telegram_username: Optional[str] = None
+    phone: Optional[str] = None
+    whatsapp: Optional[str] = None
+    profile_photos: List[ProfilePhotoOut] = []
+    attended_events: List[MemberEventOut] = []
+    library_items: List[MemberLibraryOut] = []
+    forum_activity: List[MemberForumActivityOut] = []
 
     model_config = {"from_attributes": True}

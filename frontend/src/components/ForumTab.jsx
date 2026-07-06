@@ -204,7 +204,7 @@ const btnGhost = {
 }
 
 /* ── Main forum tab ───────────────────────────────────────────────────────── */
-export default function ForumTab({ lang = 'en', isActive, onSubscribe, checkoutLoading }) {
+export default function ForumTab({ lang = 'en', isActive, onSubscribe, checkoutLoading, initialTopicId, onConsumedInitialTopic }) {
   const t = T(lang)
   const [topics, setTopics] = useState([])
   const [loading, setLoading] = useState(true)
@@ -266,6 +266,13 @@ export default function ForumTab({ lang = 'en', isActive, onSubscribe, checkoutL
     const detail = await getTopic(topic.id).catch(() => null)
     if (detail) setOpenTopic(detail)
   }
+
+  // deep-link from a member's profile ("recent forum activity") straight into a topic
+  useEffect(() => {
+    if (!initialTopicId) return
+    openDetail({ id: initialTopicId })
+    onConsumedInitialTopic?.()
+  }, [initialTopicId])
 
   const submitReply = async () => {
     if (!openTopic || (!reply.body.trim() && !reply.image_url)) return

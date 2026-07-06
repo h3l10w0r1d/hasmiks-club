@@ -6,7 +6,7 @@ import {
   Home, BookOpen, GalleryHorizontal, Users, CreditCard,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum } from '../api/members'
+import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum, addProfilePhoto, deleteProfilePhoto, getMemberProfile } from '../api/members'
 import { getEvents, rsvp, cancelRsvp, joinWaitlist, leaveWaitlist, getWaitlistPosition } from '../api/events'
 import { getLibrary } from '../api/content'
 import { getPublicSettings, createCheckout } from '../api/payments'
@@ -14,6 +14,7 @@ import { refreshToken as apiRefresh } from '../api/auth'
 import NotificationBell from '../components/NotificationBell'
 import OnboardingModal from '../components/OnboardingModal'
 import ForumTab from '../components/ForumTab'
+import MemberProfileModal from '../components/MemberProfileModal'
 import { getCheckinToken } from '../api/events'
 import client from '../api/client'
 
@@ -39,7 +40,10 @@ export default function DashboardPage({ lang }) {
   const [library, setLibrary] = useState([])
   const [directory, setDirectory] = useState([])
   const [waitlistPositions, setWaitlistPositions] = useState({}) // eventId -> {on_waitlist, position}
-  const [profileForm, setProfileForm] = useState({ full_name: '', photo_url: '', show_in_directory: true })
+  const [profileForm, setProfileForm] = useState({ full_name: '', photo_url: '', show_in_directory: true, bio: '', facebook_url: '', telegram_username: '', phone: '', whatsapp: '' })
+  const [profilePhotos, setProfilePhotos] = useState([])
+  const [galleryUploading, setGalleryUploading] = useState(false)
+  const galleryInputRef = useRef(null)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const [rsvpError, setRsvpError] = useState('')
@@ -48,6 +52,7 @@ export default function DashboardPage({ lang }) {
   const [photoUploading, setPhotoUploading] = useState(false)
   const [selectedContent, setSelectedContent] = useState(null)
   const [selectedMember, setSelectedMember] = useState(null)
+  const [forumDeepLinkTopicId, setForumDeepLinkTopicId] = useState(null)
   const [albums, setAlbums] = useState([])
   const [openAlbum, setOpenAlbum] = useState(null)
   const [rsvpDone, setRsvpDone] = useState({})
@@ -102,6 +107,16 @@ export default function DashboardPage({ lang }) {
     noMembers:   lang === 'hy' ? 'Անդամներ չկան ցուցակում' : 'No members in the directory yet',
     memberSince2: lang === 'hy' ? 'Անդամ' : 'Member since',
     viewProfile: lang === 'hy' ? 'Պրոֆիլ' : 'View profile',
+    bio:         lang === 'hy' ? 'Իմ մասին' : 'About me',
+    bioPh:       lang === 'hy' ? 'Պատմեք մի փոքր ձեր մասին...' : 'Tell others a little about yourself…',
+    contactInfo: lang === 'hy' ? 'Կապի տվյալներ' : 'Contact info',
+    facebook:    'Facebook',
+    telegram:    'Telegram',
+    phone:       lang === 'hy' ? 'Հեռախոս' : 'Phone',
+    whatsapp:    'WhatsApp',
+    myPhotos:    lang === 'hy' ? 'Իմ լուսանկարները' : 'My photos',
+    addPhoto:    lang === 'hy' ? 'Ավելացնել լուսանկար' : 'Add photo',
+    photoLimit:  lang === 'hy' ? 'Առավելագույնը 6 լուսանկար' : 'Up to 6 photos',
     verifyBanner:lang === 'hy' ? 'Խնդրում ենք հաստատել Ձեր էլ. հասցեն' : 'Please verify your email address',
     resendVerify:lang === 'hy' ? 'Կրկին ուղարկել' : 'Resend verification email',
     verifyOk:    lang === 'hy' ? 'Էլ. հասցեն հաստատված է ✓' : 'Email verified ✓',
@@ -120,7 +135,12 @@ export default function DashboardPage({ lang }) {
     getMe().then(fresh => {
       if (!alive) return
       setUser(fresh)
-      setProfileForm({ full_name: fresh.full_name, photo_url: fresh.photo_url || '', show_in_directory: fresh.show_in_directory ?? true })
+      setProfileForm({
+        full_name: fresh.full_name, photo_url: fresh.photo_url || '', show_in_directory: fresh.show_in_directory ?? true,
+        bio: fresh.bio || '', facebook_url: fresh.facebook_url || '', telegram_username: fresh.telegram_username || '',
+        phone: fresh.phone || '', whatsapp: fresh.whatsapp || '',
+      })
+      setProfilePhotos(fresh.profile_photos || [])
       if (!fresh.onboarding_completed) setShowOnboarding(true)
     }).catch(() => {})
     getPublicSettings().then(s => { if (alive) setTelegramUrl(s.telegram_invite_url || '') }).catch(() => {})
@@ -186,6 +206,24 @@ export default function DashboardPage({ lang }) {
       setMsg(detail || (lang === 'hy' ? 'Վերբեռնումը ձախողվեց' : 'Upload failed'))
     }
     finally { setPhotoUploading(false) }
+  }
+
+  const handleGalleryAdd = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setGalleryUploading(true)
+    try {
+      const updated = await addProfilePhoto(file)
+      setProfilePhotos(updated)
+    } catch (err) {
+      const detail = err.response?.data?.detail
+      setMsg(detail || (lang === 'hy' ? 'Վերբեռնումը ձախողվեց' : 'Upload failed'))
+    } finally { setGalleryUploading(false) }
+  }
+
+  const handleGalleryDelete = async (photoId) => {
+    try { setProfilePhotos(await deleteProfilePhoto(photoId)) } catch { /* ignore */ }
   }
 
   const handleRsvp = async (event) => {
@@ -635,6 +673,34 @@ export default function DashboardPage({ lang }) {
                   </div>
                 </div>
 
+                <label className="auth-label">{t.bio}
+                  <textarea className="auth-input" value={profileForm.bio} placeholder={t.bioPh} rows={3}
+                    style={{ resize: 'vertical', minHeight: 70, fontFamily: 'inherit' }}
+                    onChange={e => setProfileForm(f => ({ ...f, bio: e.target.value }))} />
+                </label>
+
+                <div style={{ marginBottom: 16 }}>
+                  <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--deep)', marginBottom: 10 }}>{t.contactInfo}</p>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+                    <label className="auth-label">{t.facebook}
+                      <input className="auth-input" placeholder="https://facebook.com/…" value={profileForm.facebook_url}
+                        onChange={e => setProfileForm(f => ({ ...f, facebook_url: e.target.value }))} />
+                    </label>
+                    <label className="auth-label">{t.telegram}
+                      <input className="auth-input" placeholder="@username" value={profileForm.telegram_username}
+                        onChange={e => setProfileForm(f => ({ ...f, telegram_username: e.target.value }))} />
+                    </label>
+                    <label className="auth-label">{t.phone}
+                      <input className="auth-input" placeholder="+374 …" value={profileForm.phone}
+                        onChange={e => setProfileForm(f => ({ ...f, phone: e.target.value }))} />
+                    </label>
+                    <label className="auth-label">{t.whatsapp}
+                      <input className="auth-input" placeholder="+374 …" value={profileForm.whatsapp}
+                        onChange={e => setProfileForm(f => ({ ...f, whatsapp: e.target.value }))} />
+                    </label>
+                  </div>
+                </div>
+
                 <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, cursor: 'pointer', fontSize: 14, color: '#555' }}>
                   <input type="checkbox" checked={profileForm.show_in_directory}
                     onChange={e => setProfileForm(f => ({ ...f, show_in_directory: e.target.checked }))} />
@@ -645,6 +711,29 @@ export default function DashboardPage({ lang }) {
                   {saving ? '...' : t.save}
                 </button>
               </form>
+
+              <div style={{ marginTop: 28 }}>
+                <p style={{ fontSize: 13, fontWeight: 700, color: 'var(--deep)', marginBottom: 4 }}>{t.myPhotos}</p>
+                <p style={{ fontSize: 12, color: '#aaa', marginBottom: 12 }}>{t.photoLimit}</p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 10 }}>
+                  {profilePhotos.map(p => (
+                    <div key={p.id} style={{ position: 'relative', aspectRatio: '1', borderRadius: 10, overflow: 'hidden' }}>
+                      <img src={p.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                      <button type="button" onClick={() => handleGalleryDelete(p.id)}
+                        style={{ position: 'absolute', top: 4, right: 4, width: 22, height: 22, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,.6)', color: '#fff', cursor: 'pointer', fontSize: 13, lineHeight: 1 }}>
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                  {profilePhotos.length < 6 && (
+                    <button type="button" onClick={() => galleryInputRef.current?.click()} disabled={galleryUploading}
+                      style={{ aspectRatio: '1', borderRadius: 10, border: '2px dashed var(--sand)', background: 'transparent', color: '#b3a9a3', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>
+                      {galleryUploading ? '…' : '+'}
+                    </button>
+                  )}
+                </div>
+                <input ref={galleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleGalleryAdd} />
+              </div>
             </div>
           )}
 
@@ -836,6 +925,8 @@ export default function DashboardPage({ lang }) {
               isActive={isActive}
               onSubscribe={handleSubscribe}
               checkoutLoading={checkoutLoading}
+              initialTopicId={forumDeepLinkTopicId}
+              onConsumedInitialTopic={() => setForumDeepLinkTopicId(null)}
             />
           )}
 
@@ -859,26 +950,16 @@ export default function DashboardPage({ lang }) {
 
       {/* ── Member profile modal ── */}
       {selectedMember && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(44,26,26,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}
-          onClick={() => setSelectedMember(null)}>
-          <div style={{ background: '#fff', borderRadius: 20, maxWidth: 400, width: '100%', padding: '32px 28px', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,.25)', textAlign: 'center' }}
-            onClick={e => e.stopPropagation()}>
-            <button onClick={() => setSelectedMember(null)} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', fontSize: 24, cursor: 'pointer', color: '#bbb', lineHeight: 1 }}>×</button>
-            {selectedMember.photo_url
-              ? <img src={selectedMember.photo_url} alt={selectedMember.full_name} style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', border: '4px solid #f5c0c0', marginBottom: 16 }} />
-              : <div style={{ width: 90, height: 90, borderRadius: '50%', background: '#f5c0c0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, margin: '0 auto 16px', color: '#c0394b', fontWeight: 700 }}>
-                  {selectedMember.full_name.charAt(0)}
-                </div>
-            }
-            <h2 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian",serif', fontSize: 24, fontWeight: 700, color: '#2c1a1a', margin: '0 0 6px' }}>{selectedMember.full_name}</h2>
-            <p style={{ fontSize: 12, color: '#aaa', marginBottom: selectedMember.bio ? 16 : 0 }}>
-              {lang === 'hy' ? 'Անդամ' : 'Member since'} {new Date(selectedMember.joined_at).getFullYear()}
-            </p>
-            {selectedMember.bio && (
-              <p style={{ fontSize: 14, color: '#555', lineHeight: 1.7, borderTop: '1px solid #f0e0e5', paddingTop: 16, marginTop: 8, textAlign: 'left' }}>{selectedMember.bio}</p>
-            )}
-          </div>
-        </div>
+        <MemberProfileModal
+          member={selectedMember}
+          lang={lang}
+          onClose={() => setSelectedMember(null)}
+          onOpenForumTopic={(topicId) => {
+            setSelectedMember(null)
+            setForumDeepLinkTopicId(topicId)
+            setTab('forum')
+          }}
+        />
       )}
 
       {/* ── Album lightbox ── */}

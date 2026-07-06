@@ -31,6 +31,10 @@ class User(Base):
     verification_token_expires = Column(sa.DateTime(timezone=True), nullable=True)
     admin_notes = Column(Text, nullable=True)
     bio = Column(Text, nullable=True)
+    facebook_url = Column(String, nullable=True)
+    telegram_username = Column(String(64), nullable=True)
+    phone = Column(String(32), nullable=True)
+    whatsapp = Column(String(32), nullable=True)
     referral_code = Column(String(16), nullable=True, unique=True, index=True)
     referred_by_id = Column(Integer, ForeignKey('users.id'), nullable=True)
     application_message = Column(Text, nullable=True)
@@ -42,3 +46,18 @@ class User(Base):
     rsvps = relationship("RSVP", back_populates="user", cascade="all, delete-orphan")
     unlocked_content = relationship("MemberContent", back_populates="user", cascade="all, delete-orphan")
     referrals = relationship("User", foreign_keys="User.referred_by_id", backref=sa.orm.backref("referred_by", remote_side="User.id"))
+    profile_photos = relationship("ProfilePhoto", back_populates="user", cascade="all, delete-orphan",
+                                  order_by="ProfilePhoto.sort_order")
+
+
+class ProfilePhoto(Base):
+    """A small personal photo-gallery entry on a member's profile (capped at 6)."""
+    __tablename__ = "profile_photos"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    user_id    = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    url        = Column(Text, nullable=False)
+    sort_order = Column(Integer, nullable=False, default=0)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    user = relationship("User", back_populates="profile_photos")
