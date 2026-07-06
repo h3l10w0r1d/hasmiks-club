@@ -18,7 +18,7 @@ services:
       - key: ALGORITHM
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
-        value: 10080
+        value: 129600 # 90 days
       - key: ALLOWED_ORIGINS
         value: https://hasmiks.club,https://www.hasmiks.club
       - key: ADMIN_EMAIL

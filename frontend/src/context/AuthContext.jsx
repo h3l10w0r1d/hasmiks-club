@@ -32,7 +32,15 @@ export function AuthProvider({ children }) {
     // floor guarantees this can never tighten into a rapid loop regardless of
     // how short the configured token lifetime is.
     const buffer = Math.min(86400000, msUntilExpiry / 2)
-    const refreshIn = Math.max(msUntilExpiry - buffer, 30000)
+    // setTimeout delays are stored as a 32-bit signed int; anything past ~24.8
+    // days (2^31-1 ms) overflows and fires immediately instead of waiting —
+    // which, since each fire re-mints a same-lifetime token and reschedules
+    // itself, would hammer /auth/refresh in a tight infinite loop. With
+    // ACCESS_TOKEN_EXPIRE_MINUTES at 90 days that overflow is guaranteed, so
+    // cap the actual wait well under the limit; the token itself still lasts
+    // its full configured lifetime, this just re-arms the timer periodically.
+    const MAX_TIMEOUT_MS = 20 * 86400000 // 20 days
+    const refreshIn = Math.min(Math.max(msUntilExpiry - buffer, 30000), MAX_TIMEOUT_MS)
     refreshTimerRef.current = setTimeout(async () => {
       // Bail out if user already signed out (token gone)
       if (!localStorage.getItem('hc_token')) return

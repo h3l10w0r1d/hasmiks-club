@@ -70,6 +70,14 @@ function ProtectedRoute({ children }) {
   return user ? children : <Navigate to="/login" replace />
 }
 
+// Inverse of ProtectedRoute: while a JWT is still valid, send the user straight
+// to their dashboard instead of showing the marketing landing/login/register pages.
+function GuestOnlyRoute({ children }) {
+  const { user, loading } = useAuth()
+  if (loading) return null
+  return user ? <Navigate to="/dashboard" replace /> : children
+}
+
 function AdminRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return null
@@ -82,9 +90,21 @@ function AppRoutes() {
   const [lang, setLang] = useLang()
   return (
     <Routes>
-      <Route path="/" element={<LandingPage lang={lang} setLang={setLang} />} />
-      <Route path="/login" element={<LoginPage lang={lang} />} />
-      <Route path="/register" element={<RegisterPage lang={lang} />} />
+      <Route path="/" element={
+        <GuestOnlyRoute>
+          <LandingPage lang={lang} setLang={setLang} />
+        </GuestOnlyRoute>
+      } />
+      <Route path="/login" element={
+        <GuestOnlyRoute>
+          <LoginPage lang={lang} />
+        </GuestOnlyRoute>
+      } />
+      <Route path="/register" element={
+        <GuestOnlyRoute>
+          <RegisterPage lang={lang} />
+        </GuestOnlyRoute>
+      } />
       <Route path="/dashboard" element={
         <ProtectedRoute>
           <DashboardPage lang={lang} />

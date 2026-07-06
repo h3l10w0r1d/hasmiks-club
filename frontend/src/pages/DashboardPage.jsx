@@ -31,6 +31,34 @@ function getCountdown(iso, lang) {
   return null
 }
 
+function dayKey(iso) {
+  const d = new Date(iso)
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`
+}
+
+function formatDateHeader(iso, lang) {
+  const d = new Date(iso)
+  const today = new Date()
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1)
+  if (dayKey(iso) === dayKey(today)) return lang === 'hy' ? 'Այսօր' : 'Today'
+  if (dayKey(iso) === dayKey(tomorrow)) return lang === 'hy' ? 'Վաղը' : 'Tomorrow'
+  const opts = { weekday: 'long', month: 'long', day: 'numeric' }
+  if (d.getFullYear() !== today.getFullYear()) opts.year = 'numeric'
+  return d.toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-US', opts)
+}
+
+// Groups a chronologically-sorted events array into { label, events }[] buckets by calendar day.
+function groupEventsByDate(events, lang) {
+  const groups = []
+  for (const ev of events) {
+    const key = dayKey(ev.event_date)
+    const last = groups[groups.length - 1]
+    if (last && last.key === key) last.events.push(ev)
+    else groups.push({ key, label: formatDateHeader(ev.event_date, lang), events: [ev] })
+  }
+  return groups
+}
+
 export default function DashboardPage({ lang }) {
   const { user, setUser, signOut } = useAuth()
   const navigate = useNavigate()
@@ -778,61 +806,71 @@ export default function DashboardPage({ lang }) {
               {rsvpError && <p className="auth-error" style={{ marginBottom: '12px' }}>{rsvpError}</p>}
               {events.length === 0
                 ? <p className="dash-empty">{t.noEvents}</p>
-                : events.map(ev => {
-                  const wl = waitlistPositions[ev.id]
-                  const countdown = getCountdown(ev.event_date, lang)
-                  return (
-                    <div key={ev.id} className={`event-card${ev.user_has_rsvp ? ' rsvpd' : ''}`}>
-                      <div className="event-card-top">
-                        <div>
-                          <div className="event-title">{lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title}</div>
-                          <div className="event-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} /> {ev.location}</span> ·
-                            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CalendarDays size={13} /> {new Date(ev.event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                            {countdown && (
-                              <span style={{ background: '#fff0f2', color: '#c0394b', borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 600, marginLeft: 4 }}>
-                                {countdown}
+                : groupEventsByDate(events, lang).map(group => (
+                  <div key={group.key} style={{ marginBottom: 28 }}>
+                    <h3 style={{
+                      fontSize: 13, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+                      color: 'var(--rose)', margin: '0 0 12px', paddingBottom: 8, borderBottom: '1px solid var(--sand)',
+                    }}>
+                      {group.label}
+                    </h3>
+                    {group.events.map(ev => {
+                      const wl = waitlistPositions[ev.id]
+                      const countdown = getCountdown(ev.event_date, lang)
+                      return (
+                        <div key={ev.id} className={`event-card${ev.user_has_rsvp ? ' rsvpd' : ''}`}>
+                          <div className="event-card-top">
+                            <div>
+                              <div className="event-title">{lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title}</div>
+                              <div className="event-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} /> {ev.location}</span> ·
+                                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CalendarDays size={13} /> {new Date(ev.event_date).toLocaleTimeString(lang === 'hy' ? 'hy-AM' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                                {countdown && (
+                                  <span style={{ background: '#fff0f2', color: '#c0394b', borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 600, marginLeft: 4 }}>
+                                    {countdown}
+                                  </span>
+                                )}
+                              </div>
+                              {lang === 'hy' && ev.description_hy
+                                ? <p className="event-desc">{ev.description_hy}</p>
+                                : ev.description && <p className="event-desc">{ev.description}</p>}
+                            </div>
+                            <div className="event-seats">
+                              {ev.seats_available > 0
+                                ? <><strong>{ev.seats_available}</strong> {t.seats}</>
+                                : <span className="fully-booked">{t.booked}</span>}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                            {rsvpDone[ev.id] ? (
+                              <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
+                            ) : !isActive ? (
+                              <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Բաժանորդագրվեք՝ գրանցվելու համար' : 'Subscribe to RSVP'}</button>
+                            ) : ev.user_has_rsvp ? (
+                              <button className="plan-btn plan-btn-outline" onClick={() => handleRsvp(ev)}>{t.cancelRsvp}</button>
+                            ) : ev.seats_available > 0 ? (
+                              <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(ev)}>{t.rsvpBtn}</button>
+                            ) : (
+                              <button
+                                className={`plan-btn ${wl?.on_waitlist ? 'plan-btn-outline' : 'plan-btn-fill'}`}
+                                style={{ background: wl?.on_waitlist ? undefined : '#f39c12', borderColor: '#f39c12', color: wl?.on_waitlist ? '#f39c12' : '#fff' }}
+                                onClick={() => handleWaitlist(ev)}
+                              >
+                                {wl?.on_waitlist ? t.leaveWait : t.waitlist}
+                              </button>
+                            )}
+                            {wl?.on_waitlist && (
+                              <span style={{ fontSize: 13, color: '#f39c12', fontWeight: 600 }}>
+                                #{wl.position} {t.waitPos}
                               </span>
                             )}
                           </div>
-                          {lang === 'hy' && ev.description_hy
-                            ? <p className="event-desc">{ev.description_hy}</p>
-                            : ev.description && <p className="event-desc">{ev.description}</p>}
                         </div>
-                        <div className="event-seats">
-                          {ev.seats_available > 0
-                            ? <><strong>{ev.seats_available}</strong> {t.seats}</>
-                            : <span className="fully-booked">{t.booked}</span>}
-                        </div>
-                      </div>
-
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                        {rsvpDone[ev.id] ? (
-                          <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
-                        ) : !isActive ? (
-                          <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Բաժանորդագրվեք՝ գրանցվելու համար' : 'Subscribe to RSVP'}</button>
-                        ) : ev.user_has_rsvp ? (
-                          <button className="plan-btn plan-btn-outline" onClick={() => handleRsvp(ev)}>{t.cancelRsvp}</button>
-                        ) : ev.seats_available > 0 ? (
-                          <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(ev)}>{t.rsvpBtn}</button>
-                        ) : (
-                          <button
-                            className={`plan-btn ${wl?.on_waitlist ? 'plan-btn-outline' : 'plan-btn-fill'}`}
-                            style={{ background: wl?.on_waitlist ? undefined : '#f39c12', borderColor: '#f39c12', color: wl?.on_waitlist ? '#f39c12' : '#fff' }}
-                            onClick={() => handleWaitlist(ev)}
-                          >
-                            {wl?.on_waitlist ? t.leaveWait : t.waitlist}
-                          </button>
-                        )}
-                        {wl?.on_waitlist && (
-                          <span style={{ fontSize: 13, color: '#f39c12', fontWeight: 600 }}>
-                            #{wl.position} {t.waitPos}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  )
-                })
+                      )
+                    })}
+                  </div>
+                ))
               }
             </div>
           )}
