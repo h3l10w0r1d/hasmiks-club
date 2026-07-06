@@ -632,12 +632,7 @@ export default function DashboardPage({ lang }) {
                       {photoUploading ? '...' : t.uploadPhoto}
                     </button>
                     <input ref={fileInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handlePhotoUpload} />
-                    <span style={{ fontSize: '12px', color: '#888' }}>{lang === 'hy' ? 'կամ հղում' : 'or URL'}</span>
                   </div>
-                  <input className="auth-input" style={{ marginTop: '8px' }}
-                    placeholder={lang === 'hy' ? 'Լուսանկարի հղում' : 'Photo URL (optional)'}
-                    value={profileForm.photo_url}
-                    onChange={e => setProfileForm(f => ({ ...f, photo_url: e.target.value }))} />
                 </div>
 
                 <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20, cursor: 'pointer', fontSize: 14, color: '#555' }}>
