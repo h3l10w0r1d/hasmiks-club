@@ -44,7 +44,8 @@ export default function DashboardPage({ lang }) {
   const [profilePhotos, setProfilePhotos] = useState([])
   const [galleryUploading, setGalleryUploading] = useState(false)
   const galleryInputRef = useRef(null)
-  const [saving, setSaving] = useState(false)
+  const [saveStatus, setSaveStatus] = useState('idle') // idle | saving | saved
+  const lastSavedProfileRef = useRef(null)
   const [msg, setMsg] = useState('')
   const [rsvpError, setRsvpError] = useState('')
   const [checkoutLoading, setCheckoutLoading] = useState(false)
@@ -84,6 +85,8 @@ export default function DashboardPage({ lang }) {
     uploadPhoto: lang === 'hy' ? 'Վերբեռնել լուսանկար' : 'Upload Photo',
     save:        lang === 'hy' ? 'Պահպանել' : 'Save Changes',
     saved:       lang === 'hy' ? 'Պահպանված է' : 'Saved!',
+    savingNow:   lang === 'hy' ? 'Պահպանվում է...' : 'Saving…',
+    savedNow:    lang === 'hy' ? 'Պահպանված է ✓' : 'Saved ✓',
     showInDir:   lang === 'hy' ? 'Ցուցադրել համայնքի ցուցակում' : 'Show in community directory',
     seats:       lang === 'hy' ? 'տեղ մնացել' : 'seats left',
     rsvpBtn:     lang === 'hy' ? 'Գրանցվել' : 'RSVP',
@@ -135,11 +138,13 @@ export default function DashboardPage({ lang }) {
     getMe().then(fresh => {
       if (!alive) return
       setUser(fresh)
-      setProfileForm({
+      const initialForm = {
         full_name: fresh.full_name, photo_url: fresh.photo_url || '', show_in_directory: fresh.show_in_directory ?? true,
         bio: fresh.bio || '', facebook_url: fresh.facebook_url || '', telegram_username: fresh.telegram_username || '',
         phone: fresh.phone || '', whatsapp: fresh.whatsapp || '',
-      })
+      }
+      setProfileForm(initialForm)
+      lastSavedProfileRef.current = JSON.stringify(initialForm)
       setProfilePhotos(fresh.profile_photos || [])
       if (!fresh.onboarding_completed) setShowOnboarding(true)
     }).catch(() => {})
@@ -180,16 +185,24 @@ export default function DashboardPage({ lang }) {
     // forum data is loaded inside the ForumTab component
   }, [tab])
 
-  const handleSave = async (e) => {
-    e.preventDefault()
-    setSaving(true)
-    try {
-      const updated = await updateMe(profileForm)
-      setUser(updated)
-      setMsg(t.saved)
-      setTimeout(() => setMsg(''), 2500)
-    } finally { setSaving(false) }
-  }
+  // Auto-save the profile form: debounce edits, skip the initial fetch-populated value.
+  useEffect(() => {
+    const current = JSON.stringify(profileForm)
+    if (lastSavedProfileRef.current === null || current === lastSavedProfileRef.current) return
+    setSaveStatus('saving')
+    const timer = setTimeout(async () => {
+      try {
+        const updated = await updateMe(profileForm)
+        setUser(updated)
+        lastSavedProfileRef.current = current
+        setSaveStatus('saved')
+        setTimeout(() => setSaveStatus(s => s === 'saved' ? 'idle' : s), 2000)
+      } catch {
+        setSaveStatus('idle')
+      }
+    }, 800)
+    return () => clearTimeout(timer)
+  }, [profileForm])
 
   const handlePhotoUpload = async (e) => {
     const file = e.target.files?.[0]
@@ -656,7 +669,7 @@ export default function DashboardPage({ lang }) {
 
               {msg && <p className="auth-success" style={{ marginBottom: 16 }}>{msg}</p>}
 
-              <form onSubmit={handleSave} className="profile-form">
+              <div className="profile-form">
                 <div className="profile-card">
                   <div className="profile-avatar-row">
                     {profileForm.photo_url
@@ -682,9 +695,10 @@ export default function DashboardPage({ lang }) {
                     {t.showInDir}
                   </label>
 
-                  <button className="btn-rose auth-submit" type="submit" disabled={saving} style={{ width: '100%' }}>
-                    {saving ? '...' : t.save}
-                  </button>
+                  <p style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: saveStatus === 'saved' ? '#2e7d32' : '#aaa', minHeight: 16, margin: 0 }}>
+                    {saveStatus === 'saving' && t.savingNow}
+                    {saveStatus === 'saved' && <><CheckCircle2 size={14} /> {t.savedNow}</>}
+                  </p>
                 </div>
 
                 <div>
@@ -743,7 +757,7 @@ export default function DashboardPage({ lang }) {
                     <input ref={galleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleGalleryAdd} />
                   </div>
                 </div>
-              </form>
+              </div>
             </div>
           )}
 
