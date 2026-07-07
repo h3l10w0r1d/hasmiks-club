@@ -25,6 +25,8 @@ class Settings(BaseSettings):
 
     # Telegram
     TELEGRAM_INVITE_URL: str = ""
+    TELEGRAM_BOT_USERNAME: str = ""  # not secret — the login widget needs it client-side
+    TELEGRAM_BOT_TOKEN: str = ""  # secret — used server-side to verify login widget payloads
 
     # Cloudinary
     CLOUDINARY_CLOUD_NAME: str = ""

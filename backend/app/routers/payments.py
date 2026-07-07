@@ -53,7 +53,7 @@ def create_checkout(
         resp = ameriabank.init_payment(
             order_id=row.order_id,
             amount=amount,
-            description=f"Hasmik's Club membership — {current_user.email}",
+            description=f"Hasmik's Club membership — {current_user.email or current_user.full_name}",
             back_url=settings.AMERIABANK_BACK_URL,
         )
     except ameriabank.AmeriaBankError as exc:

@@ -2,7 +2,7 @@ import csv
 import io
 import json
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 
 import cloudinary
 import cloudinary.uploader
@@ -189,7 +189,7 @@ def get_referrals(db: Session = Depends(get_db), _: User = Depends(require_permi
         {
             "referrer_id": r.referred_by_id,
             "referrer_name": referrers[r.referred_by_id].full_name if r.referred_by_id in referrers else "Unknown",
-            "referrer_email": referrers[r.referred_by_id].email if r.referred_by_id in referrers else "",
+            "referrer_email": (referrers[r.referred_by_id].email or "") if r.referred_by_id in referrers else "",
             "referral_count": r.count,
         }
         for r in rows
@@ -222,7 +222,7 @@ def list_events(db: Session = Depends(get_db), _: User = Depends(require_permiss
 class AttendeeOut(BaseModel):
     id: int
     full_name: str
-    email: str
+    email: Optional[str] = None
     membership_status: str
     checked_in: bool = False
     model_config = {"from_attributes": False}

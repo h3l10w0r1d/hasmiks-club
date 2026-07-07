@@ -17,6 +17,9 @@ export const refreshToken = () => client.post('/auth/refresh').then((r) => r.dat
 export const googleSignIn = (credential, referralCode) =>
   client.post('/auth/google', { credential, referral_code: referralCode || null }).then((r) => r.data)
 
+export const telegramSignIn = (telegramUser, referralCode) =>
+  client.post('/auth/telegram', { ...telegramUser, referral_code: referralCode || null }).then((r) => r.data)
+
 export const forgotPassword = (email) =>
   client.post('/auth/forgot-password', { email }).then((r) => r.data)
 

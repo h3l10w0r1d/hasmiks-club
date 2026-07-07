@@ -5,6 +5,7 @@ import { getPublicSettings } from '../api/payments'
 import { useAuth } from '../context/AuthContext'
 import GlobalHeader from '../components/GlobalHeader'
 import GoogleSignInButton from '../components/GoogleSignInButton'
+import TelegramLoginButton from '../components/TelegramLoginButton'
 
 export default function RegisterPage({ lang }) {
   const { signIn } = useAuth()
@@ -130,6 +131,14 @@ export default function RegisterPage({ lang }) {
                 navigate(data.user?.application_status !== 'pending' ? '/welcome' : '/dashboard')
               }}
               onError={setError} />
+            <div style={{ marginTop: 10 }}>
+              <TelegramLoginButton lang={lang} referralCode={refCode}
+                onSuccess={(data) => {
+                  signIn(data)
+                  navigate(data.user?.application_status !== 'pending' ? '/welcome' : '/dashboard')
+                }}
+                onError={setError} />
+            </div>
             {error && <p className="auth-error" style={{ marginTop: 12 }}>{error}</p>}
           </>
         )}

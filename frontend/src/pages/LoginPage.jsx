@@ -4,6 +4,7 @@ import { login } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
 import GlobalHeader from '../components/GlobalHeader'
 import GoogleSignInButton from '../components/GoogleSignInButton'
+import TelegramLoginButton from '../components/TelegramLoginButton'
 
 export default function LoginPage({ lang }) {
   const { signIn } = useAuth()
@@ -71,6 +72,11 @@ export default function LoginPage({ lang }) {
         <GoogleSignInButton lang={lang}
           onSuccess={(data) => { signIn(data); navigate(from, { replace: true }) }}
           onError={setError} />
+        <div style={{ marginTop: 10 }}>
+          <TelegramLoginButton lang={lang}
+            onSuccess={(data) => { signIn(data); navigate(from, { replace: true }) }}
+            onError={setError} />
+        </div>
 
         <p className="auth-footer">
           {t.noAcc} <Link to="/register" className="auth-link">{t.register}</Link>

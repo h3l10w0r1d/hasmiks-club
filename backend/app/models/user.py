@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, ForeignKey
+from sqlalchemy import Column, Integer, BigInteger, String, DateTime, Boolean, Text, ForeignKey
 import sqlalchemy as sa
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -16,9 +16,10 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=False)
-    password_hash = Column(String, nullable=True)  # null for Google-only accounts
+    email = Column(String, unique=True, index=True, nullable=True)  # null for Telegram-only accounts
+    password_hash = Column(String, nullable=True)  # null for Google/Telegram-only accounts
     google_id = Column(String(64), unique=True, index=True, nullable=True)  # Google's "sub" claim
+    telegram_id = Column(BigInteger, unique=True, index=True, nullable=True)  # Telegram's numeric user id
     full_name = Column(String, nullable=False)
     photo_url = Column(String, nullable=True)
     lang_pref = Column(String, default="en")

@@ -39,7 +39,7 @@ class ProfilePhotoOut(BaseModel):
 
 class UserOut(BaseModel):
     id: int
-    email: str
+    email: Optional[str] = None  # null for Telegram-only accounts
     full_name: str
     photo_url: Optional[str]
     lang_pref: str

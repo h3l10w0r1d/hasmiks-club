@@ -49,6 +49,8 @@ def _send(to_email: str, to_name: str, subject: str, html: str) -> None:
 
 
 def send_async(to_email: str, to_name: str, subject: str, html: str) -> None:
+    if not to_email:
+        return  # Telegram-only members have no email — nothing to send, not an error
     threading.Thread(target=_send, args=(to_email, to_name, subject, html), daemon=True).start()
 
 
@@ -76,12 +78,14 @@ def _sync_contact(email: str, name: str, membership_status: str) -> None:
 
 
 def sync_contact_async(email: str, name: str, membership_status: str) -> None:
+    if not email:
+        return  # Telegram-only members have no email — nothing to sync
     threading.Thread(target=_sync_contact, args=(email, name, membership_status), daemon=True).start()
 
 
 def update_contact_status(email: str, membership_status: str) -> None:
     """Update membership status attribute on an existing Brevo contact."""
-    if not settings.BREVO_API_KEY:
+    if not settings.BREVO_API_KEY or not email:
         return
     def _do():
         try:

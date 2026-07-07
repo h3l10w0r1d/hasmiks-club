@@ -1,3 +1,5 @@
+import hashlib
+import hmac
 import secrets
 import string
 from datetime import datetime, timedelta, timezone
@@ -27,6 +29,17 @@ class GoogleSignInRequest(BaseModel):
     credential: str  # the ID token from Google Identity Services
     referral_code: str | None = None  # only used when this creates a brand-new account
 
+
+class TelegramSignInRequest(BaseModel):
+    id: int
+    first_name: str
+    last_name: str | None = None
+    username: str | None = None
+    photo_url: str | None = None
+    auth_date: int
+    hash: str
+    referral_code: str | None = None  # only used when this creates a brand-new account
+
 _REF_CHARS = string.ascii_uppercase + string.digits
 
 
@@ -40,7 +53,7 @@ class ResetPasswordRequest(BaseModel):
 
 
 def _ensure_admin(user: User, db: Session) -> None:
-    if settings.ADMIN_EMAIL and user.email.lower() == settings.ADMIN_EMAIL.lower():
+    if settings.ADMIN_EMAIL and user.email and user.email.lower() == settings.ADMIN_EMAIL.lower():
         if not user.is_admin:
             user.is_admin = True
             db.commit()
@@ -184,6 +197,76 @@ def google_sign_in(payload: GoogleSignInRequest, db: Session = Depends(get_db)):
             mailer.send_application_received(user.email, user.full_name)
         else:
             mailer.send_welcome(user.email, user.full_name)
+        mailer.sync_contact_async(user.email, user.full_name, user.membership_status)
+
+    token = create_access_token(str(user.id))
+    return TokenOut(access_token=token, user=UserOut.model_validate(user))
+
+
+def _verify_telegram_payload(payload: TelegramSignInRequest) -> None:
+    """Verify Telegram's login-widget HMAC per their documented algorithm, and
+    reject stale payloads (a captured/replayed widget response)."""
+    data = payload.model_dump(exclude={"hash", "referral_code"}, exclude_none=True)
+    check_string = "\n".join(f"{k}={data[k]}" for k in sorted(data))
+    secret_key = hashlib.sha256(settings.TELEGRAM_BOT_TOKEN.encode()).digest()
+    computed = hmac.new(secret_key, check_string.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(computed, payload.hash):
+        raise HTTPException(status_code=401, detail="Invalid Telegram credential")
+    if datetime.now(timezone.utc).timestamp() - payload.auth_date > 86400:
+        raise HTTPException(status_code=401, detail="Telegram login expired — please try again")
+
+
+@router.post("/telegram", response_model=TokenOut)
+def telegram_sign_in(payload: TelegramSignInRequest, db: Session = Depends(get_db)):
+    if not settings.TELEGRAM_BOT_TOKEN:
+        raise HTTPException(status_code=503, detail="Telegram Sign-In is not configured")
+    _verify_telegram_payload(payload)
+
+    full_name = f"{payload.first_name} {payload.last_name}".strip() if payload.last_name else payload.first_name
+    user = db.query(User).filter(User.telegram_id == payload.id).first()
+    is_new = False
+
+    if not user:
+        # Telegram never provides an email, so there's nothing reliable to auto-link
+        # against — every first-time Telegram sign-in is a brand-new account.
+        is_new = True
+        require_approval = _get_setting(db, "require_approval", "false").lower() == "true"
+        app_status = "pending" if require_approval else "approved"
+
+        referred_by_id = None
+        if payload.referral_code:
+            referrer = db.query(User).filter(User.referral_code == payload.referral_code.upper()).first()
+            if referrer:
+                referred_by_id = referrer.id
+
+        user = User(
+            email=None,
+            password_hash=None,
+            telegram_id=payload.id,
+            telegram_username=payload.username,
+            full_name=full_name,
+            photo_url=payload.photo_url,
+            is_verified=True,  # Telegram already confirmed control of this account
+            application_status=app_status,
+            referred_by_id=referred_by_id,
+            referral_code=_gen_referral_code(db),
+        )
+        db.add(user)
+        db.commit()
+        db.refresh(user)
+    else:
+        # Keep the verified handle current on every login (distinct from the
+        # free-text telegram_username a member can otherwise type into their profile).
+        if payload.username and user.telegram_username != payload.username:
+            user.telegram_username = payload.username
+            db.commit()
+            db.refresh(user)
+
+    _ensure_admin(user, db)
+
+    if is_new:
+        # No email to send a welcome/application-received notice to — sync_contact_async
+        # and send_* already no-op safely when email is None, so nothing further needed.
         mailer.sync_contact_async(user.email, user.full_name, user.membership_status)
 
     token = create_access_token(str(user.id))
