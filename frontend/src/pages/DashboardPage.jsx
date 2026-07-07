@@ -60,7 +60,7 @@ function groupEventsByDate(events, lang) {
   return groups
 }
 
-export default function DashboardPage({ lang }) {
+export default function DashboardPage({ lang, setLang }) {
   const { user, setUser, signOut } = useAuth()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -449,6 +449,12 @@ export default function DashboardPage({ lang }) {
       <nav className="dash-nav">
         <div className="dash-nav-brand">Hasmik's <span>Club</span></div>
         <div className="dash-nav-right">
+          {setLang && (
+            <div className="gh-lang">
+              <button className={`gh-lang-btn${lang === 'en' ? ' active' : ''}`} onClick={() => setLang('en')}>EN</button>
+              <button className={`gh-lang-btn${lang === 'hy' ? ' active' : ''}`} onClick={() => setLang('hy')}>ՀԱՅ</button>
+            </div>
+          )}
           <NotificationBell />
           <span className="dash-user-name">{user.full_name}</span>
           {user.is_admin && (
@@ -550,6 +556,10 @@ export default function DashboardPage({ lang }) {
                 </h3>
                 {nextEvent ? (
                   <div className={`event-card${nextEvent.user_has_rsvp ? ' rsvpd' : ''}`}>
+                    {nextEvent.cover_url && (
+                      <img className="event-card-cover" src={nextEvent.cover_url}
+                        alt={lang === 'hy' && nextEvent.title_hy ? nextEvent.title_hy : nextEvent.title} />
+                    )}
                     <div className="event-card-top">
                       <div>
                         <div className="event-title">{lang === 'hy' && nextEvent.title_hy ? nextEvent.title_hy : nextEvent.title}</div>
@@ -846,6 +856,10 @@ export default function DashboardPage({ lang }) {
                       const countdown = getCountdown(ev.event_date, lang)
                       return (
                         <div key={ev.id} className={`event-card${ev.user_has_rsvp ? ' rsvpd' : ''}`}>
+                          {ev.cover_url && (
+                            <img className="event-card-cover" src={ev.cover_url}
+                              alt={lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title} />
+                          )}
                           <div className="event-card-top">
                             <div>
                               <div className="event-title">{lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title}</div>

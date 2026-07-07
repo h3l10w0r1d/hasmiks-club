@@ -1140,6 +1140,13 @@ footer{
   background:rgba(245,234,234,0.18);
 }
 .event-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}
+.event-card-cover{
+  display:block;width:calc(100% + 64px);height:200px;object-fit:cover;
+  margin:-28px -32px 20px -32px;
+}
+@media (max-width:640px){
+  .event-card-cover{width:calc(100% + 40px);margin:-28px -20px 16px -20px;height:160px}
+}
 .event-title{
   font-family:var(--font-serif);
   font-size:22px;font-weight:600;color:var(--deep);

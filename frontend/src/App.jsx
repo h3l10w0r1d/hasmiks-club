@@ -107,7 +107,7 @@ function AppRoutes() {
       } />
       <Route path="/dashboard" element={
         <ProtectedRoute>
-          <DashboardPage lang={lang} />
+          <DashboardPage lang={lang} setLang={setLang} />
         </ProtectedRoute>
       } />
       <Route path="/welcome" element={
