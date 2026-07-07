@@ -19,6 +19,7 @@ import { getCheckinToken } from '../api/events'
 import client from '../api/client'
 
 const TABS = ['home', 'profile', 'events', 'library', 'gallery', 'community', 'forum']
+const TAB_ICONS = { home: Home, profile: User, events: CalendarDays, library: BookOpen, gallery: GalleryHorizontal, community: Users, forum: MessageCircle }
 
 function getCountdown(iso, lang) {
   const diff = new Date(iso) - new Date()
@@ -471,21 +472,36 @@ export default function DashboardPage({ lang }) {
         <aside className="dash-sidebar">
           <div className="dash-sidebar-section">
             <span className="dash-sidebar-section-label">{lang === 'hy' ? 'Գլխ.' : 'Overview'}</span>
-            {['home'].map(k => (
-              <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => changeTab(k)}>{t[k]}</button>
-            ))}
+            {['home'].map(k => {
+              const Icon = TAB_ICONS[k]
+              return (
+                <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => changeTab(k)}>
+                  <Icon size={16} strokeWidth={1.75} /> {t[k]}
+                </button>
+              )
+            })}
           </div>
           <div className="dash-sidebar-section">
             <span className="dash-sidebar-section-label">{lang === 'hy' ? 'Անձ.' : 'Personal'}</span>
-            {['profile', 'events', 'library'].map(k => (
-              <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => changeTab(k)}>{t[k]}</button>
-            ))}
+            {['profile', 'events', 'library'].map(k => {
+              const Icon = TAB_ICONS[k]
+              return (
+                <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => changeTab(k)}>
+                  <Icon size={16} strokeWidth={1.75} /> {t[k]}
+                </button>
+              )
+            })}
           </div>
           <div className="dash-sidebar-section">
             <span className="dash-sidebar-section-label">{lang === 'hy' ? 'Համ.' : 'Community'}</span>
-            {['gallery', 'community', 'forum'].map(k => (
-              <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => changeTab(k)}>{t[k]}</button>
-            ))}
+            {['gallery', 'community', 'forum'].map(k => {
+              const Icon = TAB_ICONS[k]
+              return (
+                <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => changeTab(k)}>
+                  <Icon size={16} strokeWidth={1.75} /> {t[k]}
+                </button>
+              )
+            })}
           </div>
           <div className="dash-membership-badge">
             <span className={`dash-status ${user.membership_status}`}>{isActive ? t.active : t.inactive}</span>
@@ -1020,8 +1036,7 @@ export default function DashboardPage({ lang }) {
       {/* ── Mobile bottom navigation ── */}
       <nav className="dash-bottom-nav">
         {TABS.map(k => {
-          const icons = { home: Home, profile: User, events: CalendarDays, library: BookOpen, gallery: GalleryHorizontal, community: Users, forum: MessageCircle }
-          const Icon = icons[k]
+          const Icon = TAB_ICONS[k]
           return (
             <button key={k} className={`dash-bottom-nav-item${tab === k ? ' active' : ''}`} onClick={() => changeTab(k)}>
               <span className="nav-icon"><Icon size={20} strokeWidth={1.75} /></span>

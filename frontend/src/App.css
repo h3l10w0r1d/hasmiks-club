@@ -1010,8 +1010,9 @@ footer{
   transition:color .15s;
   border-left:2px solid transparent;
   width:100%;
-  display:block;
+  display:flex;align-items:center;gap:10px;
 }
+.dash-tab svg{flex-shrink:0}
 .dash-tab:hover{color:var(--mocha)}
 .dash-tab.active{
   color:var(--rose);
