@@ -39,17 +39,6 @@ services:
         sync: false
       - key: RESEND_SENDER_NAME
         sync: false
-      # Stripe (payments)
-      - key: STRIPE_SECRET_KEY
-        value: ""
-      - key: STRIPE_WEBHOOK_SECRET
-        value: ""
-      - key: STRIPE_PRICE_ID
-        value: ""
-      - key: STRIPE_SUCCESS_URL
-        value: https://hasmiks.club/dashboard
-      - key: STRIPE_CANCEL_URL
-        value: https://hasmiks.club/events
       # Cloudinary (photo uploads) — set these as secrets in the Render dashboard.
       # sync:false keeps dashboard values from being wiped on each deploy.
       - key: CLOUDINARY_CLOUD_NAME
