@@ -62,8 +62,19 @@ function groupEventsByDate(events, lang) {
 export default function DashboardPage({ lang }) {
   const { user, setUser, signOut } = useAuth()
   const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [tab, setTab] = useState(searchParams.get('tab') || 'home')
+
+  // Keep the URL's ?tab= in sync so refreshing (or sharing/bookmarking the
+  // link) lands back on the same tab instead of always resetting to Home.
+  const changeTab = useCallback((next) => {
+    setTab(next)
+    setSearchParams(prev => {
+      const p = new URLSearchParams(prev)
+      p.set('tab', next)
+      return p
+    }, { replace: true })
+  }, [setSearchParams])
   const [events, setEvents] = useState([])
   const [library, setLibrary] = useState([])
   const [directory, setDirectory] = useState([])
@@ -461,19 +472,19 @@ export default function DashboardPage({ lang }) {
           <div className="dash-sidebar-section">
             <span className="dash-sidebar-section-label">{lang === 'hy' ? 'Գլխ.' : 'Overview'}</span>
             {['home'].map(k => (
-              <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>{t[k]}</button>
+              <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => changeTab(k)}>{t[k]}</button>
             ))}
           </div>
           <div className="dash-sidebar-section">
             <span className="dash-sidebar-section-label">{lang === 'hy' ? 'Անձ.' : 'Personal'}</span>
             {['profile', 'events', 'library'].map(k => (
-              <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>{t[k]}</button>
+              <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => changeTab(k)}>{t[k]}</button>
             ))}
           </div>
           <div className="dash-sidebar-section">
             <span className="dash-sidebar-section-label">{lang === 'hy' ? 'Համ.' : 'Community'}</span>
             {['gallery', 'community', 'forum'].map(k => (
-              <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>{t[k]}</button>
+              <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => changeTab(k)}>{t[k]}</button>
             ))}
           </div>
           <div className="dash-membership-badge">
@@ -610,7 +621,7 @@ export default function DashboardPage({ lang }) {
                   </h3>
                   <div
                     style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', cursor: 'pointer' }}
-                    onClick={() => setTab('gallery')}
+                    onClick={() => changeTab('gallery')}
                   >
                     <img src={albums[0].cover_url} alt={albums[0].title} style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }} />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(44,26,26,.6) 0%, transparent 50%)', display: 'flex', alignItems: 'flex-end', padding: '16px 20px' }}>
@@ -632,7 +643,7 @@ export default function DashboardPage({ lang }) {
                     </div>
                   </div>
                   <button
-                    onClick={() => setTab('community')}
+                    onClick={() => changeTab('community')}
                     style={{ background: 'none', border: '1px solid #c0394b', color: '#c0394b', borderRadius: 8, padding: '8px 18px', cursor: 'pointer', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
                     {lang === 'hy' ? 'Ծանոթանալ →' : 'Meet them →'}
                   </button>
@@ -1012,7 +1023,7 @@ export default function DashboardPage({ lang }) {
           const icons = { home: Home, profile: User, events: CalendarDays, library: BookOpen, gallery: GalleryHorizontal, community: Users, forum: MessageCircle }
           const Icon = icons[k]
           return (
-            <button key={k} className={`dash-bottom-nav-item${tab === k ? ' active' : ''}`} onClick={() => setTab(k)}>
+            <button key={k} className={`dash-bottom-nav-item${tab === k ? ' active' : ''}`} onClick={() => changeTab(k)}>
               <span className="nav-icon"><Icon size={20} strokeWidth={1.75} /></span>
               {t[k]}
             </button>
@@ -1029,7 +1040,7 @@ export default function DashboardPage({ lang }) {
           onOpenForumTopic={(topicId) => {
             setSelectedMember(null)
             setForumDeepLinkTopicId(topicId)
-            setTab('forum')
+            changeTab('forum')
           }}
         />
       )}
