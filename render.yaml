@@ -26,10 +26,10 @@ services:
       # Google Sign-In Client ID — not secret, safe to hardcode
       - key: GOOGLE_CLIENT_ID
         value: 387340156498-3r62hj2mrns6tpag2t93k475jjke7sgh.apps.googleusercontent.com
-      # Telegram Sign-In — bot username is not secret, but the bot TOKEN is.
-      # Both set in the Render dashboard (sync:false so they survive deploys).
+      # Telegram Sign-In — bot username is not secret, safe to hardcode. The bot
+      # TOKEN is secret and stays sync:false (set directly in the Render dashboard).
       - key: TELEGRAM_BOT_USERNAME
-        sync: false
+        value: hasmikm_bot
       - key: TELEGRAM_BOT_TOKEN
         sync: false
       # Brevo — CRM contact sync only. Set in the Render dashboard (sync:false so it
