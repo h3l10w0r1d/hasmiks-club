@@ -22,7 +22,9 @@
 }
 
 html{scroll-behavior:smooth}
-body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:var(--mocha);overflow-x:hidden}
+/* Cormorant Garamond's old-style figures render "10" looking like "IO" —
+   force lining (uniform-height) numerals everywhere; inherited site-wide. */
+body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:var(--mocha);overflow-x:hidden;font-variant-numeric:lining-nums}
 
 /* ═══════════════════════════════════════
    GLOBAL HEADER  (.gh-*)

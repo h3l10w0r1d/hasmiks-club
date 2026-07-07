@@ -912,7 +912,7 @@ export default function DashboardPage({ lang }) {
                           </>
                         ) : (
                           <>
-                            <div style={{ position: 'relative' }}>
+                            <div style={{ position: 'relative', minHeight: 150 }}>
                               {item.cover_url && <img src={item.cover_url} alt={item.title} className="library-cover" style={{ filter: 'blur(2px)', opacity: 0.5 }} />}
                               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,248,245,.8)' }}>
                                 <Lock size={26} strokeWidth={1.5} color="#c0394b" />
