@@ -69,10 +69,10 @@ export default function LoginPage({ lang }) {
           <span style={{ fontSize: 12, color: 'var(--stone)' }}>{lang === 'hy' ? 'կամ' : 'or'}</span>
           <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
         </div>
-        <GoogleSignInButton lang={lang}
-          onSuccess={(data) => { signIn(data); navigate(from, { replace: true }) }}
-          onError={setError} />
-        <div style={{ marginTop: 10 }}>
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
+          <GoogleSignInButton lang={lang}
+            onSuccess={(data) => { signIn(data); navigate(from, { replace: true }) }}
+            onError={setError} />
           <TelegramLoginButton lang={lang}
             onSuccess={(data) => { signIn(data); navigate(from, { replace: true }) }}
             onError={setError} />

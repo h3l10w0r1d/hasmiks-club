@@ -125,13 +125,13 @@ export default function RegisterPage({ lang }) {
               <span style={{ fontSize: 12, color: 'var(--stone)' }}>{lang === 'hy' ? 'կամ' : 'or'}</span>
               <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
             </div>
-            <GoogleSignInButton lang={lang} referralCode={refCode}
-              onSuccess={(data) => {
-                signIn(data)
-                navigate(data.user?.application_status !== 'pending' ? '/welcome' : '/dashboard')
-              }}
-              onError={setError} />
-            <div style={{ marginTop: 10 }}>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
+              <GoogleSignInButton lang={lang} referralCode={refCode}
+                onSuccess={(data) => {
+                  signIn(data)
+                  navigate(data.user?.application_status !== 'pending' ? '/welcome' : '/dashboard')
+                }}
+                onError={setError} />
               <TelegramLoginButton lang={lang} referralCode={refCode}
                 onSuccess={(data) => {
                   signIn(data)
