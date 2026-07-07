@@ -9,6 +9,9 @@ class Settings(BaseSettings):
     ADMIN_EMAIL: str = ""
     API_BASE_URL: str = "https://hasmiks-club.onrender.com"  # this backend's own public URL
 
+    # Google Sign-In — Client ID is not secret (it's sent to the browser regardless)
+    GOOGLE_CLIENT_ID: str = ""
+
     # Brevo — CRM contact sync only (transactional email now goes through Resend)
     BREVO_API_KEY: str = ""
     BREVO_SENDER_EMAIL: str = ""

@@ -5,6 +5,8 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import RedirectResponse
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -19,6 +21,11 @@ from app.core.deps import get_current_user
 from app.core import email as mailer
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+class GoogleSignInRequest(BaseModel):
+    credential: str  # the ID token from Google Identity Services
+    referral_code: str | None = None  # only used when this creates a brand-new account
 
 _REF_CHARS = string.ascii_uppercase + string.digits
 
@@ -106,9 +113,79 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
 @router.post("/login", response_model=TokenOut)
 def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == form.username).first()
-    if not user or not verify_password(form.password, user.password_hash):
+    if not user or not user.password_hash:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
+    if not verify_password(form.password, user.password_hash):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid credentials")
     _ensure_admin(user, db)
+    token = create_access_token(str(user.id))
+    return TokenOut(access_token=token, user=UserOut.model_validate(user))
+
+
+@router.post("/google", response_model=TokenOut)
+def google_sign_in(payload: GoogleSignInRequest, db: Session = Depends(get_db)):
+    if not settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=503, detail="Google Sign-In is not configured")
+    try:
+        claims = google_id_token.verify_oauth2_token(
+            payload.credential, google_requests.Request(), settings.GOOGLE_CLIENT_ID,
+        )
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid Google credential")
+
+    if not claims.get("email_verified"):
+        raise HTTPException(status_code=401, detail="Google account email is not verified")
+
+    google_sub = claims["sub"]
+    email = claims["email"].lower()
+    full_name = claims.get("name") or email.split("@")[0]
+
+    user = db.query(User).filter(User.google_id == google_sub).first()
+    is_new = False
+
+    if not user:
+        # Auto-link: same email already registered (e.g. via email/password) → attach this Google account.
+        user = db.query(User).filter(User.email == email).first()
+        if user:
+            user.google_id = google_sub
+            if not user.is_verified:
+                user.is_verified = True  # Google already verified this address
+            db.commit()
+            db.refresh(user)
+        else:
+            is_new = True
+            require_approval = _get_setting(db, "require_approval", "false").lower() == "true"
+            app_status = "pending" if require_approval else "approved"
+
+            referred_by_id = None
+            if payload.referral_code:
+                referrer = db.query(User).filter(User.referral_code == payload.referral_code.upper()).first()
+                if referrer:
+                    referred_by_id = referrer.id
+
+            user = User(
+                email=email,
+                password_hash=None,
+                google_id=google_sub,
+                full_name=full_name,
+                is_verified=True,
+                application_status=app_status,
+                referred_by_id=referred_by_id,
+                referral_code=_gen_referral_code(db),
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+
+    _ensure_admin(user, db)
+
+    if is_new:
+        if user.application_status == "pending":
+            mailer.send_application_received(user.email, user.full_name)
+        else:
+            mailer.send_welcome(user.email, user.full_name)
+        mailer.sync_contact_async(user.email, user.full_name, user.membership_status)
+
     token = create_access_token(str(user.id))
     return TokenOut(access_token=token, user=UserOut.model_validate(user))
 

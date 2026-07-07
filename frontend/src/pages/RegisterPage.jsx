@@ -4,6 +4,7 @@ import { register } from '../api/auth'
 import { getPublicSettings } from '../api/payments'
 import { useAuth } from '../context/AuthContext'
 import GlobalHeader from '../components/GlobalHeader'
+import GoogleSignInButton from '../components/GoogleSignInButton'
 
 export default function RegisterPage({ lang }) {
   const { signIn } = useAuth()
@@ -114,6 +115,23 @@ export default function RegisterPage({ lang }) {
               {t.continue}
             </button>
           </form>
+        )}
+
+        {step === 1 && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
+              <span style={{ fontSize: 12, color: 'var(--stone)' }}>{lang === 'hy' ? 'կամ' : 'or'}</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
+            </div>
+            <GoogleSignInButton lang={lang} referralCode={refCode}
+              onSuccess={(data) => {
+                signIn(data)
+                navigate(data.user?.application_status !== 'pending' ? '/welcome' : '/dashboard')
+              }}
+              onError={setError} />
+            {error && <p className="auth-error" style={{ marginTop: 12 }}>{error}</p>}
+          </>
         )}
 
         {step === 2 && (

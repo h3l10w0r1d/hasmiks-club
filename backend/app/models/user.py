@@ -17,7 +17,8 @@ class User(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     email = Column(String, unique=True, index=True, nullable=False)
-    password_hash = Column(String, nullable=False)
+    password_hash = Column(String, nullable=True)  # null for Google-only accounts
+    google_id = Column(String(64), unique=True, index=True, nullable=True)  # Google's "sub" claim
     full_name = Column(String, nullable=False)
     photo_url = Column(String, nullable=True)
     lang_pref = Column(String, default="en")

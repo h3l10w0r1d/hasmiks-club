@@ -13,3 +13,5 @@ pydantic-settings==2.6.1
 cloudinary==1.42.1
 httpx==0.28.1
 APScheduler==3.10.4
+google-auth==2.35.0
+requests==2.32.3

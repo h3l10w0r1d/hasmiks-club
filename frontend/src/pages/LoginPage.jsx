@@ -3,6 +3,7 @@ import { useNavigate, useLocation, Link } from 'react-router-dom'
 import { login } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
 import GlobalHeader from '../components/GlobalHeader'
+import GoogleSignInButton from '../components/GoogleSignInButton'
 
 export default function LoginPage({ lang }) {
   const { signIn } = useAuth()
@@ -61,6 +62,16 @@ export default function LoginPage({ lang }) {
             {loading ? '...' : t.submit}
           </button>
         </form>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
+          <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
+          <span style={{ fontSize: 12, color: 'var(--stone)' }}>{lang === 'hy' ? 'կամ' : 'or'}</span>
+          <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
+        </div>
+        <GoogleSignInButton lang={lang}
+          onSuccess={(data) => { signIn(data); navigate(from, { replace: true }) }}
+          onError={setError} />
+
         <p className="auth-footer">
           {t.noAcc} <Link to="/register" className="auth-link">{t.register}</Link>
         </p>
