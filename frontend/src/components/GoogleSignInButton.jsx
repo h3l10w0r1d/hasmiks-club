@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
 import { googleSignIn } from '../api/auth'
+import { GoogleIcon } from './SocialIcons'
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
+const BTN_WIDTH = 340
+const BTN_HEIGHT = 44
 
 // Google's button text language is set via ?hl= on the script URL (the
 // renderButton "locale" option does not control it), so cache one script
@@ -24,13 +27,17 @@ function loadGoogleScript(hl) {
 }
 
 /**
- * Renders Google's own "Sign in with Google" button. On success, verifies the
- * credential with the backend (which auto-links to an existing email/password
- * account, or creates a new member) and calls onSuccess with the TokenOut data —
- * the caller decides how to route/redirect (same shape as the email login flow).
+ * A brand-consistent "Continue with Google" button. Google's own rendered
+ * button (which otherwise varies by browser/locale — Chrome's FedCM account
+ * chooser renders in the OS/browser language, not ours) is kept but made
+ * invisible and stacked exactly on top of our custom-styled button — the
+ * standard technique for custom OAuth buttons: the real click still lands on
+ * Google's widget, only the visuals are ours. On success, verifies the
+ * credential with the backend (auto-links to an existing email/password
+ * account, or creates a new member) and calls onSuccess with the TokenOut data.
  */
 export default function GoogleSignInButton({ lang = 'en', referralCode, onSuccess, onError }) {
-  const divRef = useRef(null)
+  const overlayRef = useRef(null)
   const [ready, setReady] = useState(false)
 
   useEffect(() => {
@@ -38,7 +45,7 @@ export default function GoogleSignInButton({ lang = 'en', referralCode, onSucces
     let cancelled = false
     const hl = lang === 'hy' ? 'hy' : 'en'
     loadGoogleScript(hl).then(() => {
-      if (cancelled || !divRef.current) return
+      if (cancelled || !overlayRef.current) return
       window.google.accounts.id.initialize({
         client_id: CLIENT_ID,
         callback: async ({ credential }) => {
@@ -50,8 +57,9 @@ export default function GoogleSignInButton({ lang = 'en', referralCode, onSucces
           }
         },
       })
-      window.google.accounts.id.renderButton(divRef.current, {
-        theme: 'outline', size: 'large', width: 320, text: 'continue_with',
+      overlayRef.current.innerHTML = ''
+      window.google.accounts.id.renderButton(overlayRef.current, {
+        theme: 'outline', size: 'large', width: BTN_WIDTH,
       })
       setReady(true)
     }).catch(() => onError?.(lang === 'hy' ? 'Google մուտքը հասանելի չէ' : 'Google sign-in unavailable'))
@@ -60,5 +68,19 @@ export default function GoogleSignInButton({ lang = 'en', referralCode, onSucces
 
   if (!CLIENT_ID) return null
 
-  return <div ref={divRef} style={{ display: 'flex', justifyContent: 'center', minHeight: ready ? 'auto' : 44 }} />
+  return (
+    <div style={{ position: 'relative', width: '100%', maxWidth: BTN_WIDTH, height: BTN_HEIGHT, margin: '0 auto' }}>
+      <button type="button" tabIndex={-1} aria-hidden="true" style={{
+        width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+        border: '1px solid var(--sand)', borderRadius: 8, background: '#fff', color: 'var(--deep)',
+        fontSize: 14, fontWeight: 600, fontFamily: 'inherit', cursor: 'pointer', boxSizing: 'border-box',
+      }}>
+        <GoogleIcon size={18} /> {lang === 'hy' ? 'Շարունակել Google-ով' : 'Continue with Google'}
+      </button>
+      <div ref={overlayRef} style={{
+        position: 'absolute', inset: 0, opacity: 0, overflow: 'hidden',
+        pointerEvents: ready ? 'auto' : 'none',
+      }} />
+    </div>
+  )
 }
