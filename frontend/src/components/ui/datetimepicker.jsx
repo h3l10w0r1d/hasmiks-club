@@ -43,7 +43,11 @@ export function DateTimePicker({ value, onChange, className }) {
           <CalendarDays className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
+      <PopoverContent
+        className="w-auto p-0"
+        align="start"
+        onOpenAutoFocus={(e) => e.preventDefault()}
+      >
         <div className="rdp-warm p-3">
           <DayPicker
             mode="single"
