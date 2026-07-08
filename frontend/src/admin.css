@@ -320,7 +320,7 @@
 
   /* Sidebar becomes a sticky top bar with a horizontal, swipeable tab strip */
   .admin-sidebar {
-    width: 100%; height: auto;
+    width: 100%; height: auto; overflow: visible;
     position: sticky; top: 0; z-index: 60;
     border-right: none;
     border-bottom: 1px solid rgba(255,255,255,0.08);
@@ -337,6 +337,7 @@
     overflow-x: auto; overflow-y: hidden;
     padding: 0 8px 2px; gap: 2px;
     -webkit-overflow-scrolling: touch;
+    width: 100%; min-width: 0; flex: 0 0 auto;
   }
   /* dissolve the group wrappers so their items flow inline */
   .admin-nav-group { display: contents; }
