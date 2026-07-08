@@ -1097,7 +1097,7 @@ export default function DashboardPage({ lang, setLang }) {
           return (
             <button key={k} className={`dash-bottom-nav-item${tab === k ? ' active' : ''}`} onClick={() => changeTab(k)}>
               <span className="nav-icon"><Icon size={20} strokeWidth={1.75} /></span>
-              {t[k]}
+              <span className="dash-bottom-nav-label">{t[k]}</span>
             </button>
           )
         })}

@@ -1267,23 +1267,25 @@ footer{
     border-top: 1px solid var(--sand);
     padding: 4px 0 env(safe-area-inset-bottom, 4px);
     box-shadow: 0 -2px 12px rgba(44,26,26,.07);
+    overflow-x: hidden;
   }
   .dash-bottom-nav-item {
-    flex: 1;
+    flex: 1 1 0;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     gap: 3px;
-    padding: 6px 4px 4px;
+    padding: 6px 2px 4px;
     border: none;
     background: none;
     cursor: pointer;
-    font-size: 10px;
+    font-size: 9.5px;
     color: var(--stone);
     font-family: 'Jost', 'Noto Sans Armenian', sans-serif;
     font-weight: 500;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.02em;
     transition: color 0.15s;
   }
   .dash-bottom-nav-item.active {
@@ -1293,6 +1295,12 @@ footer{
   .dash-bottom-nav-item .nav-icon {
     font-size: 20px;
     line-height: 1;
+  }
+  .dash-bottom-nav-label {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   /* add bottom padding to main content so it doesn't hide behind the nav bar */
   .dash-main { padding-bottom: 80px !important; }
