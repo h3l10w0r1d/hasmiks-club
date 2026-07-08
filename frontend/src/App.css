@@ -968,6 +968,8 @@ footer{
   border-radius:2px;
 }
 .dash-signout:hover{border-color:var(--rose);color:var(--rose)}
+/* Desktop sidebar already has a Profile link — this icon is mobile-only */
+.dash-profile-btn{display:none}
 
 .dash-body{display:flex;flex:1;min-height:0}
 
@@ -1238,6 +1240,7 @@ footer{
   .dash-signout{padding:0 10px;min-height:36px}
   .dash-signout-label{display:none}
   .gh-lang-btn{padding:0 8px;font-size:10px}
+  .dash-profile-btn{display:inline-flex;padding:0 10px}
   .dash-section-title{font-size:30px}
   .event-card-top{flex-direction:column;gap:10px}
   .event-seats{align-self:flex-start}

@@ -31,6 +31,10 @@ import { cldOptimize } from '../utils/cloudinary'
 
 const TABS = ['home', 'profile', 'events', 'library', 'gallery', 'community', 'forum']
 const TAB_ICONS = { home: Home, profile: User, events: CalendarDays, library: BookOpen, gallery: GalleryHorizontal, community: Users, forum: MessageCircle }
+// Mobile bottom nav has limited width — Profile lives behind the top-nav
+// account icon instead, and Gallery is reachable from the Home tab's
+// gallery preview card, so both are dropped from this shorter list.
+const BOTTOM_NAV_TABS = ['home', 'events', 'library', 'community', 'forum']
 
 function HomeHeading({ icon: Icon, children }) {
   return <h3 className="home-heading"><Icon size={17} strokeWidth={1.75} />{children}</h3>
@@ -502,6 +506,9 @@ export default function DashboardPage({ lang, setLang }) {
             </div>
           )}
           <NotificationBell />
+          <button className="dash-signout dash-profile-btn" onClick={() => changeTab('profile')} aria-label={t.profile}>
+            <User size={14} strokeWidth={2} />
+          </button>
           <span className="dash-user-name">{user.full_name}</span>
           {user.is_admin && (
             <Link to="/admin" className="dash-signout" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -1170,7 +1177,7 @@ export default function DashboardPage({ lang, setLang }) {
 
       {/* ── Mobile bottom navigation ── */}
       <nav className="dash-bottom-nav">
-        {TABS.map(k => {
+        {BOTTOM_NAV_TABS.map(k => {
           const Icon = TAB_ICONS[k]
           return (
             <button key={k} className={`dash-bottom-nav-item${tab === k ? ' active' : ''}`} onClick={() => changeTab(k)}>
