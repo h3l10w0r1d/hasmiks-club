@@ -2,3 +2,31 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { margin: 0; }
 #root { width: 100%; }
+
+/* shadcn theme vars are scoped to .admin-shell, but Radix popovers/selects
+   portal to <body> (outside .admin-shell), so their bg-popover/border/etc.
+   utilities would resolve to nothing. Provide root-level fallbacks matching
+   the admin palette. Only the shadcn ui/* components consume these classes,
+   and those render only in admin, so this can't leak into the member site. */
+:root {
+  --popover:              35 40% 99%;
+  --popover-foreground:   18 56% 7%;
+  --border:               35 22% 83%;
+  --input:                35 22% 83%;
+  --ring:                 0 43% 35%;
+  --accent:               35 28% 90%;
+  --accent-foreground:    18 30% 18%;
+  --muted-foreground:     18 15% 44%;
+  --primary:              0 43% 35%;
+  --primary-foreground:   35 40% 97%;
+}
+
+/* react-day-picker — warm rose accent to match the brand */
+.rdp-warm {
+  --rdp-accent-color: #7E3434;
+  --rdp-accent-background-color: #F5EAEA;
+  --rdp-today-color: #7E3434;
+  --rdp-font-family: 'Jost', 'Noto Sans Armenian', sans-serif;
+  font-size: 14px;
+}
+.rdp-warm .rdp-day_button:hover { background: #F5EAEA; }

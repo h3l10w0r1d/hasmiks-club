@@ -22,9 +22,8 @@ import { RowMenu }      from '../components/ui/RowMenu'
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '../components/ui/table'
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from '../components/ui/select'
+import { Combobox } from '../components/ui/combobox'
+import { DateTimePicker } from '../components/ui/datetimepicker'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
 import GalleryManager from '../components/GalleryManager'
 import CropModal from '../components/CropModal'
@@ -1049,7 +1048,7 @@ export default function AdminPage() {
                       <Field label="Title (EN)"><Input value={eventForm.title} onChange={setEF('title')} required /></Field>
                       <Field label="Title (ՀԱՅ)"><Input value={eventForm.title_hy} onChange={setEF('title_hy')} /></Field>
                       <Field label="Location"><Input value={eventForm.location} onChange={setEF('location')} required /></Field>
-                      <Field label="Date & Time"><Input type="datetime-local" value={eventForm.event_date} onChange={setEF('event_date')} required /></Field>
+                      <Field label="Date & Time"><DateTimePicker value={eventForm.event_date} onChange={v => setEventForm(f => ({ ...f, event_date: v }))} /></Field>
                       <Field label="Max Seats"><Input type="number" value={eventForm.max_seats} onChange={setEF('max_seats')} min={1} required /></Field>
                     </div>
                     <Field label="Description (EN)"><Textarea value={eventForm.description} onChange={setEF('description')} /></Field>
@@ -1193,13 +1192,12 @@ export default function AdminPage() {
                   <form onSubmit={submitContent} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Field label="Type">
-                        <Select value={contentForm.type} onValueChange={v => setContentForm(f => ({ ...f, type: v }))}>
-                          <SelectTrigger><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="recipe">Recipe</SelectItem>
-                            <SelectItem value="ebook">E-Book</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Combobox
+                          value={contentForm.type}
+                          onChange={v => setContentForm(f => ({ ...f, type: v }))}
+                          options={[{ value: 'recipe', label: 'Recipe' }, { value: 'ebook', label: 'E-Book' }]}
+                          searchPlaceholder="Search type…"
+                        />
                       </Field>
                       <Field label="Title (EN)"><Input value={contentForm.title} onChange={setCF('title')} required /></Field>
                       <Field label="Title (ՀԱՅ)"><Input value={contentForm.title_hy} onChange={setCF('title_hy')} /></Field>
@@ -1360,13 +1358,14 @@ export default function AdminPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Field label="Album Title"><Input value={albumForm.title} onChange={e => setAlbumForm(f => ({ ...f, title: e.target.value }))} required /></Field>
                       <Field label="Linked Event (optional)">
-                        <Select value={albumForm.event_id ? String(albumForm.event_id) : 'none'} onValueChange={v => setAlbumForm(f => ({ ...f, event_id: v === 'none' ? '' : v }))}>
-                          <SelectTrigger><SelectValue placeholder="Standalone album" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Standalone (no linked event)</SelectItem>
-                            {events.map(ev => <SelectItem key={ev.id} value={String(ev.id)}>{ev.title}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
+                        <Combobox
+                          value={albumForm.event_id ? String(albumForm.event_id) : 'none'}
+                          onChange={v => setAlbumForm(f => ({ ...f, event_id: v === 'none' ? '' : v }))}
+                          options={[{ value: 'none', label: 'Standalone (no linked event)' }, ...events.map(ev => ({ value: String(ev.id), label: ev.title }))]}
+                          placeholder="Standalone album"
+                          searchPlaceholder="Search events…"
+                          emptyText="No events found"
+                        />
                       </Field>
                     </div>
                     <Field label="Description"><Textarea value={albumForm.description} onChange={e => setAlbumForm(f => ({ ...f, description: e.target.value }))} rows={2} /></Field>
@@ -1473,14 +1472,16 @@ export default function AdminPage() {
                 <CardContent>
                   <form onSubmit={handleBroadcast} className="space-y-4">
                     <Field label="Audience">
-                      <Select value={broadcastForm.segment} onValueChange={v => setBroadcastForm(f => ({ ...f, segment: v }))}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">All Members ({members.length})</SelectItem>
-                          <SelectItem value="active">Active Members ({activeCount})</SelectItem>
-                          <SelectItem value="inactive">Inactive Members ({inactiveCount})</SelectItem>
-                        </SelectContent>
-                      </Select>
+                      <Combobox
+                        value={broadcastForm.segment}
+                        onChange={v => setBroadcastForm(f => ({ ...f, segment: v }))}
+                        options={[
+                          { value: 'all', label: `All Members (${members.length})` },
+                          { value: 'active', label: `Active Members (${activeCount})` },
+                          { value: 'inactive', label: `Inactive Members (${inactiveCount})` },
+                        ]}
+                        searchPlaceholder="Search segment…"
+                      />
                     </Field>
                     <Field label="Subject Line">
                       <Input value={broadcastForm.subject} onChange={e => setBroadcastForm(f => ({ ...f, subject: e.target.value }))} placeholder="e.g. Upcoming event this Friday!" required />
