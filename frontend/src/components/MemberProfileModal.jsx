@@ -25,7 +25,7 @@ function Section({ icon, title, children, empty }) {
       <p style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, fontWeight: 700, color: 'var(--deep, #2c1a1a)', marginBottom: 10 }}>
         {icon} {title}
       </p>
-      {empty ? <p style={{ fontSize: 12.5, color: '#bbb', fontStyle: 'italic' }}>{empty}</p> : children}
+      {empty ? <p style={{ fontSize: 12.5, color: '#786050', fontStyle: 'italic' }}>{empty}</p> : children}
     </div>
   )
 }
@@ -55,7 +55,7 @@ export default function MemberProfileModal({ member, lang = 'en', onClose, onOpe
       onClick={onClose}>
       <div style={{ background: '#fff', borderRadius: 20, maxWidth: 460, width: '100%', margin: '40px auto', padding: '32px 28px', position: 'relative', boxShadow: '0 20px 60px rgba(0,0,0,.25)', textAlign: 'center' }}
         onClick={e => e.stopPropagation()}>
-        <button onClick={onClose} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: '#bbb' }}><X size={22} /></button>
+        <button onClick={onClose} aria-label={lang === 'hy' ? 'Փակել' : 'Close'} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: '#786050' }}><X size={22} /></button>
 
         {member.photo_url
           ? <img src={cldOptimize(member.photo_url, { width: 180 })} alt={member.full_name} style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', border: '4px solid #f5c0c0', marginBottom: 16 }} />
@@ -64,7 +64,7 @@ export default function MemberProfileModal({ member, lang = 'en', onClose, onOpe
             </div>
         }
         <h2 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian",serif', fontSize: 24, fontWeight: 700, color: '#2c1a1a', margin: '0 0 6px' }}>{member.full_name}</h2>
-        <p style={{ fontSize: 12, color: '#aaa' }}>{t.memberSince} {new Date(member.joined_at).getFullYear()}</p>
+        <p style={{ fontSize: 13, color: '#786050' }}>{t.memberSince} {new Date(member.joined_at).getFullYear()}</p>
 
         {!profile && !error && (
           <div style={{ padding: 30, color: '#c9bdb7' }}><Loader2 size={22} className="spin" /></div>
@@ -101,7 +101,7 @@ export default function MemberProfileModal({ member, lang = 'en', onClose, onOpe
             <Section icon={<CalendarCheck size={15} />} title={t.events} empty={!profile.attended_events.length ? t.noActivity : null}>
               {profile.attended_events.map(e => (
                 <div key={e.id} style={{ fontSize: 13, color: '#555', padding: '5px 0', display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                  <span>{e.title}</span><span style={{ color: '#aaa', flexShrink: 0 }}>{fmtDate(e.event_date, lang)}</span>
+                  <span>{e.title}</span><span style={{ color: '#786050', flexShrink: 0 }}>{fmtDate(e.event_date, lang)}</span>
                 </div>
               ))}
             </Section>
@@ -109,7 +109,7 @@ export default function MemberProfileModal({ member, lang = 'en', onClose, onOpe
             <Section icon={<BookOpen size={15} />} title={t.library} empty={!profile.library_items.length ? t.noActivity : null}>
               {profile.library_items.map(l => (
                 <div key={l.id} style={{ fontSize: 13, color: '#555', padding: '5px 0', display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-                  <span>{l.title}</span><span style={{ color: '#aaa', flexShrink: 0, fontSize: 11.5 }}>{l.type === 'ebook' ? t.ebook : t.recipe}</span>
+                  <span>{l.title}</span><span style={{ color: '#786050', flexShrink: 0, fontSize: 12.5 }}>{l.type === 'ebook' ? t.ebook : t.recipe}</span>
                 </div>
               ))}
             </Section>
@@ -120,7 +120,7 @@ export default function MemberProfileModal({ member, lang = 'en', onClose, onOpe
                 <button key={i} onClick={() => onOpenForumTopic?.(a.topic_id)}
                   style={{ display: 'block', width: '100%', textAlign: 'left', background: '#faf8f7', border: 'none', borderRadius: 10, padding: '10px 12px', marginBottom: 6, cursor: 'pointer' }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--deep,#2c1a1a)' }}>{a.title}</div>
-                  <div style={{ fontSize: 12, color: '#888', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.snippet}</div>
+                  <div style={{ fontSize: 13, color: '#786050', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.snippet}</div>
                 </button>
               ))}
             </Section>

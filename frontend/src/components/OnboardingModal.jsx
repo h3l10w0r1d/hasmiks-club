@@ -43,18 +43,19 @@ export default function OnboardingModal({ lang, telegramUrl, onDone }) {
   const isLast = step === STEPS.length - 1
   const current = STEPS[step]
 
-  const handleNext = async () => {
-    if (isLast) {
-      setLoading(true)
-      try {
-        const updated = await updateMe({ onboarding_completed: true })
-        setUser(u => ({ ...u, ...updated }))
-      } catch { /* silently proceed */ }
-      finally { setLoading(false) }
-      onDone()
-    } else {
-      setStep(s => s + 1)
-    }
+  const finish = async () => {
+    setLoading(true)
+    try {
+      const updated = await updateMe({ onboarding_completed: true })
+      setUser(u => ({ ...u, ...updated }))
+    } catch { /* silently proceed */ }
+    finally { setLoading(false) }
+    onDone()
+  }
+
+  const handleNext = () => {
+    if (isLast) finish()
+    else setStep(s => s + 1)
   }
 
   return (
@@ -66,10 +67,22 @@ export default function OnboardingModal({ lang, telegramUrl, onDone }) {
     }}>
       <div style={{
         background: '#fff', borderRadius: 24, maxWidth: 440, width: '100%',
-        padding: '40px 36px', textAlign: 'center',
+        padding: '40px 36px', textAlign: 'center', position: 'relative',
         boxShadow: '0 24px 80px rgba(44,26,26,0.25)',
         animation: 'dashFadeIn 0.25s ease both',
       }}>
+        <button
+          onClick={finish}
+          disabled={loading}
+          style={{
+            position: 'absolute', top: 18, right: 18,
+            background: 'none', border: 'none', color: '#786050',
+            fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: '6px 8px',
+          }}
+        >
+          {lang === 'hy' ? 'Բաց թողնել' : 'Skip'}
+        </button>
+
         {/* step dots */}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 32 }}>
           {STEPS.map((_, i) => (
@@ -91,7 +104,7 @@ export default function OnboardingModal({ lang, telegramUrl, onDone }) {
         <h2 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian",serif', fontSize: 26, fontWeight: 700, color: 'var(--deep)', marginBottom: 14, lineHeight: 1.3 }}>
           {current.title(lang)}
         </h2>
-        <p style={{ fontSize: 15, color: '#666', lineHeight: 1.7, marginBottom: 28 }}>
+        <p style={{ fontSize: 16, color: '#555', lineHeight: 1.7, marginBottom: 28 }}>
           {typeof current.body === 'function' ? current.body(lang, telegramUrl) : current.body}
         </p>
 
@@ -121,7 +134,7 @@ export default function OnboardingModal({ lang, telegramUrl, onDone }) {
 
         {step > 0 && (
           <button onClick={() => setStep(s => s - 1)}
-            style={{ background: 'none', border: 'none', color: '#aaa', fontSize: 13, cursor: 'pointer', marginTop: 12 }}>
+            style={{ background: 'none', border: 'none', color: '#786050', fontSize: 14, fontWeight: 600, cursor: 'pointer', marginTop: 12, padding: '6px 8px' }}>
             ← {lang === 'hy' ? 'Հետ' : 'Back'}
           </button>
         )}

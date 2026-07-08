@@ -7,22 +7,47 @@ import GlobalHeader from '../components/GlobalHeader'
 import GoogleSignInButton from '../components/GoogleSignInButton'
 import TelegramLoginButton from '../components/TelegramLoginButton'
 
+// Everything except the password survives a refresh or accidental back-nav —
+// losing an already-typed name/email/bio mid-registration is exactly the
+// kind of thing that makes an older member give up rather than retype it.
+// The password itself is deliberately left out of the saved snapshot.
+const DRAFT_KEY = 'hc_register_draft'
+
+function loadDraft(refCode, lang) {
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null')
+    if (saved) return { ...saved, password: '', referral_code: saved.referral_code || refCode }
+  } catch { /* ignore corrupt draft */ }
+  return {
+    full_name: '', email: '', password: '',
+    bio: '', lang_pref: lang || 'hy',
+    referral_code: refCode,
+    application_message: '',
+  }
+}
+
 export default function RegisterPage({ lang }) {
   const { signIn } = useAuth()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
   const refCode = searchParams.get('ref') || ''
 
-  const [form, setForm] = useState({
-    full_name: '', email: '', password: '',
-    bio: '', lang_pref: lang || 'hy',
-    referral_code: refCode,
-    application_message: '',
-  })
+  const [form, setForm] = useState(() => loadDraft(refCode, lang))
   const [requireApproval, setRequireApproval] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  // Always resume on step 1, even when a draft restores name/email/bio — the
+  // password is never saved, so re-submitting straight into step 2 would
+  // silently fail with a blank password. Step 1 just needs one Continue tap
+  // since its other fields are already filled in.
   const [step, setStep] = useState(1)
+
+  useEffect(() => {
+    const { password, ...draft } = form
+    try { sessionStorage.setItem(DRAFT_KEY, JSON.stringify(draft)) } catch { /* storage unavailable */ }
+  }, [form])
+
+  const clearDraft = () => { try { sessionStorage.removeItem(DRAFT_KEY) } catch { /* ignore */ } }
 
   useEffect(() => {
     getPublicSettings().then(s => setRequireApproval(!!s.require_approval)).catch(() => {})
@@ -66,6 +91,7 @@ export default function RegisterPage({ lang }) {
       }
       const data = await register(payload)
       signIn(data)
+      clearDraft()
 
       // Approved accounts (no manual review) see the membership proposal first —
       // benefits + a real choice to subscribe now or skip for later. Pending
@@ -122,19 +148,21 @@ export default function RegisterPage({ lang }) {
           <>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
               <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
-              <span style={{ fontSize: 12, color: 'var(--stone)' }}>{lang === 'hy' ? 'կամ' : 'or'}</span>
+              <span style={{ fontSize: 14, color: 'var(--taupe)' }}>{lang === 'hy' ? 'կամ' : 'or'}</span>
               <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
             </div>
             <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
               <GoogleSignInButton lang={lang} referralCode={refCode}
                 onSuccess={(data) => {
                   signIn(data)
+                  clearDraft()
                   navigate(data.user?.application_status !== 'pending' ? '/welcome' : '/dashboard')
                 }}
                 onError={setError} />
               <TelegramLoginButton lang={lang} referralCode={refCode}
                 onSuccess={(data) => {
                   signIn(data)
+                  clearDraft()
                   navigate(data.user?.application_status !== 'pending' ? '/welcome' : '/dashboard')
                 }}
                 onError={setError} />
@@ -146,7 +174,7 @@ export default function RegisterPage({ lang }) {
         {step === 2 && (
           <>
             {requireApproval && (
-              <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '10px 14px', marginBottom: 20, fontSize: 13, color: '#795548' }}>
+              <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '10px 14px', marginBottom: 20, fontSize: 15, color: '#5c3d1f' }}>
                 ℹ️ {t.appMsgHint}
               </div>
             )}
@@ -194,7 +222,7 @@ export default function RegisterPage({ lang }) {
               <button
                 type="button"
                 onClick={() => { setError(''); setStep(1) }}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6b7280', fontSize: 14, padding: '4px 0', textAlign: 'center', width: '100%' }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--taupe)', fontSize: 15, fontWeight: 600, padding: '8px 0', textAlign: 'center', width: '100%' }}
               >
                 {t.back}
               </button>

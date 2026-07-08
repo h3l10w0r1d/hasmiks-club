@@ -8,6 +8,7 @@ import { cldOptimize } from '../utils/cloudinary'
 import { getMe } from '../api/members'
 import { createCheckout } from '../api/payments'
 import GlobalHeader from '../components/GlobalHeader'
+import ConfirmDialog from '../components/ConfirmDialog'
 
 /* ─── i18n ──────────────────────────────────────────────────────────────── */
 const copy = {
@@ -86,6 +87,7 @@ export default function EventsPage({ lang = 'en' }) {
   const [busy, setBusy] = useState({})          // { [eventId]: true } during RSVP calls
   const [toast, setToast] = useState(null)       // { msg, type }
   const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [confirmCancel, setConfirmCancel] = useState(null) // event to confirm-cancel, or null
 
   const showToast = useCallback((msg, type = 'success') => {
     setToast({ msg, type })
@@ -139,18 +141,9 @@ export default function EventsPage({ lang = 'en' }) {
       }
       return
     }
-    // Already attending → cancel RSVP
+    // Already attending → confirm before cancelling (a mis-tap here loses your spot)
     if (ev.user_has_rsvp) {
-      setBusy(b => ({ ...b, [ev.id]: true }))
-      try {
-        await cancelRsvp(ev.id)
-        showToast(t.cancelSuccess)
-        loadEvents(true)
-      } catch {
-        showToast(t.error, 'error')
-      } finally {
-        setBusy(b => ({ ...b, [ev.id]: false }))
-      }
+      setConfirmCancel(ev)
       return
     }
     // Normal RSVP
@@ -162,6 +155,19 @@ export default function EventsPage({ lang = 'en' }) {
     } catch (err) {
       const msg = err?.response?.data?.detail || t.error
       showToast(msg, 'error')
+    } finally {
+      setBusy(b => ({ ...b, [ev.id]: false }))
+    }
+  }
+
+  const doCancelRsvp = async (ev) => {
+    setBusy(b => ({ ...b, [ev.id]: true }))
+    try {
+      await cancelRsvp(ev.id)
+      showToast(t.cancelSuccess)
+      loadEvents(true)
+    } catch {
+      showToast(t.error, 'error')
     } finally {
       setBusy(b => ({ ...b, [ev.id]: false }))
     }
@@ -222,7 +228,7 @@ export default function EventsPage({ lang = 'en' }) {
         {!loading && events.length === 0 && (
           <div style={styles.emptyState}>
             <Flower2 size={36} strokeWidth={1.5} color="var(--rose)" />
-            <p style={{ marginTop: 12, color: '#888' }}>{t.noEvents}</p>
+            <p style={{ marginTop: 12, color: '#786050', fontSize: 16 }}>{t.noEvents}</p>
           </div>
         )}
 
@@ -288,6 +294,17 @@ export default function EventsPage({ lang = 'en' }) {
           {toast.msg}
         </div>
       )}
+
+      {confirmCancel && (
+        <ConfirmDialog
+          lang={lang}
+          title={lang === 'hy' ? 'Չեղարկե՞լ գրանցումը' : 'Cancel your RSVP?'}
+          body={lang === 'hy' ? `Ձեր տեղը «${confirmCancel.title}»-ի համար կազատվի:` : `Your spot for "${confirmCancel.title}" will be released.`}
+          confirmLabel={t.cancel}
+          onConfirm={() => { doCancelRsvp(confirmCancel); setConfirmCancel(null) }}
+          onCancel={() => setConfirmCancel(null)}
+        />
+      )}
     </div>
   )
 }
@@ -330,7 +347,7 @@ const styles = {
     fontWeight: 600,
   },
   sub: {
-    color: '#888',
+    color: '#786050',
     fontSize: 16,
     margin: 0,
   },
@@ -374,15 +391,15 @@ const styles = {
     display: 'flex',
     gap: 10,
     flexWrap: 'wrap',
-    fontSize: 13,
-    color: '#888',
+    fontSize: 14,
+    color: '#786050',
     marginBottom: 10,
     alignItems: 'center',
   },
   desc: {
     color: '#555',
     lineHeight: 1.6,
-    fontSize: 15,
+    fontSize: 16,
     margin: 0,
   },
   cardFooter: {
@@ -395,8 +412,8 @@ const styles = {
     flexWrap: 'wrap',
   },
   hint: {
-    fontSize: 13,
-    color: '#aaa',
+    fontSize: 14,
+    color: '#786050',
   },
   badgeOpen: {
     display: 'inline-block',
@@ -516,8 +533,8 @@ const styles = {
     padding: '60px 0',
   },
   dim: {
-    color: '#aaa',
-    fontSize: 14,
+    color: '#786050',
+    fontSize: 16,
     textAlign: 'center',
     padding: '40px 0',
   },

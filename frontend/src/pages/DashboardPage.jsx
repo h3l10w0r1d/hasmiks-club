@@ -22,6 +22,7 @@ import { getPublicSettings, createCheckout } from '../api/payments'
 import { refreshToken as apiRefresh } from '../api/auth'
 import NotificationBell from '../components/NotificationBell'
 import OnboardingModal from '../components/OnboardingModal'
+import ConfirmDialog from '../components/ConfirmDialog'
 // Forum disabled for now — kept for a future re-enable, see all "FORUM (disabled)" markers below.
 // import ForumTab from '../components/ForumTab'
 import MemberProfileModal from '../components/MemberProfileModal'
@@ -125,6 +126,7 @@ export default function DashboardPage({ lang, setLang }) {
   const [msg, setMsg] = useState('')
   const [verifiedToast, setVerifiedToast] = useState(false)
   const [rsvpError, setRsvpError] = useState('')
+  const [confirmDialog, setConfirmDialog] = useState(null)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [telegramUrl, setTelegramUrl] = useState('')
   const [photoUploading, setPhotoUploading] = useState(false)
@@ -382,6 +384,56 @@ export default function DashboardPage({ lang, setLang }) {
     }
   }
 
+  // Cancelling/leaving/deleting/disconnecting are all one-tap-irreversible on
+  // the old buttons — a mis-tap loses your RSVP, a photo, or a login method
+  // with no way back. Route the destructive branch through a confirm step;
+  // joining/RSVPing stays a direct single tap since it's harmless to redo.
+  const handleRsvpClick = (event) => {
+    if (event.user_has_rsvp) {
+      setConfirmDialog({
+        title: lang === 'hy' ? 'Չեղարկե՞լ գրանցումը' : 'Cancel your RSVP?',
+        body: lang === 'hy' ? `Ձեր տեղը «${event.title}»-ի համար կազատվի:` : `Your spot for "${event.title}" will be released.`,
+        confirmLabel: t.cancelRsvp,
+        onConfirm: () => handleRsvp(event),
+      })
+    } else {
+      handleRsvp(event)
+    }
+  }
+
+  const handleWaitlistClick = (event) => {
+    const onList = waitlistPositions[event.id]?.on_waitlist
+    if (onList) {
+      setConfirmDialog({
+        title: lang === 'hy' ? 'Հեռանա՞լ ցուցակից' : 'Leave the waitlist?',
+        body: lang === 'hy' ? `Դուք կկորցնեք ձեր տեղը «${event.title}»-ի սպասման ցուցակում:` : `You'll lose your spot on the waitlist for "${event.title}".`,
+        confirmLabel: t.leaveWait,
+        onConfirm: () => handleWaitlist(event),
+      })
+    } else {
+      handleWaitlist(event)
+    }
+  }
+
+  const confirmGalleryDelete = (photoId) => {
+    setConfirmDialog({
+      title: lang === 'hy' ? 'Ջնջե՞լ նկարը' : 'Delete this photo?',
+      body: lang === 'hy' ? 'Այս գործողությունը հնարավոր չէ հետարկել:' : 'This can\'t be undone.',
+      confirmLabel: lang === 'hy' ? 'Ջնջել' : 'Delete',
+      onConfirm: () => handleGalleryDelete(photoId),
+    })
+  }
+
+  const confirmTelegramUnlink = () => {
+    setConfirmDialog({
+      title: lang === 'hy' ? 'Անջատե՞լ Telegram-ը' : 'Disconnect Telegram?',
+      body: lang === 'hy' ? 'Այլևս չեք կարողանա մուտք գործել Telegram-ի միջոցով, եթե նորից չկապակցեք:' : 'You won\'t be able to sign in with Telegram again until you reconnect it.',
+      confirmLabel: t.tgDisconnect,
+      danger: false,
+      onConfirm: handleTelegramUnlink,
+    })
+  }
+
   const handleResendVerify = async () => {
     try {
       await client.post('/auth/resend-verification')
@@ -517,6 +569,10 @@ export default function DashboardPage({ lang, setLang }) {
         <div className="dash-nav-right">
           <LangSwitch lang={lang} setLang={setLang} />
           <NotificationBell />
+          <Link to="/contact" className="dash-signout" aria-label={lang === 'hy' ? 'Կապ' : 'Contact'} style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <Phone size={14} strokeWidth={2} className="dash-signout-icon" />
+            <span className="dash-signout-label">{lang === 'hy' ? 'Կապ' : 'Contact'}</span>
+          </Link>
           <button className="dash-signout dash-profile-btn" onClick={() => changeTab('profile')} aria-label={t.profile}>
             <User size={14} strokeWidth={2} />
           </button>
@@ -644,7 +700,7 @@ export default function DashboardPage({ lang, setLang }) {
                       {rsvpDone[nextEvent.id] ? (
                         <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
                       ) : nextEvent.user_has_rsvp ? (
-                        <button className="plan-btn plan-btn-outline" onClick={() => handleRsvp(nextEvent)}>{t.cancelRsvp}</button>
+                        <button className="plan-btn plan-btn-outline" onClick={() => handleRsvpClick(nextEvent)}>{t.cancelRsvp}</button>
                       ) : nextEvent.seats_available > 0 ? (
                         isActive
                           ? <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(nextEvent)}>{t.rsvpBtn}</button>
@@ -907,8 +963,8 @@ export default function DashboardPage({ lang, setLang }) {
                             <CheckCircle2 size={15} color="#2e7d32" />
                             {t.tgConnected} {user.telegram_username ? `@${user.telegram_username}` : 'Telegram'}
                           </span>
-                          <button type="button" onClick={handleTelegramUnlink}
-                            style={{ background: 'none', border: 'none', color: 'var(--rose)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
+                          <button type="button" onClick={confirmTelegramUnlink}
+                            style={{ background: 'none', border: 'none', color: 'var(--rose)', fontSize: 14, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
                             {t.tgDisconnect}
                           </button>
                         </div>
@@ -928,7 +984,7 @@ export default function DashboardPage({ lang, setLang }) {
                       {profilePhotos.map(p => (
                         <div key={p.id} className="profile-photo-tile">
                           <img src={cldOptimize(p.url, { width: 400 })} alt="" />
-                          <button type="button" className="profile-photo-remove" onClick={() => handleGalleryDelete(p.id)}>×</button>
+                          <button type="button" className="profile-photo-remove" aria-label={lang === 'hy' ? 'Ջնջել նկարը' : 'Delete photo'} onClick={() => confirmGalleryDelete(p.id)}>×</button>
                         </div>
                       ))}
                       {profilePhotos.length < 6 && (
@@ -998,14 +1054,14 @@ export default function DashboardPage({ lang, setLang }) {
                             ) : !isActive ? (
                               <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Բաժանորդագրվեք՝ գրանցվելու համար' : 'Subscribe to RSVP'}</button>
                             ) : ev.user_has_rsvp ? (
-                              <button className="plan-btn plan-btn-outline" onClick={() => handleRsvp(ev)}>{t.cancelRsvp}</button>
+                              <button className="plan-btn plan-btn-outline" onClick={() => handleRsvpClick(ev)}>{t.cancelRsvp}</button>
                             ) : ev.seats_available > 0 ? (
                               <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(ev)}>{t.rsvpBtn}</button>
                             ) : (
                               <button
                                 className={`plan-btn ${wl?.on_waitlist ? 'plan-btn-outline' : 'plan-btn-fill'}`}
                                 style={{ background: wl?.on_waitlist ? undefined : '#f39c12', borderColor: '#f39c12', color: wl?.on_waitlist ? '#f39c12' : '#fff' }}
-                                onClick={() => handleWaitlist(ev)}
+                                onClick={() => handleWaitlistClick(ev)}
                               >
                                 {wl?.on_waitlist ? t.leaveWait : t.waitlist}
                               </button>
@@ -1379,11 +1435,23 @@ export default function DashboardPage({ lang, setLang }) {
         }}>
           <span style={{ display: 'flex', color: '#2e7d32', flexShrink: 0 }}><CheckCircle2 size={22} /></span>
           <p style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--deep)' }}>{t.verifyOk}</p>
-          <button onClick={() => setVerifiedToast(false)}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#bbb', fontSize: 18, lineHeight: 1, marginLeft: 4, flexShrink: 0 }}>
+          <button onClick={() => setVerifiedToast(false)} aria-label={lang === 'hy' ? 'Փակել' : 'Close'}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#786050', fontSize: 18, lineHeight: 1, marginLeft: 4, flexShrink: 0 }}>
             ×
           </button>
         </div>
+      )}
+
+      {confirmDialog && (
+        <ConfirmDialog
+          lang={lang}
+          title={confirmDialog.title}
+          body={confirmDialog.body}
+          confirmLabel={confirmDialog.confirmLabel}
+          danger={confirmDialog.danger !== false}
+          onConfirm={() => { confirmDialog.onConfirm(); setConfirmDialog(null) }}
+          onCancel={() => setConfirmDialog(null)}
+        />
       )}
     </div>
   )
