@@ -1,5 +1,3 @@
-import hashlib
-import hmac
 import secrets
 import string
 from datetime import datetime, timedelta, timezone
@@ -20,6 +18,7 @@ from app.schemas.user import UserRegister, UserOut, TokenOut
 from app.core.security import hash_password, verify_password, create_access_token
 from app.core.config import settings
 from app.core.deps import get_current_user
+from app.core.telegram_auth import TelegramSignInRequest, verify_telegram_payload
 from app.core import email as mailer
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -27,17 +26,6 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 class GoogleSignInRequest(BaseModel):
     credential: str  # the ID token from Google Identity Services
-    referral_code: str | None = None  # only used when this creates a brand-new account
-
-
-class TelegramSignInRequest(BaseModel):
-    id: int
-    first_name: str
-    last_name: str | None = None
-    username: str | None = None
-    photo_url: str | None = None
-    auth_date: int
-    hash: str
     referral_code: str | None = None  # only used when this creates a brand-new account
 
 _REF_CHARS = string.ascii_uppercase + string.digits
@@ -203,24 +191,11 @@ def google_sign_in(payload: GoogleSignInRequest, db: Session = Depends(get_db)):
     return TokenOut(access_token=token, user=UserOut.model_validate(user))
 
 
-def _verify_telegram_payload(payload: TelegramSignInRequest) -> None:
-    """Verify Telegram's login-widget HMAC per their documented algorithm, and
-    reject stale payloads (a captured/replayed widget response)."""
-    data = payload.model_dump(exclude={"hash", "referral_code"}, exclude_none=True)
-    check_string = "\n".join(f"{k}={data[k]}" for k in sorted(data))
-    secret_key = hashlib.sha256(settings.TELEGRAM_BOT_TOKEN.encode()).digest()
-    computed = hmac.new(secret_key, check_string.encode(), hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(computed, payload.hash):
-        raise HTTPException(status_code=401, detail="Invalid Telegram credential")
-    if datetime.now(timezone.utc).timestamp() - payload.auth_date > 86400:
-        raise HTTPException(status_code=401, detail="Telegram login expired — please try again")
-
-
 @router.post("/telegram", response_model=TokenOut)
 def telegram_sign_in(payload: TelegramSignInRequest, db: Session = Depends(get_db)):
     if not settings.TELEGRAM_BOT_TOKEN:
         raise HTTPException(status_code=503, detail="Telegram Sign-In is not configured")
-    _verify_telegram_payload(payload)
+    verify_telegram_payload(payload)
 
     full_name = f"{payload.first_name} {payload.last_name}".strip() if payload.last_name else payload.first_name
     user = db.query(User).filter(User.telegram_id == payload.id).first()

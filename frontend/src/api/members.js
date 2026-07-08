@@ -28,3 +28,7 @@ export const deleteProfilePhoto = (id) => client.delete(`/members/me/photos/${id
 
 // full public profile (bio, contact links, photos, activity) for the directory modal
 export const getMemberProfile = (id) => client.get(`/members/${id}`).then(r => r.data)
+
+// attach/detach a Telegram account to the currently-logged-in member
+export const linkTelegram = (telegramUser) => client.post('/members/me/telegram', telegramUser).then(r => r.data)
+export const unlinkTelegram = () => client.delete('/members/me/telegram').then(r => r.data)

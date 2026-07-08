@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { X, Phone, Send, MessageCircle, ExternalLink, CalendarCheck, BookOpen, MessageSquare, Loader2 } from 'lucide-react'
 import { getMemberProfile } from '../api/members'
+import { cldOptimize } from '../utils/cloudinary'
 
 const T = (lang) => ({
   memberSince: lang === 'hy' ? 'Անդամ' : 'Member since',
@@ -57,7 +58,7 @@ export default function MemberProfileModal({ member, lang = 'en', onClose, onOpe
         <button onClick={onClose} style={{ position: 'absolute', top: 14, right: 16, background: 'none', border: 'none', cursor: 'pointer', color: '#bbb' }}><X size={22} /></button>
 
         {member.photo_url
-          ? <img src={member.photo_url} alt={member.full_name} style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', border: '4px solid #f5c0c0', marginBottom: 16 }} />
+          ? <img src={cldOptimize(member.photo_url, { width: 180 })} alt={member.full_name} style={{ width: 90, height: 90, borderRadius: '50%', objectFit: 'cover', border: '4px solid #f5c0c0', marginBottom: 16 }} />
           : <div style={{ width: 90, height: 90, borderRadius: '50%', background: '#f5c0c0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 36, margin: '0 auto 16px', color: '#c0394b', fontWeight: 700 }}>
               {member.full_name.charAt(0)}
             </div>
@@ -91,7 +92,7 @@ export default function MemberProfileModal({ member, lang = 'en', onClose, onOpe
               <Section icon={null} title={t.photos}>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
                   {profile.profile_photos.map(p => (
-                    <img key={p.id} src={p.url} alt="" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 8 }} />
+                    <img key={p.id} src={cldOptimize(p.url, { width: 300 })} alt="" style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 8 }} />
                   ))}
                 </div>
               </Section>

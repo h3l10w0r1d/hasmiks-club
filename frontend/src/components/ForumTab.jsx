@@ -7,6 +7,7 @@ import {
   getTopics, createTopic, getTopic, createPost, react,
   uploadForumImage, searchGifs, trendingGifs,
 } from '../api/forum'
+import { cldOptimize } from '../utils/cloudinary'
 
 const EMOJIS = ['❤️', '👍', '😂', '🎉', '🔥', '😮', '😢', '🙏', '👏', '💯']
 
@@ -50,7 +51,7 @@ const fmtDate = (d, lang) => new Date(d).toLocaleDateString(lang === 'hy' ? 'hy-
 
 function Avatar({ user, size = 36 }) {
   if (user?.photo_url)
-    return <img src={user.photo_url} alt={user.full_name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+    return <img src={cldOptimize(user.photo_url, { width: 96 })} alt={user.full_name} style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
   return (
     <div style={{ width: size, height: size, borderRadius: '50%', background: '#f5c0c0', color: '#c0394b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: size * 0.42, flexShrink: 0 }}>
       {user?.full_name?.charAt(0) || '?'}
@@ -177,7 +178,7 @@ function AttachBar({ lang, imageUrl, onImage, onClear, onOpenGif, uploading }) {
     <div>
       {imageUrl && (
         <div style={{ position: 'relative', display: 'inline-block', marginBottom: 10 }}>
-          <img src={imageUrl} alt="" style={{ maxHeight: 160, maxWidth: '100%', borderRadius: 10, display: 'block' }} />
+          <img src={cldOptimize(imageUrl, { width: 500 })} alt="" style={{ maxHeight: 160, maxWidth: '100%', borderRadius: 10, display: 'block' }} />
           <button type="button" onClick={onClear}
             style={{ position: 'absolute', top: 6, right: 6, width: 26, height: 26, borderRadius: '50%', border: 'none', background: 'rgba(0,0,0,.6)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <X size={15} />
@@ -381,7 +382,7 @@ export default function ForumTab({ lang = 'en', isActive, onSubscribe, checkoutL
                 <p style={{ fontWeight: 700, fontSize: 16, color: 'var(--deep, #2c1a1a)', margin: '0 0 4px' }}>{topic.title}</p>
                 <p style={{ fontSize: 13.5, color: '#6b5d56', margin: '0 0 10px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{topic.body}</p>
                 {topic.image_url && (
-                  <img src={topic.image_url} alt="" style={{ maxHeight: 180, maxWidth: '100%', borderRadius: 10, marginBottom: 10, display: 'block' }} />
+                  <img src={cldOptimize(topic.image_url, { width: 700 })} alt="" style={{ maxHeight: 180, maxWidth: '100%', borderRadius: 10, marginBottom: 10, display: 'block' }} />
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                   <ReactionBar targetType="topic" targetId={topic.id} reactions={topic.reactions} isActive={isActive} onSubscribe={onSubscribe}
@@ -414,7 +415,7 @@ export default function ForumTab({ lang = 'en', isActive, onSubscribe, checkoutL
               <div style={{ fontSize: 13, color: '#8a7a72' }}>{openTopic.author?.full_name} · {fmtDate(openTopic.created_at, lang)}</div>
             </div>
             <p style={{ fontSize: 15, color: '#493f3a', lineHeight: 1.7, margin: '0 0 16px', whiteSpace: 'pre-wrap' }}>{openTopic.body}</p>
-            {openTopic.image_url && <img src={openTopic.image_url} alt="" style={{ maxWidth: '100%', borderRadius: 12, marginBottom: 16, display: 'block' }} />}
+            {openTopic.image_url && <img src={cldOptimize(openTopic.image_url, { width: 900 })} alt="" style={{ maxWidth: '100%', borderRadius: 12, marginBottom: 16, display: 'block' }} />}
             <div style={{ paddingBottom: 18, borderBottom: '1px solid var(--sand)', marginBottom: 20 }}>
               <ReactionBar targetType="topic" targetId={openTopic.id} reactions={openTopic.reactions} isActive={isActive} onSubscribe={onSubscribe}
                 onUpdate={(r) => { setOpenTopic(tp => ({ ...tp, reactions: r })); applyTopicReactions(openTopic.id, r) }} />
@@ -429,7 +430,7 @@ export default function ForumTab({ lang = 'en', isActive, onSubscribe, checkoutL
                     <strong style={{ color: '#6b5d56' }}>{post.author?.full_name}</strong> · {fmtDate(post.created_at, lang)}
                   </div>
                   {post.body && <p style={{ fontSize: 14.5, color: '#493f3a', lineHeight: 1.6, margin: '0 0 8px', whiteSpace: 'pre-wrap' }}>{post.body}</p>}
-                  {post.image_url && <img src={post.image_url} alt="" style={{ maxHeight: 220, maxWidth: '100%', borderRadius: 10, marginBottom: 8, display: 'block' }} />}
+                  {post.image_url && <img src={cldOptimize(post.image_url, { width: 700 })} alt="" style={{ maxHeight: 220, maxWidth: '100%', borderRadius: 10, marginBottom: 8, display: 'block' }} />}
                   <ReactionBar targetType="post" targetId={post.id} reactions={post.reactions} isActive={isActive} onSubscribe={onSubscribe}
                     onUpdate={(r) => setOpenTopic(tp => ({ ...tp, posts: tp.posts.map(p => p.id === post.id ? { ...p, reactions: r } : p) }))} />
                 </div>

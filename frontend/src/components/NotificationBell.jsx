@@ -60,15 +60,15 @@ export default function NotificationBell() {
         onClick={() => setOpen(o => !o)}
         style={{
           background: 'none', border: 'none', cursor: 'pointer',
-          display: 'flex', alignItems: 'center',
-          position: 'relative', padding: '4px 8px', color: 'var(--deep, #221c16)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          position: 'relative', width: 44, height: 44, color: 'var(--deep, #221c16)',
         }}
         aria-label="Notifications"
       >
         <Bell size={20} strokeWidth={1.75} />
         {data.unread_count > 0 && (
           <span style={{
-            position: 'absolute', top: 0, right: 0,
+            position: 'absolute', top: 4, right: 4,
             background: '#c0394b', color: '#fff', borderRadius: '50%',
             width: 18, height: 18, fontSize: 11, fontWeight: 700,
             display: 'flex', alignItems: 'center', justifyContent: 'center',

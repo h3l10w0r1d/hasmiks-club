@@ -6,7 +6,7 @@ import {
   Home, BookOpen, GalleryHorizontal, Users, CreditCard, Phone, ExternalLink,
 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
-import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum, addProfilePhoto, deleteProfilePhoto, getMemberProfile } from '../api/members'
+import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum, addProfilePhoto, deleteProfilePhoto, getMemberProfile, unlinkTelegram } from '../api/members'
 import { getEvents, rsvp, cancelRsvp, joinWaitlist, leaveWaitlist, getWaitlistPosition } from '../api/events'
 import { getLibrary } from '../api/content'
 import { getPublicSettings, createCheckout } from '../api/payments'
@@ -15,8 +15,10 @@ import NotificationBell from '../components/NotificationBell'
 import OnboardingModal from '../components/OnboardingModal'
 import ForumTab from '../components/ForumTab'
 import MemberProfileModal from '../components/MemberProfileModal'
+import TelegramLinkButton from '../components/TelegramLinkButton'
 import { getCheckinToken } from '../api/events'
 import client from '../api/client'
+import { cldOptimize } from '../utils/cloudinary'
 
 const TABS = ['home', 'profile', 'events', 'library', 'gallery', 'community', 'forum']
 const TAB_ICONS = { home: Home, profile: User, events: CalendarDays, library: BookOpen, gallery: GalleryHorizontal, community: Users, forum: MessageCircle }
@@ -158,6 +160,9 @@ export default function DashboardPage({ lang, setLang }) {
     telegram:    'Telegram',
     phone:       lang === 'hy' ? 'Հեռախոս' : 'Phone',
     whatsapp:    'WhatsApp',
+    tgConnected: lang === 'hy' ? 'Կապակցված է որպես' : 'Connected as',
+    tgDisconnect:lang === 'hy' ? 'Անջատել' : 'Disconnect',
+    tgSignInNote:lang === 'hy' ? 'Կապակցեք՝ Telegram-ով մուտք գործելու համար' : 'Connect it so you can also sign in with Telegram',
     myPhotos:    lang === 'hy' ? 'Իմ լուսանկարները' : 'My photos',
     addPhoto:    lang === 'hy' ? 'Ավելացնել լուսանկար' : 'Add photo',
     photoLimit:  lang === 'hy' ? 'Առավելագույնը 6 լուսանկար' : 'Up to 6 photos',
@@ -287,6 +292,22 @@ export default function DashboardPage({ lang, setLang }) {
 
   const handleGalleryDelete = async (photoId) => {
     try { setProfilePhotos(await deleteProfilePhoto(photoId)) } catch { /* ignore */ }
+  }
+
+  const handleTelegramLinked = (updated) => {
+    setUser(updated)
+    setMsg(lang === 'hy' ? 'Telegram-ը կապակցված է ✓' : 'Telegram connected ✓')
+    setTimeout(() => setMsg(''), 2500)
+  }
+
+  const handleTelegramUnlink = async () => {
+    try {
+      const updated = await unlinkTelegram()
+      setUser(updated)
+    } catch (err) {
+      setMsg(err?.response?.data?.detail || (lang === 'hy' ? 'Չհաջողվեց անջատել' : 'Could not disconnect'))
+      setTimeout(() => setMsg(''), 3000)
+    }
   }
 
   const handleRsvp = async (event) => {
@@ -557,7 +578,7 @@ export default function DashboardPage({ lang, setLang }) {
                 {nextEvent ? (
                   <div className={`event-card${nextEvent.user_has_rsvp ? ' rsvpd' : ''}`}>
                     {nextEvent.cover_url && (
-                      <img className="event-card-cover" src={nextEvent.cover_url}
+                      <img className="event-card-cover" src={cldOptimize(nextEvent.cover_url, { width: 800 })}
                         alt={lang === 'hy' && nextEvent.title_hy ? nextEvent.title_hy : nextEvent.title} />
                     )}
                     <div className="event-card-top">
@@ -616,7 +637,7 @@ export default function DashboardPage({ lang, setLang }) {
                         style={{ background: '#fff', border: '1px solid #f0dde0', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}
                         onClick={() => setSelectedContent(item)}>
                         {item.cover_url && (
-                          <img src={item.cover_url} alt={item.title} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                          <img src={cldOptimize(item.cover_url, { width: 96 })} alt={item.title} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
                         )}
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 3 }}>
@@ -649,7 +670,7 @@ export default function DashboardPage({ lang, setLang }) {
                     style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', cursor: 'pointer' }}
                     onClick={() => changeTab('gallery')}
                   >
-                    <img src={albums[0].cover_url} alt={albums[0].title} style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }} />
+                    <img src={cldOptimize(albums[0].cover_url, { width: 800 })} alt={albums[0].title} style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }} />
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(44,26,26,.6) 0%, transparent 50%)', display: 'flex', alignItems: 'flex-end', padding: '16px 20px' }}>
                       <span style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 20, fontWeight: 700, color: '#fff' }}>{albums[0].title}</span>
                     </div>
@@ -748,7 +769,7 @@ export default function DashboardPage({ lang, setLang }) {
                 <div className="profile-card">
                   <div className="profile-avatar-row">
                     {profileForm.photo_url
-                      ? <img src={profileForm.photo_url} alt="avatar" className="profile-avatar" />
+                      ? <img src={cldOptimize(profileForm.photo_url, { width: 200 })} alt="avatar" className="profile-avatar" />
                       : <div className="profile-avatar-placeholder">{profileForm.full_name.charAt(0) || '?'}</div>
                     }
                     <button type="button" className="plan-btn plan-btn-outline" style={{ fontSize: 13, padding: '8px 16px' }}
@@ -810,6 +831,26 @@ export default function DashboardPage({ lang, setLang }) {
                           onChange={e => setProfileForm(f => ({ ...f, whatsapp: e.target.value }))} />
                       </div>
                     </div>
+
+                    <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--sand)' }}>
+                      {user.telegram_id ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                          <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 13, color: 'var(--deep)', fontWeight: 600 }}>
+                            <CheckCircle2 size={15} color="#2e7d32" />
+                            {t.tgConnected} {user.telegram_username ? `@${user.telegram_username}` : 'Telegram'}
+                          </span>
+                          <button type="button" onClick={handleTelegramUnlink}
+                            style={{ background: 'none', border: 'none', color: 'var(--rose)', fontSize: 12.5, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
+                            {t.tgDisconnect}
+                          </button>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                          <TelegramLinkButton lang={lang} onSuccess={handleTelegramLinked} onError={(m) => { setMsg(m); setTimeout(() => setMsg(''), 3000) }} />
+                          <span style={{ fontSize: 12, color: '#aaa' }}>{t.tgSignInNote}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="profile-card">
@@ -818,7 +859,7 @@ export default function DashboardPage({ lang, setLang }) {
                     <div className="profile-photo-grid">
                       {profilePhotos.map(p => (
                         <div key={p.id} className="profile-photo-tile">
-                          <img src={p.url} alt="" />
+                          <img src={cldOptimize(p.url, { width: 400 })} alt="" />
                           <button type="button" className="profile-photo-remove" onClick={() => handleGalleryDelete(p.id)}>×</button>
                         </div>
                       ))}
@@ -857,7 +898,7 @@ export default function DashboardPage({ lang, setLang }) {
                       return (
                         <div key={ev.id} className={`event-card${ev.user_has_rsvp ? ' rsvpd' : ''}`}>
                           {ev.cover_url && (
-                            <img className="event-card-cover" src={ev.cover_url}
+                            <img className="event-card-cover" src={cldOptimize(ev.cover_url, { width: 800 })}
                               alt={lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title} />
                           )}
                           <div className="event-card-top">
@@ -929,7 +970,7 @@ export default function DashboardPage({ lang, setLang }) {
                         onClick={() => setSelectedContent(item)}>
                         {item.is_unlocked ? (
                           <>
-                            {item.cover_url && <img src={item.cover_url} alt={item.title} className="library-cover" />}
+                            {item.cover_url && <img src={cldOptimize(item.cover_url, { width: 400 })} alt={item.title} className="library-cover" />}
                             <div className="library-type">{item.type === 'recipe' ? t.recipe : t.ebook}</div>
                             <div className="library-title">{lang === 'hy' && item.title_hy ? item.title_hy : item.title}</div>
                             {(lang === 'hy' && item.description_hy ? item.description_hy : item.description) && (
@@ -943,7 +984,7 @@ export default function DashboardPage({ lang, setLang }) {
                         ) : (
                           <>
                             <div style={{ position: 'relative', minHeight: 150 }}>
-                              {item.cover_url && <img src={item.cover_url} alt={item.title} className="library-cover" style={{ filter: 'blur(2px)', opacity: 0.5 }} />}
+                              {item.cover_url && <img src={cldOptimize(item.cover_url, { width: 400 })} alt={item.title} className="library-cover" style={{ filter: 'blur(2px)', opacity: 0.5 }} />}
                               <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,248,245,.8)' }}>
                                 <Lock size={26} strokeWidth={1.5} color="#c0394b" />
                                 <p style={{ fontSize: 12, color: '#c0394b', fontWeight: 600, marginTop: 6, textAlign: 'center', padding: '0 8px' }}>
@@ -979,7 +1020,7 @@ export default function DashboardPage({ lang, setLang }) {
                           setOpenAlbum(detail)
                         }}>
                         {album.cover_url
-                          ? <img src={album.cover_url} alt={album.title} style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }} />
+                          ? <img src={cldOptimize(album.cover_url, { width: 600 })} alt={album.title} style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }} />
                           : <div style={{ width: '100%', height: 140, background: '#f5ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImageIcon size={28} strokeWidth={1.5} color="#c9a8a8" /></div>
                         }
                         <div style={{ padding: '14px 16px' }}>
@@ -1014,7 +1055,7 @@ export default function DashboardPage({ lang, setLang }) {
                         onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 2px 10px rgba(192,57,75,.07)' }}
                       >
                         {m.photo_url
-                          ? <img src={m.photo_url} alt={m.full_name} style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', marginBottom: 12, border: '3px solid #f5c0c0' }} />
+                          ? <img src={cldOptimize(m.photo_url, { width: 150 })} alt={m.full_name} style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', marginBottom: 12, border: '3px solid #f5c0c0' }} />
                           : <div style={{ width: 72, height: 72, borderRadius: '50%', background: '#f5c0c0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 28, margin: '0 auto 12px', color: '#c0394b', fontWeight: 700 }}>
                               {m.full_name.charAt(0)}
                             </div>
@@ -1088,7 +1129,7 @@ export default function DashboardPage({ lang, setLang }) {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8, padding: 16 }}>
               {(openAlbum.photos || []).map(photo => (
                 <div key={photo.id}>
-                  <img src={photo.url} alt={photo.caption || ''} style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 10, display: 'block' }} />
+                  <img src={cldOptimize(photo.url, { width: 500 })} alt={photo.caption || ''} style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 10, display: 'block' }} />
                   {photo.caption && <p style={{ fontSize: 11, color: '#aaa', textAlign: 'center', marginTop: 4 }}>{photo.caption}</p>}
                 </div>
               ))}
@@ -1123,7 +1164,7 @@ export default function DashboardPage({ lang, setLang }) {
             >×</button>
 
             {selectedContent.cover_url && (
-              <img src={selectedContent.cover_url} alt={selectedContent.title}
+              <img src={cldOptimize(selectedContent.cover_url, { width: 800 })} alt={selectedContent.title}
                 style={{ width: '100%', height: 220, objectFit: 'cover', borderRadius: '16px 16px 0 0', display: 'block' }} />
             )}
 

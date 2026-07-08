@@ -18,6 +18,7 @@ from app.schemas.user import (
 )
 from app.core.deps import get_current_user
 from app.core.config import settings
+from app.core.telegram_auth import TelegramSignInRequest, verify_telegram_payload
 
 router = APIRouter(prefix="/members", tags=["members"])
 
@@ -113,6 +114,46 @@ def delete_profile_photo(
     db.delete(photo)
     db.commit()
     return db.query(ProfilePhoto).filter(ProfilePhoto.user_id == current_user.id).order_by(ProfilePhoto.sort_order).all()
+
+
+@router.post("/me/telegram", response_model=UserOut)
+def link_telegram(
+    payload: TelegramSignInRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Attach a verified Telegram account to the currently-logged-in member —
+    for someone who already has an email/password or Google account and wants
+    to also be able to sign in with Telegram. Telegram sign-in itself can't
+    auto-link this way (no email to match on), so this has to be an explicit
+    action taken from inside the account it should attach to."""
+    if not settings.TELEGRAM_BOT_TOKEN:
+        raise HTTPException(status_code=503, detail="Telegram Sign-In is not configured")
+    verify_telegram_payload(payload)
+
+    existing = db.query(User).filter(User.telegram_id == payload.id).first()
+    if existing and existing.id != current_user.id:
+        raise HTTPException(status_code=409, detail="This Telegram account is already linked to another member")
+
+    current_user.telegram_id = payload.id
+    if payload.username:
+        current_user.telegram_username = payload.username
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.delete("/me/telegram", response_model=UserOut)
+def unlink_telegram(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    if not current_user.password_hash and not current_user.google_id:
+        raise HTTPException(status_code=400, detail="Add a password or Google sign-in before disconnecting Telegram — you'd be locked out otherwise")
+    current_user.telegram_id = None
+    db.commit()
+    db.refresh(current_user)
+    return current_user
 
 
 @router.get("/directory", response_model=List[MemberDirectoryOut])

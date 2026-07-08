@@ -16,6 +16,13 @@ from app.models.user import User
 from app.models.event import Event
 from app.core import email as mailer
 
+# Error tracking — a no-op unless SENTRY_DSN is configured. Must run before the
+# FastAPI app is constructed so its ASGI middleware gets instrumented too.
+if settings.SENTRY_DSN:
+    import sentry_sdk
+    sentry_sdk.init(dsn=settings.SENTRY_DSN, environment=settings.ENVIRONMENT,
+                     traces_sample_rate=0.1, send_default_pii=False)
+
 scheduler = AsyncIOScheduler()
 
 

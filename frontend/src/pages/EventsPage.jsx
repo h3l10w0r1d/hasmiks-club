@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async'
 import { Flower2, MapPin, CalendarDays } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getPublicEvents, getEvents, rsvp, cancelRsvp } from '../api/events'
+import { cldOptimize } from '../utils/cloudinary'
 import { getMe } from '../api/members'
 import { createCheckout } from '../api/payments'
 import GlobalHeader from '../components/GlobalHeader'
@@ -234,7 +235,7 @@ export default function EventsPage({ lang = 'en' }) {
               {/* cover image */}
               {ev.cover_url && (
                 <img
-                  src={ev.cover_url}
+                  src={cldOptimize(ev.cover_url, { width: 800 })}
                   alt={title}
                   style={styles.coverImg}
                 />

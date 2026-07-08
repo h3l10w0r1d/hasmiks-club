@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     # Giphy (forum GIF picker) — free key from developers.giphy.com
     GIPHY_API_KEY: str = ""
 
+    # Sentry — error tracking, disabled unless a DSN is set
+    SENTRY_DSN: str = ""
+    ENVIRONMENT: str = "production"
+
     # Ameriabank vPOS (https://servicestest.ameriabank.am for the test environment)
     AMERIABANK_CLIENT_ID: str = ""
     AMERIABANK_USERNAME: str = ""

@@ -14,6 +14,7 @@
     "@radix-ui/react-label": "^2.1.8",
     "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",
+    "@sentry/react": "^10.64.0",
     "autoprefixer": "^10.5.0",
     "axios": "^1.16.1",
     "class-variance-authority": "^0.7.1",

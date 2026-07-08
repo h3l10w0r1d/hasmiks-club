@@ -45,6 +45,11 @@ services:
         sync: false
       - key: RESEND_SENDER_NAME
         sync: false
+      # Sentry — error tracking, disabled unless set. Set in the Render dashboard.
+      - key: SENTRY_DSN
+        sync: false
+      - key: ENVIRONMENT
+        value: production
       # Cloudinary (photo uploads) — set these as secrets in the Render dashboard.
       # sync:false keeps dashboard values from being wiped on each deploy.
       - key: CLOUDINARY_CLOUD_NAME
