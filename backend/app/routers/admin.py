@@ -319,7 +319,15 @@ def list_content(db: Session = Depends(get_db), _: User = Depends(require_permis
 def create_content(payload: ContentCreate, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_content'))):
     item = ContentItem(**payload.model_dump())
     db.add(item)
-    audit_log(db, f"create_content: {payload.title}", admin_id=admin.id, entity_type="content")
+    db.flush()  # assign item.id before granting access below
+    # New content is unlocked for all currently-active members immediately —
+    # otherwise it silently sits invisible until someone remembers to click
+    # "Unlock All" separately, which isn't obvious from the creation flow.
+    active_users = db.query(User).filter(User.membership_status == "active").all()
+    for user in active_users:
+        db.add(MemberContent(user_id=user.id, content_id=item.id))
+        notify.push(db, user.id, "content", f"New content unlocked: {item.title}", link="/dashboard?tab=library")
+    audit_log(db, f"create_content: {payload.title} (auto-unlocked for {len(active_users)} active members)", admin_id=admin.id, entity_type="content")
     db.commit()
     db.refresh(item)
     return _content_out(item, True)
