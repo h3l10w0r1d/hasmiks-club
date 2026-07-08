@@ -5,6 +5,14 @@ import {
   Send, CheckCircle2, Circle, Lock, Image as ImageIcon, User, MessageCircle,
   Home, BookOpen, GalleryHorizontal, Users, CreditCard, Phone, ExternalLink,
 } from 'lucide-react'
+import Lightbox from 'yet-another-react-lightbox'
+import Zoom from 'yet-another-react-lightbox/plugins/zoom'
+import Counter from 'yet-another-react-lightbox/plugins/counter'
+import Captions from 'yet-another-react-lightbox/plugins/captions'
+import Thumbnails from 'yet-another-react-lightbox/plugins/thumbnails'
+import 'yet-another-react-lightbox/styles.css'
+import 'yet-another-react-lightbox/plugins/captions.css'
+import 'yet-another-react-lightbox/plugins/thumbnails.css'
 import { useAuth } from '../context/AuthContext'
 import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum, addProfilePhoto, deleteProfilePhoto, getMemberProfile, unlinkTelegram } from '../api/members'
 import { getEvents, rsvp, cancelRsvp, joinWaitlist, leaveWaitlist, getWaitlistPosition } from '../api/events'
@@ -103,6 +111,7 @@ export default function DashboardPage({ lang, setLang }) {
   const [forumDeepLinkTopicId, setForumDeepLinkTopicId] = useState(null)
   const [albums, setAlbums] = useState([])
   const [openAlbum, setOpenAlbum] = useState(null)
+  const [lightboxIndex, setLightboxIndex] = useState(-1)
   const [rsvpDone, setRsvpDone] = useState({})
   const [showOnboarding, setShowOnboarding] = useState(false)
   const fileInputRef = useRef(null)
@@ -1015,7 +1024,7 @@ export default function DashboardPage({ lang, setLang }) {
                 : (
                   <div className="library-grid">
                     {albums.map(album => (
-                      <div key={album.id} style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', boxShadow: '0 2px 10px rgba(192,57,75,.07)', cursor: 'pointer' }}
+                      <div key={album.id} className="home-clickable" style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid var(--sand)' }}
                         onClick={async () => {
                           if (openAlbum?.id === album.id) { setOpenAlbum(null); return }
                           const detail = await getAlbum(album.id)
@@ -1129,8 +1138,8 @@ export default function DashboardPage({ lang, setLang }) {
             </div>
             {openAlbum.description && <p style={{ padding: '12px 24px 0', color: '#888', fontSize: 14 }}>{openAlbum.description}</p>}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 8, padding: 16 }}>
-              {(openAlbum.photos || []).map(photo => (
-                <div key={photo.id}>
+              {(openAlbum.photos || []).map((photo, i) => (
+                <div key={photo.id} className="home-clickable" style={{ borderRadius: 10 }} onClick={() => setLightboxIndex(i)}>
                   <img src={cldOptimize(photo.url, { width: 500 })} alt={photo.caption || ''} style={{ width: '100%', height: 160, objectFit: 'cover', borderRadius: 10, display: 'block' }} />
                   {photo.caption && <p style={{ fontSize: 11, color: '#aaa', textAlign: 'center', marginTop: 4 }}>{photo.caption}</p>}
                 </div>
@@ -1138,6 +1147,20 @@ export default function DashboardPage({ lang, setLang }) {
             </div>
           </div>
         </div>
+      )}
+
+      {openAlbum && (
+        <Lightbox
+          open={lightboxIndex >= 0}
+          close={() => setLightboxIndex(-1)}
+          index={lightboxIndex}
+          slides={(openAlbum.photos || []).map(photo => ({
+            src: cldOptimize(photo.url, { width: 1600 }),
+            title: photo.caption || undefined,
+          }))}
+          plugins={[Zoom, Counter, Captions, Thumbnails]}
+          styles={{ container: { zIndex: 9998 } }}
+        />
       )}
 
       {/* ── Onboarding modal ── */}

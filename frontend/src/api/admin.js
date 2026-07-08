@@ -37,11 +37,18 @@ export const adminCreateAlbum         = (data)           => client.post('/admin/
 export const adminUpdateAlbum         = (id, data)       => client.patch(`/admin/gallery/${id}`, data).then(r => r.data)
 export const adminDeleteAlbum         = (id)             => client.delete(`/admin/gallery/${id}`)
 export const adminAddPhoto            = (albumId, data)  => client.post(`/admin/gallery/${albumId}/photos`, data).then(r => r.data)
+export const adminUpdatePhoto         = (photoId, data)  => client.patch(`/admin/gallery/photos/${photoId}`, data).then(r => r.data)
 export const adminDeletePhoto         = (photoId)        => client.delete(`/admin/gallery/photos/${photoId}`)
+export const adminReorderPhotos       = (albumId, photoIds) => client.patch(`/admin/gallery/${albumId}/photos/reorder`, { photo_ids: photoIds })
 export const adminUploadGalleryPhoto  = (file) => {
   const form = new FormData()
   form.append('file', file)
   return client.post('/admin/gallery/upload-photo', form, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
+}
+export const adminAddPhotosBulk = (albumId, files) => {
+  const form = new FormData()
+  files.forEach(f => form.append('files', f))
+  return client.post(`/admin/gallery/${albumId}/photos/bulk`, form, { headers: { 'Content-Type': 'multipart/form-data' } }).then(r => r.data)
 }
 
 // image upload (for events/content forms)

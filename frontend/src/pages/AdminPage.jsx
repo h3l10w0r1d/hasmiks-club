@@ -8,7 +8,7 @@ import {
   TrendingUp, CheckCircle2, XCircle, Percent, Search, ImageUp,
   SendHorizonal, StickyNote, Filter, UserCheck,
   Inbox, GalleryHorizontal, Settings2, Trophy, Link2, Plus, Trash2, ExternalLink,
-  Shield, MapPin, Pencil, Unlock, CreditCard, RotateCcw, Ban, ScrollText,
+  Shield, MapPin, Pencil, Unlock, CreditCard, RotateCcw, Ban, ScrollText, Crop,
 } from 'lucide-react'
 
 import { Button }       from '../components/ui/button'
@@ -26,6 +26,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../components/ui/select'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
+import GalleryManager from '../components/GalleryManager'
+import CropModal from '../components/CropModal'
 
 import {
   adminGetMembers, adminUpdateMember, adminDeleteMember, adminSendTelegramInvite,
@@ -36,8 +38,8 @@ import {
   adminGetContent, adminCreateContent, adminUpdateContent, adminDeleteContent,
   adminUnlockContent, adminUnlockContentForAll,
   adminUploadImage,
-  adminGetAlbums, adminGetAlbum, adminCreateAlbum, adminDeleteAlbum,
-  adminAddPhoto, adminDeletePhoto, adminUploadGalleryPhoto,
+  adminGetAlbums, adminGetAlbum, adminCreateAlbum, adminUpdateAlbum, adminDeleteAlbum,
+  adminUploadGalleryPhoto,
   adminBroadcast, adminExportCsv, adminGetAuditLog,
   adminGetSettings, adminSaveSettings,
   adminGetRoles, adminUpdateRole,
@@ -230,6 +232,50 @@ function ImageUploadField({ label, value, onChange, onUpload }) {
   )
 }
 
+// Cover image field with a crop step — file goes through CropModal before upload
+function CoverImageCropField({ label, value, onChange, onUpload }) {
+  const ref = useRef(null)
+  const [uploading, setUploading] = useState(false)
+  const [pendingSrc, setPendingSrc] = useState(null)
+  const handleFile = (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setPendingSrc(URL.createObjectURL(file))
+  }
+  const handleCropConfirm = async (blob) => {
+    setPendingSrc(null)
+    setUploading(true)
+    try {
+      const file = new File([blob], 'cover.jpg', { type: 'image/jpeg' })
+      const res = await onUpload(file)
+      onChange(res.url)
+    } catch { /* ignore */ }
+    finally { setUploading(false) }
+  }
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label>{label}</Label>
+      <div className="flex gap-2">
+        <Input value={value} onChange={e => onChange(e.target.value)} placeholder="https://… or upload & crop →" className="flex-1" />
+        <Button type="button" variant="outline" size="sm" onClick={() => ref.current?.click()} disabled={uploading}>
+          <Crop className="h-3.5 w-3.5" />
+          {uploading ? '…' : 'Upload'}
+        </Button>
+        <input ref={ref} type="file" accept="image/*" className="hidden" onChange={handleFile} />
+      </div>
+      {pendingSrc && (
+        <CropModal
+          imageSrc={pendingSrc}
+          aspect={16 / 9}
+          onCancel={() => setPendingSrc(null)}
+          onConfirm={handleCropConfirm}
+        />
+      )}
+    </div>
+  )
+}
+
 // ── main component ────────────────────────────────────────────────────────────
 export default function AdminPage() {
   const { user, signOut } = useAuth()
@@ -252,10 +298,6 @@ export default function AdminPage() {
   const [albums,       setAlbums]       = useState([])
   const [openAlbum,    setOpenAlbum]    = useState(null)   // full album detail
   const [albumForm,    setAlbumForm]    = useState(EMPTY_ALBUM)
-  const [photoUrl,     setPhotoUrl]     = useState('')
-  const [photoCaption, setPhotoCaption] = useState('')
-  const [uploadingPhoto, setUploadingPhoto] = useState(false)
-  const galleryPhotoRef = useRef(null)
 
   const [adminSettings,  setAdminSettings]  = useState(DEFAULT_SETTINGS)
   const [settingsForm,   setSettingsForm]   = useState(DEFAULT_SETTINGS)
@@ -585,28 +627,11 @@ export default function AdminPage() {
     const detail = await adminGetAlbum(album.id)
     setOpenAlbum(detail)
   }
-  const handlePhotoFileUpload = async (e) => {
-    const file = e.target.files?.[0]; if (!file) return
-    setUploadingPhoto(true)
-    try { const res = await adminUploadGalleryPhoto(file); setPhotoUrl(res.url) }
-    catch { flash('Upload failed', true) }
-    finally { setUploadingPhoto(false) }
-  }
-  const handleAddPhoto = async (e) => {
-    e.preventDefault()
-    if (!openAlbum || !photoUrl) return
-    try {
-      const photo = await adminAddPhoto(openAlbum.id, { url: photoUrl, caption: photoCaption, sort_order: openAlbum.photos?.length ?? 0 })
-      setOpenAlbum(a => ({ ...a, photos: [...(a.photos || []), photo], photo_count: (a.photo_count || 0) + 1 }))
-      setAlbums(a => a.map(x => x.id === openAlbum.id ? { ...x, photo_count: (x.photo_count || 0) + 1, cover_url: x.cover_url || photoUrl } : x))
-      setPhotoUrl(''); setPhotoCaption('')
-      flash('Photo added')
-    } catch { flash('Failed to add photo', true) }
-  }
-  const handleDeletePhoto = async (photo) => {
-    await adminDeletePhoto(photo.id)
-    setOpenAlbum(a => ({ ...a, photos: a.photos.filter(p => p.id !== photo.id), photo_count: Math.max((a.photo_count || 1) - 1, 0) }))
-    flash('Photo deleted')
+  // keeps both the expanded album detail and the summary list in sync after
+  // GalleryManager mutates photos (upload/delete/reorder/set-cover)
+  const handleAlbumPatch = (patch) => {
+    setOpenAlbum(a => a ? { ...a, ...patch } : a)
+    setAlbums(a => a.map(x => x.id === openAlbum?.id ? { ...x, ...patch } : x))
   }
 
   // ── settings ──
@@ -1345,7 +1370,7 @@ export default function AdminPage() {
                       </Field>
                     </div>
                     <Field label="Description"><Textarea value={albumForm.description} onChange={e => setAlbumForm(f => ({ ...f, description: e.target.value }))} rows={2} /></Field>
-                    <ImageUploadField label="Cover Image" value={albumForm.cover_url} onChange={v => setAlbumForm(f => ({ ...f, cover_url: v }))} onUpload={adminUploadImage} />
+                    <CoverImageCropField label="Cover Image" value={albumForm.cover_url} onChange={v => setAlbumForm(f => ({ ...f, cover_url: v }))} onUpload={adminUploadGalleryPhoto} />
                     <Button type="submit">Create Album</Button>
                   </form>
                 </CardContent>
@@ -1356,14 +1381,14 @@ export default function AdminPage() {
                 : albums.length === 0
                   ? <Card><CardContent className="py-12 text-center text-muted-foreground">No albums yet</CardContent></Card>
                   : (
-                    <div className="space-y-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                       {albums.map(album => (
-                        <Card key={album.id} className="overflow-hidden">
-                          <div className="flex items-center gap-4 p-4 flex-wrap">
-                            {album.cover_url
-                              ? <img src={album.cover_url} alt={album.title} className="w-16 h-16 object-cover rounded-lg flex-shrink-0" />
-                              : <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center flex-shrink-0"><GalleryHorizontal className="h-6 w-6 text-muted-foreground/40" /></div>
-                            }
+                        <Card key={album.id} className={`overflow-hidden${openAlbum?.id === album.id ? ' sm:col-span-2 lg:col-span-3' : ''}`}>
+                          {album.cover_url
+                            ? <img src={album.cover_url} alt={album.title} className="w-full h-36 object-cover" />
+                            : <div className="w-full h-36 bg-muted flex items-center justify-center"><GalleryHorizontal className="h-8 w-8 text-muted-foreground/40" /></div>
+                          }
+                          <div className="flex items-start gap-3 p-4 flex-wrap">
                             <div className="flex-1 min-w-0">
                               <p className="font-serif font-semibold">{album.title}</p>
                               {album.description && <p className="text-xs text-muted-foreground line-clamp-1">{album.description}</p>}
@@ -1380,47 +1405,7 @@ export default function AdminPage() {
                           </div>
 
                           {openAlbum?.id === album.id && (
-                            <div className="border-t border-border bg-muted/30 p-5 space-y-4">
-                              {/* Add photo form */}
-                              <form onSubmit={handleAddPhoto} className="flex flex-wrap gap-3 items-end">
-                                <div className="flex flex-col gap-1.5 flex-1 min-w-[200px]">
-                                  <Label>Photo URL</Label>
-                                  <div className="flex gap-2">
-                                    <Input value={photoUrl} onChange={e => setPhotoUrl(e.target.value)} placeholder="https://… or upload →" className="flex-1" required />
-                                    <Button type="button" variant="outline" size="sm" onClick={() => galleryPhotoRef.current?.click()} disabled={uploadingPhoto}>
-                                      <ImageUp className="h-3.5 w-3.5" />{uploadingPhoto ? '…' : 'Upload'}
-                                    </Button>
-                                    <input ref={galleryPhotoRef} type="file" accept="image/*" className="hidden" onChange={handlePhotoFileUpload} />
-                                  </div>
-                                </div>
-                                <Field label="Caption (optional)" className="flex-1 min-w-[160px]">
-                                  <Input value={photoCaption} onChange={e => setPhotoCaption(e.target.value)} placeholder="Optional caption" />
-                                </Field>
-                                <Button type="submit" size="sm"><Plus className="h-3.5 w-3.5" /> Add</Button>
-                              </form>
-
-                              {/* Photo grid */}
-                              {openAlbum.photos?.length === 0
-                                ? <p className="text-sm text-muted-foreground text-center py-4">No photos yet. Add the first one above.</p>
-                                : (
-                                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-                                    {openAlbum.photos.map(photo => (
-                                      <div key={photo.id} className="relative group rounded-lg overflow-hidden">
-                                        <img src={photo.url} alt={photo.caption || ''} className="w-full h-28 object-cover" />
-                                        {photo.caption && <p className="text-xs text-center text-muted-foreground truncate px-1 mt-1">{photo.caption}</p>}
-                                        <button
-                                          className="absolute top-1.5 right-1.5 bg-black/60 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                                          onClick={() => handleDeletePhoto(photo)}
-                                          title="Delete photo"
-                                        >
-                                          <Trash2 className="h-3 w-3" />
-                                        </button>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )
-                              }
-                            </div>
+                            <GalleryManager album={openAlbum} onAlbumChange={handleAlbumPatch} flash={flash} />
                           )}
                         </Card>
                       ))}

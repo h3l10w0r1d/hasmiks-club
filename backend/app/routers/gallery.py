@@ -57,6 +57,15 @@ class PhotoIn(BaseModel):
     sort_order: int = 0
 
 
+class PhotoPatch(BaseModel):
+    caption: Optional[str] = None
+    url: Optional[str] = None
+
+
+class ReorderIn(BaseModel):
+    photo_ids: List[int]
+
+
 # ── member endpoints ──────────────────────────────────────────────────────────
 
 @router.get("/gallery", response_model=List[AlbumOut])
@@ -207,6 +216,23 @@ def admin_add_photo(
     return photo
 
 
+@router.patch("/admin/gallery/photos/{photo_id}", response_model=PhotoOut)
+def admin_update_photo(
+    photo_id: int,
+    body: PhotoPatch,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_permission('manage_gallery')),
+):
+    photo = db.query(AlbumPhoto).filter(AlbumPhoto.id == photo_id).first()
+    if not photo:
+        raise HTTPException(status_code=404, detail="Photo not found")
+    for k, v in body.model_dump(exclude_unset=True).items():
+        setattr(photo, k, v)
+    db.commit()
+    db.refresh(photo)
+    return photo
+
+
 @router.delete("/admin/gallery/photos/{photo_id}", status_code=204)
 def admin_delete_photo(
     photo_id: int,
@@ -217,6 +243,24 @@ def admin_delete_photo(
     if not photo:
         raise HTTPException(status_code=404, detail="Photo not found")
     db.delete(photo)
+    db.commit()
+
+
+@router.patch("/admin/gallery/{album_id}/photos/reorder", status_code=204)
+def admin_reorder_photos(
+    album_id: int,
+    body: ReorderIn,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_permission('manage_gallery')),
+):
+    album = db.query(Album).filter(Album.id == album_id).first()
+    if not album:
+        raise HTTPException(status_code=404, detail="Album not found")
+    photos = {p.id: p for p in album.photos}
+    if set(body.photo_ids) != set(photos.keys()):
+        raise HTTPException(status_code=400, detail="photo_ids must match the album's current photos exactly")
+    for i, pid in enumerate(body.photo_ids):
+        photos[pid].sort_order = i
     db.commit()
 
 
@@ -233,3 +277,34 @@ async def admin_upload_photo(
     data = await file.read()
     result = cloudinary.uploader.upload(data, folder="hasmiks-club-gallery", resource_type="image")
     return {"url": result["secure_url"]}
+
+
+@router.post("/admin/gallery/{album_id}/photos/bulk", response_model=List[PhotoOut], status_code=201)
+async def admin_add_photos_bulk(
+    album_id: int,
+    files: List[UploadFile] = File(...),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_permission('manage_gallery')),
+):
+    album = db.query(Album).filter(Album.id == album_id).first()
+    if not album:
+        raise HTTPException(status_code=404, detail="Album not found")
+    cloudinary.config(
+        cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+        api_key=settings.CLOUDINARY_API_KEY,
+        api_secret=settings.CLOUDINARY_API_SECRET,
+    )
+    next_order = max([p.sort_order for p in album.photos], default=-1) + 1
+    created = []
+    for i, file in enumerate(files):
+        data = await file.read()
+        result = cloudinary.uploader.upload(data, folder="hasmiks-club-gallery", resource_type="image")
+        photo = AlbumPhoto(album_id=album_id, url=result["secure_url"], sort_order=next_order + i)
+        db.add(photo)
+        created.append(photo)
+    if not album.cover_url and created:
+        album.cover_url = created[0].url
+    db.commit()
+    for photo in created:
+        db.refresh(photo)
+    return created
