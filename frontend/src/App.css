@@ -1142,11 +1142,12 @@ footer{
 }
 .event-card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}
 .event-card-cover{
-  display:block;width:calc(100% + 64px);height:200px;object-fit:cover;
-  margin:-28px -32px 20px -32px;
+  display:block;width:calc(100% + 64px);height:170px;object-fit:cover;object-position:center;
+  margin:-28px -32px 22px -32px;
+  border-bottom:1px solid var(--sand);
 }
 @media (max-width:640px){
-  .event-card-cover{width:calc(100% + 40px);margin:-28px -20px 16px -20px;height:160px}
+  .event-card-cover{width:calc(100% + 40px);margin:-28px -20px 18px -20px;height:140px}
 }
 .event-title{
   font-family:var(--font-serif);
