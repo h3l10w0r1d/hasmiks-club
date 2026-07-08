@@ -1130,17 +1130,17 @@ export default function DashboardPage({ lang, setLang }) {
               {albums.length === 0
                 ? <p className="dash-empty">{t.noGallery}</p>
                 : (
-                  <div className="library-grid">
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20 }}>
                     {albums.map(album => (
-                      <div key={album.id} className="home-clickable" style={{ background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid var(--sand)' }}
+                      <div key={album.id} className="home-clickable" style={{ width: 'min(100%, 320px)', background: '#fff', borderRadius: 14, overflow: 'hidden', border: '1px solid var(--sand)', alignSelf: 'flex-start' }}
                         onClick={async () => {
                           if (openAlbum?.id === album.id) { setOpenAlbum(null); return }
                           const detail = await getAlbum(album.id)
                           setOpenAlbum(detail)
                         }}>
                         {album.cover_url
-                          ? <img src={cldOptimize(album.cover_url, { width: 600 })} alt={album.title} style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }} />
-                          : <div style={{ width: '100%', height: 140, background: '#f5ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImageIcon size={28} strokeWidth={1.5} color="#c9a8a8" /></div>
+                          ? <img src={cldOptimize(album.cover_url, { width: 600 })} alt={album.title} style={{ width: '100%', display: 'block' }} />
+                          : <div style={{ width: '100%', aspectRatio: '4 / 3', background: '#f5ece8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImageIcon size={28} strokeWidth={1.5} color="#c9a8a8" /></div>
                         }
                         <div style={{ padding: '14px 16px' }}>
                           <div style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian",serif', fontSize: 17, fontWeight: 700, color: 'var(--deep)' }}>{album.title}</div>
