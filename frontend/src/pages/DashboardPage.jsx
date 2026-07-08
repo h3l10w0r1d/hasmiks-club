@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import {
   PartyPopper, Flower2, AlertTriangle, UserPlus, MapPin, CalendarDays,
   Send, CheckCircle2, Circle, Lock, Image as ImageIcon, User, MessageCircle,
-  Home, BookOpen, GalleryHorizontal, Users, CreditCard, Phone, ExternalLink,
+  Home, BookOpen, GalleryHorizontal, Users, CreditCard, Phone, ExternalLink, Search,
 } from 'lucide-react'
 import Lightbox from 'yet-another-react-lightbox'
 import Zoom from 'yet-another-react-lightbox/plugins/zoom'
@@ -92,6 +92,8 @@ export default function DashboardPage({ lang, setLang }) {
   }, [setSearchParams])
   const [events, setEvents] = useState([])
   const [library, setLibrary] = useState([])
+  const [librarySearch, setLibrarySearch] = useState('')
+  const [libraryType, setLibraryType] = useState('all')
   const [directory, setDirectory] = useState([])
   const [waitlistPositions, setWaitlistPositions] = useState({}) // eventId -> {on_waitlist, position}
   const [profileForm, setProfileForm] = useState({ full_name: '', photo_url: '', show_in_directory: true, bio: '', facebook_url: '', telegram_username: '', phone: '', whatsapp: '' })
@@ -471,6 +473,14 @@ export default function DashboardPage({ lang, setLang }) {
   const now = new Date()
   const nextEvent = events.find(ev => new Date(ev.event_date) > now)
   const unlockedLibrary = library.filter(item => item.is_unlocked)
+  const filteredLibrary = library.filter(item => {
+    if (libraryType !== 'all' && item.type !== libraryType) return false
+    if (!librarySearch.trim()) return true
+    const q = librarySearch.trim().toLowerCase()
+    const title = (lang === 'hy' && item.title_hy ? item.title_hy : item.title) || ''
+    const desc = (lang === 'hy' && item.description_hy ? item.description_hy : item.description) || ''
+    return title.toLowerCase().includes(q) || desc.toLowerCase().includes(q)
+  })
   const hour = new Date().getHours()
   const greeting = hour < 12
     ? (lang === 'hy' ? 'Բարի առավոտ' : 'Good morning')
@@ -975,8 +985,45 @@ export default function DashboardPage({ lang, setLang }) {
               {library.length === 0
                 ? <p className="dash-empty">{t.noLibrary}</p>
                 : (
+                  <>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 20 }}>
+                      <div style={{ position: 'relative', flex: '1 1 220px', minWidth: 180 }}>
+                        <Search size={15} color="#b89a8a" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+                        <input
+                          type="text"
+                          value={librarySearch}
+                          onChange={e => setLibrarySearch(e.target.value)}
+                          placeholder={lang === 'hy' ? 'Փնտրել գրադարանում…' : 'Search the library…'}
+                          style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px 9px 34px', borderRadius: 999, border: '1px solid var(--sand)', fontSize: 13, fontFamily: 'inherit', outline: 'none', background: '#fff' }}
+                        />
+                      </div>
+                      <div style={{ display: 'flex', gap: 6 }}>
+                        {[
+                          { key: 'all', label: lang === 'hy' ? 'Բոլորը' : 'All' },
+                          { key: 'recipe', label: t.recipe },
+                          { key: 'ebook', label: t.ebook },
+                        ].map(f => (
+                          <button
+                            key={f.key}
+                            onClick={() => setLibraryType(f.key)}
+                            style={{
+                              padding: '8px 16px', borderRadius: 999, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                              border: '1px solid ' + (libraryType === f.key ? 'var(--rose)' : 'var(--sand)'),
+                              background: libraryType === f.key ? 'var(--rose)' : '#fff',
+                              color: libraryType === f.key ? '#fff' : 'var(--taupe)',
+                              transition: 'all 0.15s', whiteSpace: 'nowrap',
+                            }}
+                          >
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {filteredLibrary.length === 0 ? (
+                      <p className="dash-empty">{lang === 'hy' ? 'Ոչինչ չի գտնվել' : 'No matches found'}</p>
+                    ) : (
                   <div className="library-grid">
-                    {library.map(item => (
+                    {filteredLibrary.map(item => (
                       <div key={item.id} className="library-card" style={{ cursor: 'pointer' }}
                         onClick={() => setSelectedContent(item)}>
                         {item.is_unlocked ? (
@@ -1010,6 +1057,8 @@ export default function DashboardPage({ lang, setLang }) {
                       </div>
                     ))}
                   </div>
+                    )}
+                  </>
                 )
               }
             </div>
