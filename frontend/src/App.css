@@ -129,8 +129,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   display:none;
   position:absolute;top:100%;left:0;right:0;
   flex-direction:column;
-  background:rgba(250,247,242,0.98);
-  backdrop-filter:blur(14px);
+  background:#FAF7F2;
   border-bottom:1px solid var(--sand);
   box-shadow:0 12px 28px rgba(24,12,4,0.08);
   padding:10px 20px 18px;z-index:99;
