@@ -40,6 +40,18 @@ function HomeHeading({ icon: Icon, children }) {
   return <h3 className="home-heading"><Icon size={17} strokeWidth={1.75} />{children}</h3>
 }
 
+function StatCard({ icon: Icon, label, value, accent }) {
+  return (
+    <div className="stat-card">
+      <div className="stat-card-icon" style={accent ? { color: 'var(--rose)', background: 'var(--rose-bg, #F5EAEA)' } : undefined}>
+        <Icon size={17} strokeWidth={1.75} />
+      </div>
+      <div className="stat-card-value">{value}</div>
+      <div className="stat-card-label">{label}</div>
+    </div>
+  )
+}
+
 function getCountdown(iso, lang) {
   const diff = new Date(iso) - new Date()
   if (diff < 0) return null
@@ -584,30 +596,17 @@ export default function DashboardPage({ lang, setLang }) {
                 {greeting}, {user.full_name.split(' ')[0]}! <Flower2 size={20} strokeWidth={1.5} color="var(--rose)" />
               </h2>
 
-              {/* Referral link — prominent, first card */}
-              {user.referral_code && (
-                <div className="home-card" style={{ marginBottom: 28 }}>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--deep)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <UserPlus size={16} /> {lang === 'hy' ? 'Հրավիրե՛ք ընկերուհի' : 'Invite a friend'}
-                  </p>
-                  <p style={{ fontSize: 13, color: '#888', marginBottom: 12 }}>
-                    {lang === 'hy' ? 'Կիսե՛ք հղումը՝ ընկերուհուն հրավիրելու համար:' : "Share your link and your friend's application will be linked to you."}
-                  </p>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <code style={{ background: '#f5ece8', borderRadius: 8, padding: '6px 12px', fontSize: 13, color: 'var(--deep)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {window.location.origin}/register?ref={user.referral_code}
-                    </code>
-                    <button
-                      onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/register?ref=${user.referral_code}`); setMsg(lang === 'hy' ? 'Պատճենված է!' : 'Copied!'); setTimeout(() => setMsg(''), 2000) }}
-                      style={{ background: 'var(--rose)', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600, flexShrink: 0 }}
-                    >
-                      {lang === 'hy' ? 'Պատճենել' : 'Copy'}
-                    </button>
-                  </div>
-                  {msg && <p className="auth-success" style={{ marginTop: 10, marginBottom: 0 }}>{msg}</p>}
-                </div>
-              )}
+              {/* At-a-glance stats */}
+              <div className="stat-strip">
+                <StatCard icon={CheckCircle2} label={t.status} value={isActive ? t.active : t.inactive} accent={isActive} />
+                <StatCard icon={CalendarDays} label={lang === 'hy' ? 'Հաջորդը' : 'Next Event'}
+                  value={nextEvent ? (getCountdown(nextEvent.event_date, lang) || new Date(nextEvent.event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'short' })) : '—'} />
+                <StatCard icon={BookOpen} label={t.library} value={unlockedLibrary.length} />
+                <StatCard icon={Users} label={lang === 'hy' ? 'Համայնք' : 'Community'} value={directory.length} />
+              </div>
 
+              <div className="home-grid">
+              <div className="home-main">
               {/* Next event card */}
               <div style={{ marginBottom: 32 }}>
                 <HomeHeading icon={CalendarDays}>{lang === 'hy' ? 'Հաջորդ հանդիպումը' : 'Next Event'}</HomeHeading>
@@ -696,6 +695,32 @@ export default function DashboardPage({ lang, setLang }) {
                   </div>
                 )}
               </div>
+              </div>
+
+              <div className="home-side">
+              {/* Referral link */}
+              {user.referral_code && (
+                <div className="home-card" style={{ marginBottom: 28 }}>
+                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--deep)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <UserPlus size={16} /> {lang === 'hy' ? 'Հրավիրե՛ք ընկերուհի' : 'Invite a friend'}
+                  </p>
+                  <p style={{ fontSize: 13, color: '#888', marginBottom: 12 }}>
+                    {lang === 'hy' ? 'Կիսե՛ք հղումը՝ ընկերուհուն հրավիրելու համար:' : "Share your link and your friend's application will be linked to you."}
+                  </p>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <code style={{ background: '#f5ece8', borderRadius: 8, padding: '6px 12px', fontSize: 13, color: 'var(--deep)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {window.location.origin}/register?ref={user.referral_code}
+                    </code>
+                    <button
+                      onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/register?ref=${user.referral_code}`); setMsg(lang === 'hy' ? 'Պատճենված է!' : 'Copied!'); setTimeout(() => setMsg(''), 2000) }}
+                      style={{ background: 'var(--rose)', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600, flexShrink: 0 }}
+                    >
+                      {lang === 'hy' ? 'Պատճենել' : 'Copy'}
+                    </button>
+                  </div>
+                  {msg && <p className="auth-success" style={{ marginTop: 10, marginBottom: 0 }}>{msg}</p>}
+                </div>
+              )}
 
               {/* Gallery preview */}
               {albums.length > 0 && albums[0].cover_url && (
@@ -732,6 +757,8 @@ export default function DashboardPage({ lang, setLang }) {
                   </button>
                 </div>
               )}
+              </div>
+              </div>
             </div>
           )}
 

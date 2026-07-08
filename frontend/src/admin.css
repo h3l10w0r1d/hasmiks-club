@@ -318,6 +318,9 @@
   /* Let the page scroll instead of locking to 100vh */
   .admin-shell { flex-direction: column; height: auto; overflow: visible; }
 
+  /* iOS Safari auto-zooms on focusing any input under 16px */
+  .admin-shell input,.admin-shell textarea,.admin-shell select { font-size: 16px !important; }
+
   /* Sidebar becomes a sticky top bar with a horizontal, swipeable tab strip */
   .admin-sidebar {
     width: 100%; height: auto; overflow: visible;
