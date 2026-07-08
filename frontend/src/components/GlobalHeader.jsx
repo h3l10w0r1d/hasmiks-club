@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { Menu, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import LangSwitch from './LangSwitch'
 
 /**
  * GlobalHeader — used on every page except the dashboard and admin panel,
@@ -11,7 +12,7 @@ import { useAuth } from '../context/AuthContext'
  *   lang      string   'en' | 'hy'  — current language
  *   setLang   fn       setter — shows language toggle when provided
  */
-export default function GlobalHeader({ lang = 'en', setLang }) {
+export default function GlobalHeader({ lang = 'hy', setLang }) {
   const { user } = useAuth()
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
@@ -66,12 +67,7 @@ export default function GlobalHeader({ lang = 'en', setLang }) {
     </>
   )
 
-  const langToggle = setLang && (
-    <div className="gh-lang">
-      <button className={`gh-lang-btn${lang === 'en' ? ' active' : ''}`} onClick={() => setLang('en')}>EN</button>
-      <button className={`gh-lang-btn${lang === 'hy' ? ' active' : ''}`} onClick={() => setLang('hy')}>ՀԱՅ</button>
-    </div>
-  )
+  const langToggle = <LangSwitch lang={lang} setLang={setLang} />
 
   return (
     <header className={`gh${scrolled ? ' gh--scrolled' : ''}`}>

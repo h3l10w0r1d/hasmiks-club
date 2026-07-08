@@ -78,15 +78,13 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   margin-right:4px;
 }
 .gh-lang-btn{
-  min-height:34px;padding:0 12px;
+  min-height:34px;padding:0 10px;
   display:flex;align-items:center;justify-content:center;
-  font-family:var(--font-sans);
-  font-size:11px;font-weight:600;letter-spacing:0.1em;
   background:none;border:none;cursor:pointer;
-  color:var(--taupe);
-  transition:background .15s,color .15s;
+  opacity:.55;transition:opacity .15s,background .15s;
 }
-.gh-lang-btn.active{background:var(--rose);color:#fff}
+.gh-lang-btn svg{display:block;border-radius:2px}
+.gh-lang-btn.active{background:var(--rose-bg,#F5EAEA);opacity:1}
 
 /* buttons */
 .gh-btn{
@@ -1280,7 +1278,7 @@ footer{
   .dash-user-name{display:none}
   .dash-signout{padding:0 10px;min-height:36px}
   .dash-signout-label{display:none}
-  .gh-lang-btn{padding:0 8px;font-size:10px}
+  .gh-lang-btn{padding:0 8px}
   .dash-profile-btn{display:inline-flex;padding:0 10px}
   .dash-section-title{font-size:30px}
   .event-card-top{flex-direction:column;gap:10px}

@@ -15,7 +15,7 @@ export default function RegisterPage({ lang }) {
 
   const [form, setForm] = useState({
     full_name: '', email: '', password: '',
-    bio: '', lang_pref: lang || 'en',
+    bio: '', lang_pref: lang || 'hy',
     referral_code: refCode,
     application_message: '',
   })

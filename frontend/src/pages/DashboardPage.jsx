@@ -25,6 +25,7 @@ import OnboardingModal from '../components/OnboardingModal'
 // Forum disabled for now — kept for a future re-enable, see all "FORUM (disabled)" markers below.
 // import ForumTab from '../components/ForumTab'
 import MemberProfileModal from '../components/MemberProfileModal'
+import LangSwitch from '../components/LangSwitch'
 import TelegramLinkButton from '../components/TelegramLinkButton'
 import { getCheckinToken } from '../api/events'
 import client from '../api/client'
@@ -514,12 +515,7 @@ export default function DashboardPage({ lang, setLang }) {
       <nav className="dash-nav">
         <div className="dash-nav-brand">Hasmik's <span>Club</span></div>
         <div className="dash-nav-right">
-          {setLang && (
-            <div className="gh-lang">
-              <button className={`gh-lang-btn${lang === 'en' ? ' active' : ''}`} onClick={() => setLang('en')}>EN</button>
-              <button className={`gh-lang-btn${lang === 'hy' ? ' active' : ''}`} onClick={() => setLang('hy')}>ՀԱՅ</button>
-            </div>
-          )}
+          <LangSwitch lang={lang} setLang={setLang} />
           <NotificationBell />
           <button className="dash-signout dash-profile-btn" onClick={() => changeTab('profile')} aria-label={t.profile}>
             <User size={14} strokeWidth={2} />
@@ -639,6 +635,9 @@ export default function DashboardPage({ lang, setLang }) {
                           : <span className="fully-booked">{t.booked}</span>}
                       </div>
                     </div>
+                    {(lang === 'hy' && nextEvent.description_hy
+                      ? <p className="event-desc" style={{ marginBottom: 16 }}>{nextEvent.description_hy}</p>
+                      : nextEvent.description && <p className="event-desc" style={{ marginBottom: 16 }}>{nextEvent.description}</p>)}
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                       {rsvpDone[nextEvent.id] ? (
                         <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
