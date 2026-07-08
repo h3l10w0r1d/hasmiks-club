@@ -109,6 +109,7 @@ export default function DashboardPage({ lang, setLang }) {
   const [telegramUrl, setTelegramUrl] = useState('')
   const [photoUploading, setPhotoUploading] = useState(false)
   const [selectedContent, setSelectedContent] = useState(null)
+  const [readerOpen, setReaderOpen] = useState(false)
   const [selectedMember, setSelectedMember] = useState(null)
   const [forumDeepLinkTopicId, setForumDeepLinkTopicId] = useState(null)
   const [albums, setAlbums] = useState([])
@@ -119,13 +120,13 @@ export default function DashboardPage({ lang, setLang }) {
   const fileInputRef = useRef(null)
   const homeLoaded = useRef(false)
 
-  const closeContent = useCallback(() => setSelectedContent(null), [])
+  const closeContent = useCallback(() => { setSelectedContent(null); setReaderOpen(false) }, [])
   useEffect(() => {
     if (!selectedContent) return
-    const onKey = (e) => { if (e.key === 'Escape') closeContent() }
+    const onKey = (e) => { if (e.key === 'Escape') { readerOpen ? setReaderOpen(false) : closeContent() } }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [selectedContent, closeContent])
+  }, [selectedContent, readerOpen, closeContent])
 
   const t = {
     home:        lang === 'hy' ? 'Գլխ.' : 'Home',
@@ -986,6 +987,18 @@ export default function DashboardPage({ lang, setLang }) {
                 ? <p className="dash-empty">{t.noLibrary}</p>
                 : (
                   <>
+                    <p style={{ fontSize: 13, color: 'var(--taupe)', marginTop: -10, marginBottom: 20 }}>
+                      {filteredLibrary.length !== library.length
+                        ? (lang === 'hy'
+                          ? `Ցուցադրված է ${filteredLibrary.length} ${library.length}-ից`
+                          : `Showing ${filteredLibrary.length} of ${library.length}`)
+                        : (lang === 'hy' ? `${library.length} նյութ` : `${library.length} item${library.length !== 1 ? 's' : ''}`)
+                      }
+                      {' · '}
+                      {library.filter(i => i.type === 'recipe').length} {t.recipe.toLowerCase()}{library.filter(i => i.type === 'recipe').length !== 1 && lang !== 'hy' ? 's' : ''}
+                      {' · '}
+                      {library.filter(i => i.type === 'ebook').length} {t.ebook.toLowerCase()}{library.filter(i => i.type === 'ebook').length !== 1 && lang !== 'hy' ? 's' : ''}
+                    </p>
                     <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 20 }}>
                       <div style={{ position: 'relative', flex: '1 1 220px', minWidth: 180 }}>
                         <Search size={15} color="#b89a8a" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
@@ -1256,25 +1269,54 @@ export default function DashboardPage({ lang, setLang }) {
               )}
 
               {selectedContent.is_unlocked && selectedContent.file_url ? (
-                <>
-                  {selectedContent.file_url.toLowerCase().endsWith('.pdf') && (
-                    <iframe
-                      src={selectedContent.file_url}
-                      title={selectedContent.title}
-                      style={{ width: '100%', height: 380, border: '1px solid var(--sand)', borderRadius: 8, marginBottom: 16, display: 'block' }}
-                    />
-                  )}
+                selectedContent.file_url.toLowerCase().endsWith('.pdf') ? (
+                  <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <button onClick={() => setReaderOpen(true)}
+                      className="plan-btn plan-btn-fill" style={{ flex: '1 1 160px' }}>
+                      {lang === 'hy' ? 'Կարդալ' : 'Read'}
+                    </button>
+                    <a href={selectedContent.file_url} target="_blank" rel="noreferrer"
+                      className="plan-btn plan-btn-outline"
+                      style={{ flex: '1 1 160px', textAlign: 'center', textDecoration: 'none' }}>
+                      {t.download}
+                    </a>
+                  </div>
+                ) : (
                   <a href={selectedContent.file_url} target="_blank" rel="noreferrer"
                     className="plan-btn plan-btn-fill"
                     style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
                     {t.download}
                   </a>
-                </>
+                )
               ) : (
                 <p style={{ textAlign: 'center', color: '#aaa', fontSize: 13, marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}><Lock size={13} /> {t.lockedLib}</p>
               )}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* ── Full-screen PDF reader ── */}
+      {selectedContent && readerOpen && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 10001, background: '#221c16', display: 'flex', flexDirection: 'column' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 20px', background: '#1A1714', flexShrink: 0 }}>
+            <span style={{ color: '#F2E9DC', fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 18, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {lang === 'hy' && selectedContent.title_hy ? selectedContent.title_hy : selectedContent.title}
+            </span>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexShrink: 0, marginLeft: 12 }}>
+              <a href={selectedContent.file_url} target="_blank" rel="noreferrer"
+                style={{ color: '#F2E9DC', fontSize: 13, textDecoration: 'none', border: '1px solid rgba(255,255,255,.25)', borderRadius: 8, padding: '6px 14px' }}>
+                {t.download}
+              </a>
+              <button onClick={() => setReaderOpen(false)} aria-label="Close reader"
+                style={{ background: 'none', border: 'none', color: '#F2E9DC', fontSize: 28, cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </div>
+          </div>
+          <iframe
+            src={selectedContent.file_url}
+            title={selectedContent.title}
+            style={{ flex: 1, width: '100%', border: 'none' }}
+          />
         </div>
       )}
 
