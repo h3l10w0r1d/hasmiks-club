@@ -1136,6 +1136,21 @@ footer{
   box-shadow:0 4px 24px rgba(24,12,4,0.07);
   border-color:var(--stone);
 }
+.event-card{box-shadow:0 2px 10px rgba(192,57,75,.05)}
+
+/* ── Home tab cards ── */
+.home-heading{
+  display:flex;align-items:center;gap:8px;
+  font-family:var(--font-serif);font-size:19px;font-weight:700;
+  color:var(--deep);margin:0 0 14px;
+}
+.home-heading svg{color:var(--rose);flex-shrink:0}
+.home-card{
+  background:#fff;border:1px solid var(--sand);border-radius:16px;
+  padding:22px 26px;box-shadow:0 2px 10px rgba(192,57,75,.05);
+}
+.home-clickable{cursor:pointer;transition:box-shadow .18s,transform .18s}
+.home-clickable:hover{box-shadow:0 6px 20px rgba(192,57,75,.12);transform:translateY(-2px)}
 .event-card.rsvpd{
   border-left-color:var(--rose);
   background:rgba(245,234,234,0.18);

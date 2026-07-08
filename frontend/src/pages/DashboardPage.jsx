@@ -23,6 +23,10 @@ import { cldOptimize } from '../utils/cloudinary'
 const TABS = ['home', 'profile', 'events', 'library', 'gallery', 'community', 'forum']
 const TAB_ICONS = { home: Home, profile: User, events: CalendarDays, library: BookOpen, gallery: GalleryHorizontal, community: Users, forum: MessageCircle }
 
+function HomeHeading({ icon: Icon, children }) {
+  return <h3 className="home-heading"><Icon size={17} strokeWidth={1.75} />{children}</h3>
+}
+
 function getCountdown(iso, lang) {
   const diff = new Date(iso) - new Date()
   if (diff < 0) return null
@@ -548,7 +552,7 @@ export default function DashboardPage({ lang, setLang }) {
 
               {/* Referral link — prominent, first card */}
               {user.referral_code && (
-                <div style={{ background: '#fff', border: '1px solid #f0dde0', borderRadius: 14, padding: '20px 24px', marginBottom: 28 }}>
+                <div className="home-card" style={{ marginBottom: 28 }}>
                   <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--deep)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                     <UserPlus size={16} /> {lang === 'hy' ? 'Հրավիրե՛ք ընկերուհի' : 'Invite a friend'}
                   </p>
@@ -572,9 +576,7 @@ export default function DashboardPage({ lang, setLang }) {
 
               {/* Next event card */}
               <div style={{ marginBottom: 32 }}>
-                <h3 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 20, fontWeight: 700, color: '#2c1a1a', marginBottom: 14 }}>
-                  {lang === 'hy' ? 'Հաջորդ հանդիպումը' : 'Next Event'}
-                </h3>
+                <HomeHeading icon={CalendarDays}>{lang === 'hy' ? 'Հաջորդ հանդիպումը' : 'Next Event'}</HomeHeading>
                 {nextEvent ? (
                   <div className={`event-card${nextEvent.user_has_rsvp ? ' rsvpd' : ''}`}>
                     {nextEvent.cover_url && (
@@ -613,19 +615,19 @@ export default function DashboardPage({ lang, setLang }) {
                     </div>
                   </div>
                 ) : (
-                  <p style={{ color: '#9b6e6e', fontSize: 14, fontStyle: 'italic' }}>
-                    {lang === 'hy' ? 'Առայժմ հանդիպումներ չկան — շուտով կլինեն' : 'No upcoming events — check back soon'}
-                  </p>
+                  <div className="home-card">
+                    <p style={{ color: '#9b6e6e', fontSize: 14, fontStyle: 'italic', margin: 0 }}>
+                      {lang === 'hy' ? 'Առայժմ հանդիպումներ չկան — շուտով կլինեն' : 'No upcoming events — check back soon'}
+                    </p>
+                  </div>
                 )}
               </div>
 
               {/* Library preview */}
               <div style={{ marginBottom: 32 }}>
-                <h3 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 20, fontWeight: 700, color: '#2c1a1a', marginBottom: 14 }}>
-                  {lang === 'hy' ? 'Գրադարանից' : 'From the Library'}
-                </h3>
+                <HomeHeading icon={BookOpen}>{lang === 'hy' ? 'Գրադարանից' : 'From the Library'}</HomeHeading>
                 {unlockedLibrary.length === 0 ? (
-                  <div style={{ background: '#fff', border: '1px solid #f0dde0', borderRadius: 14, padding: '20px 24px' }}>
+                  <div className="home-card">
                     <p style={{ fontSize: 14, color: '#9b6e6e', fontStyle: 'italic', margin: 0 }}>
                       {lang === 'hy' ? 'Ձեր գրադարանը կհայտնվի, երբ անդամությունը ակտիվ լինի' : 'Your library will appear here once your membership is activated'}
                     </p>
@@ -634,7 +636,8 @@ export default function DashboardPage({ lang, setLang }) {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {unlockedLibrary.slice(0, 2).map(item => (
                       <div key={item.id}
-                        style={{ background: '#fff', border: '1px solid #f0dde0', borderRadius: 12, padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14, cursor: 'pointer' }}
+                        className="home-card home-clickable"
+                        style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}
                         onClick={() => setSelectedContent(item)}>
                         {item.cover_url && (
                           <img src={cldOptimize(item.cover_url, { width: 96 })} alt={item.title} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
@@ -663,11 +666,10 @@ export default function DashboardPage({ lang, setLang }) {
               {/* Gallery preview */}
               {albums.length > 0 && albums[0].cover_url && (
                 <div style={{ marginBottom: 32 }}>
-                  <h3 style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 20, fontWeight: 700, color: '#2c1a1a', marginBottom: 14 }}>
-                    {lang === 'hy' ? 'Ֆոտոսրահ' : 'Gallery'}
-                  </h3>
+                  <HomeHeading icon={GalleryHorizontal}>{lang === 'hy' ? 'Ֆոտոսրահ' : 'Gallery'}</HomeHeading>
                   <div
-                    style={{ position: 'relative', borderRadius: 14, overflow: 'hidden', cursor: 'pointer' }}
+                    className="home-clickable"
+                    style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--sand)' }}
                     onClick={() => changeTab('gallery')}
                   >
                     <img src={cldOptimize(albums[0].cover_url, { width: 800 })} alt={albums[0].title} style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }} />
@@ -680,7 +682,7 @@ export default function DashboardPage({ lang, setLang }) {
 
               {/* Community count */}
               {directory.length > 0 && (
-                <div style={{ background: '#fff', border: '1px solid #f0dde0', borderRadius: 14, padding: '20px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+                <div className="home-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                   <div>
                     <div style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 22, fontWeight: 700, color: '#2c1a1a' }}>
                       {directory.length} {lang === 'hy' ? 'անդամ համայնքում' : 'members in the community'}
