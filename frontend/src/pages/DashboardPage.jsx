@@ -4,6 +4,7 @@ import {
   PartyPopper, Flower2, AlertTriangle, UserPlus, MapPin, CalendarDays,
   Send, CheckCircle2, Circle, Lock, Image as ImageIcon, User, MessageCircle,
   Home, BookOpen, GalleryHorizontal, Users, CreditCard, Phone, ExternalLink, Search,
+  LogOut, Shield,
 } from 'lucide-react'
 import Lightbox from 'yet-another-react-lightbox'
 import Zoom from 'yet-another-react-lightbox/plugins/zoom'
@@ -503,9 +504,15 @@ export default function DashboardPage({ lang, setLang }) {
           <NotificationBell />
           <span className="dash-user-name">{user.full_name}</span>
           {user.is_admin && (
-            <Link to="/admin" className="dash-signout" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center' }}>Admin</Link>
+            <Link to="/admin" className="dash-signout" style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+              <Shield size={14} strokeWidth={2} className="dash-signout-icon" />
+              <span className="dash-signout-label">Admin</span>
+            </Link>
           )}
-          <button className="dash-signout" onClick={handleSignOut}>{t.signOut}</button>
+          <button className="dash-signout" onClick={handleSignOut} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+            <LogOut size={14} strokeWidth={2} className="dash-signout-icon" />
+            <span className="dash-signout-label">{t.signOut}</span>
+          </button>
         </div>
       </nav>
 

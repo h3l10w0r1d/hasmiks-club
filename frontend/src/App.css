@@ -1231,9 +1231,13 @@ footer{
   .dash-tab.active{border-bottom-color:var(--rose);border-left-color:transparent}
   .dash-membership-badge{display:none}
   .dash-main{padding:28px 18px}
-  .dash-nav{padding:0 16px;flex-wrap:wrap;gap:8px}
-  .dash-nav-right{gap:10px}
+  .dash-nav{padding:0 12px;flex-wrap:nowrap;gap:6px}
+  .dash-nav-brand{font-size:15px;flex-shrink:0;white-space:nowrap}
+  .dash-nav-right{gap:6px;flex-shrink:0}
   .dash-user-name{display:none}
+  .dash-signout{padding:0 10px;min-height:36px}
+  .dash-signout-label{display:none}
+  .gh-lang-btn{padding:0 8px;font-size:10px}
   .dash-section-title{font-size:30px}
   .event-card-top{flex-direction:column;gap:10px}
   .event-seats{align-self:flex-start}
