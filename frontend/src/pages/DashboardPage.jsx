@@ -22,7 +22,8 @@ import { getPublicSettings, createCheckout } from '../api/payments'
 import { refreshToken as apiRefresh } from '../api/auth'
 import NotificationBell from '../components/NotificationBell'
 import OnboardingModal from '../components/OnboardingModal'
-import ForumTab from '../components/ForumTab'
+// Forum disabled for now — kept for a future re-enable, see all "FORUM (disabled)" markers below.
+// import ForumTab from '../components/ForumTab'
 import MemberProfileModal from '../components/MemberProfileModal'
 import TelegramLinkButton from '../components/TelegramLinkButton'
 import { getCheckinToken } from '../api/events'
@@ -34,7 +35,8 @@ const TAB_ICONS = { home: Home, profile: User, events: CalendarDays, library: Bo
 // Mobile bottom nav has limited width — Profile lives behind the top-nav
 // account icon instead, and Gallery is reachable from the Home tab's
 // gallery preview card, so both are dropped from this shorter list.
-const BOTTOM_NAV_TABS = ['home', 'events', 'library', 'community', 'forum']
+// FORUM (disabled): 'forum' removed from this list — was ['home', 'events', 'library', 'community', 'forum']
+const BOTTOM_NAV_TABS = ['home', 'events', 'library', 'community']
 
 function HomeHeading({ icon: Icon, children }) {
   return <h3 className="home-heading"><Icon size={17} strokeWidth={1.75} />{children}</h3>
@@ -128,7 +130,8 @@ export default function DashboardPage({ lang, setLang }) {
   const [selectedContent, setSelectedContent] = useState(null)
   const [readerOpen, setReaderOpen] = useState(false)
   const [selectedMember, setSelectedMember] = useState(null)
-  const [forumDeepLinkTopicId, setForumDeepLinkTopicId] = useState(null)
+  // FORUM (disabled): re-enable when Forum comes back
+  // const [forumDeepLinkTopicId, setForumDeepLinkTopicId] = useState(null)
   const [albums, setAlbums] = useState([])
   const [openAlbum, setOpenAlbum] = useState(null)
   const [lightboxIndex, setLightboxIndex] = useState(-1)
@@ -571,7 +574,8 @@ export default function DashboardPage({ lang, setLang }) {
           </div>
           <div className="dash-sidebar-section">
             <span className="dash-sidebar-section-label">{lang === 'hy' ? 'Համ.' : 'Community'}</span>
-            {['gallery', 'community', 'forum'].map(k => {
+            {/* FORUM (disabled): 'forum' removed from this list — was ['gallery', 'community', 'forum'] */}
+            {['gallery', 'community'].map(k => {
               const Icon = TAB_ICONS[k]
               return (
                 <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => changeTab(k)}>
@@ -1186,7 +1190,7 @@ export default function DashboardPage({ lang, setLang }) {
             </div>
           )}
 
-          {/* ── FORUM ── */}
+          {/* ── FORUM (disabled) ──
           {tab === 'forum' && (
             <ForumTab
               lang={lang}
@@ -1197,6 +1201,7 @@ export default function DashboardPage({ lang, setLang }) {
               onConsumedInitialTopic={() => setForumDeepLinkTopicId(null)}
             />
           )}
+          ── END FORUM (disabled) ── */}
 
           </div>
         </main>
@@ -1221,11 +1226,13 @@ export default function DashboardPage({ lang, setLang }) {
           member={selectedMember}
           lang={lang}
           onClose={() => setSelectedMember(null)}
+          /* FORUM (disabled): re-enable when Forum comes back
           onOpenForumTopic={(topicId) => {
             setSelectedMember(null)
             setForumDeepLinkTopicId(topicId)
             changeTab('forum')
           }}
+          */
         />
       )}
 

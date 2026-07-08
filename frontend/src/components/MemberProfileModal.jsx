@@ -114,6 +114,7 @@ export default function MemberProfileModal({ member, lang = 'en', onClose, onOpe
               ))}
             </Section>
 
+            {/* FORUM (disabled): re-enable when Forum comes back
             <Section icon={<MessageSquare size={15} />} title={t.forum} empty={!profile.forum_activity.length ? t.noActivity : null}>
               {profile.forum_activity.map((a, i) => (
                 <button key={i} onClick={() => onOpenForumTopic?.(a.topic_id)}
@@ -123,6 +124,7 @@ export default function MemberProfileModal({ member, lang = 'en', onClose, onOpe
                 </button>
               ))}
             </Section>
+            */}
           </>
         )}
       </div>
