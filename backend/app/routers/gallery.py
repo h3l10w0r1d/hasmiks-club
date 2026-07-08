@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.deps import require_permission, get_current_user
 from app.database import get_db
 from app.models.album import Album, AlbumPhoto
+from app.models.event import Event
 from app.models.user import User
 
 router = APIRouter(tags=["gallery"])
@@ -136,6 +137,8 @@ def admin_create_album(
     db: Session = Depends(get_db),
     _: User = Depends(require_permission('manage_gallery')),
 ):
+    if body.event_id is not None and not db.query(Event).filter(Event.id == body.event_id).first():
+        raise HTTPException(status_code=400, detail=f"Event {body.event_id} does not exist")
     album = Album(**body.model_dump())
     db.add(album)
     db.commit()
@@ -157,6 +160,8 @@ def admin_update_album(
     album = db.query(Album).filter(Album.id == album_id).first()
     if not album:
         raise HTTPException(status_code=404, detail="Album not found")
+    if body.event_id is not None and not db.query(Event).filter(Event.id == body.event_id).first():
+        raise HTTPException(status_code=400, detail=f"Event {body.event_id} does not exist")
     for k, v in body.model_dump(exclude_unset=True).items():
         setattr(album, k, v)
     db.commit()

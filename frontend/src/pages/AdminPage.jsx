@@ -307,7 +307,7 @@ export default function AdminPage() {
   useEffect(() => { if (tab === 'applications') load('applications') }, [tab])
   useEffect(() => { if (tab === 'events')       load('events')       }, [tab])
   useEffect(() => { if (tab === 'content')      load('content')      }, [tab])
-  useEffect(() => { if (tab === 'gallery')      load('gallery')      }, [tab])
+  useEffect(() => { if (tab === 'gallery')      { load('gallery'); load('events') } }, [tab])
   useEffect(() => { if (tab === 'audit')        load('audit')        }, [tab])
   useEffect(() => { if (tab === 'settings')     load('settings')     }, [tab])
   useEffect(() => { if (tab === 'analytics')    load('referrals')    }, [tab])
@@ -1334,7 +1334,15 @@ export default function AdminPage() {
                   <form onSubmit={submitAlbum} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <Field label="Album Title"><Input value={albumForm.title} onChange={e => setAlbumForm(f => ({ ...f, title: e.target.value }))} required /></Field>
-                      <Field label="Linked Event ID (optional)"><Input type="number" value={albumForm.event_id} onChange={e => setAlbumForm(f => ({ ...f, event_id: e.target.value }))} placeholder="Leave blank if standalone" /></Field>
+                      <Field label="Linked Event (optional)">
+                        <Select value={albumForm.event_id ? String(albumForm.event_id) : 'none'} onValueChange={v => setAlbumForm(f => ({ ...f, event_id: v === 'none' ? '' : v }))}>
+                          <SelectTrigger><SelectValue placeholder="Standalone album" /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">Standalone (no linked event)</SelectItem>
+                            {events.map(ev => <SelectItem key={ev.id} value={String(ev.id)}>{ev.title}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </Field>
                     </div>
                     <Field label="Description"><Textarea value={albumForm.description} onChange={e => setAlbumForm(f => ({ ...f, description: e.target.value }))} rows={2} /></Field>
                     <ImageUploadField label="Cover Image" value={albumForm.cover_url} onChange={v => setAlbumForm(f => ({ ...f, cover_url: v }))} onUpload={adminUploadImage} />
