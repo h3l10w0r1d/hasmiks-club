@@ -592,8 +592,10 @@ export default function DashboardPage({ lang, setLang }) {
           {/* ── HOME ── */}
           {tab === 'home' && (
             <div className="dash-section">
-              <h2 className="dash-section-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                {greeting}, {user.full_name.split(' ')[0]}! <Flower2 size={20} strokeWidth={1.5} color="var(--rose)" />
+              <h2 className="dash-section-title">
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                  {greeting}, {user.full_name.split(' ')[0]}! <Flower2 size={20} strokeWidth={1.5} color="var(--rose)" />
+                </span>
               </h2>
 
               {/* At-a-glance stats */}
