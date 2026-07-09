@@ -56,14 +56,21 @@ function StatCard({ icon: Icon, label, value, accent }) {
   )
 }
 
+function startOfDay(d) {
+  const x = new Date(d)
+  x.setHours(0, 0, 0, 0)
+  return x
+}
+
 function getCountdown(iso, lang) {
   const diff = new Date(iso) - new Date()
   if (diff < 0) return null
-  const h = Math.floor(diff / 36e5)
-  const d = Math.floor(diff / 864e5)
-  if (h < 3) return lang === 'hy' ? 'Այսօր!' : 'Today!'
-  if (d === 0) return lang === 'hy' ? 'Վաղը!' : 'Tomorrow!'
-  if (d <= 7) return lang === 'hy' ? `${d} օրից` : `In ${d} days`
+  // Compare calendar days, not raw elapsed hours — an event later today but
+  // more than a few hours away must still say "Today", not "Tomorrow".
+  const dayDiff = Math.round((startOfDay(iso) - startOfDay(new Date())) / 864e5)
+  if (dayDiff === 0) return lang === 'hy' ? 'Այսօր!' : 'Today!'
+  if (dayDiff === 1) return lang === 'hy' ? 'Վաղը!' : 'Tomorrow!'
+  if (dayDiff <= 7) return lang === 'hy' ? `${dayDiff} օրից` : `In ${dayDiff} days`
   return null
 }
 
