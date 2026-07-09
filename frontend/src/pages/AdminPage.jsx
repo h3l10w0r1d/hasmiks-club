@@ -132,7 +132,7 @@ const DEFAULT_SETTINGS = {
   welcome_email_body: '', event_reminder_body: '', email_footer: '',
 }
 
-const EMPTY_EVENT   = { title: '', title_hy: '', description: '', description_hy: '', location: '', event_date: '', max_seats: 20, cover_url: '' }
+const EMPTY_EVENT   = { title: '', title_hy: '', description: '', description_hy: '', location: '', event_date: '', max_seats: 20, cover_url: '', ticket_price: '', max_guest_tickets: '' }
 const EMPTY_CONTENT = { type: 'recipe', title: '', title_hy: '', description: '', description_hy: '', file_url: '', cover_url: '' }
 
 function initials(name = '') {
@@ -434,7 +434,12 @@ export default function AdminPage() {
   const submitEvent = async (e) => {
     e.preventDefault()
     try {
-      const payload = { ...eventForm, max_seats: Number(eventForm.max_seats) }
+      const payload = {
+        ...eventForm,
+        max_seats: Number(eventForm.max_seats),
+        ticket_price: eventForm.ticket_price === '' ? null : Number(eventForm.ticket_price),
+        max_guest_tickets: eventForm.max_guest_tickets === '' ? null : Number(eventForm.max_guest_tickets),
+      }
       if (editingEvent) {
         const updated = await adminUpdateEvent(editingEvent.id, payload)
         setEvents(es => es.map(x => x.id === editingEvent.id ? updated : x))
@@ -449,7 +454,11 @@ export default function AdminPage() {
   const startEditEvent = (ev) => {
     setEditingEvent(ev)
     setShowEventForm(true)
-    setEventForm({ title: ev.title || '', title_hy: ev.title_hy || '', description: ev.description || '', description_hy: ev.description_hy || '', location: ev.location || '', event_date: ev.event_date ? ev.event_date.slice(0, 16) : '', max_seats: ev.max_seats, cover_url: ev.cover_url || '' })
+    setEventForm({
+      title: ev.title || '', title_hy: ev.title_hy || '', description: ev.description || '', description_hy: ev.description_hy || '',
+      location: ev.location || '', event_date: ev.event_date ? ev.event_date.slice(0, 16) : '', max_seats: ev.max_seats, cover_url: ev.cover_url || '',
+      ticket_price: ev.ticket_price ?? '', max_guest_tickets: ev.max_guest_tickets ?? '',
+    })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   const deleteEvent = (ev) => {
@@ -1050,6 +1059,12 @@ export default function AdminPage() {
                       <Field label="Location"><Input value={eventForm.location} onChange={setEF('location')} required /></Field>
                       <Field label="Date & Time"><DateTimePicker value={eventForm.event_date} onChange={v => setEventForm(f => ({ ...f, event_date: v }))} /></Field>
                       <Field label="Max Seats"><Input type="number" value={eventForm.max_seats} onChange={setEF('max_seats')} min={1} required /></Field>
+                      <Field label="One-time Ticket Price (blank = members only)">
+                        <Input type="number" step="1" min="0" value={eventForm.ticket_price} onChange={setEF('ticket_price')} placeholder="e.g. 5000" />
+                      </Field>
+                      <Field label="Max Guest Tickets (blank = shared with member seats)">
+                        <Input type="number" min="0" value={eventForm.max_guest_tickets} onChange={setEF('max_guest_tickets')} placeholder="e.g. 10" />
+                      </Field>
                     </div>
                     <Field label="Description (EN)"><Textarea value={eventForm.description} onChange={setEF('description')} /></Field>
                     <Field label="Description (ՀԱՅ)"><Textarea value={eventForm.description_hy} onChange={setEF('description_hy')} /></Field>

@@ -1,7 +1,9 @@
 from datetime import datetime, timezone
+from decimal import Decimal
 from typing import List
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
+from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -9,16 +11,27 @@ from app.models.event import Event
 from app.models.rsvp import RSVP
 from app.models.waitlist import EventWaitlist
 from app.models.user import User
-from app.schemas.event import EventCreate, EventOut, RSVPOut, PublicEventOut
+from app.models.guest_ticket import GuestTicket
+from app.schemas.event import EventCreate, EventOut, RSVPOut, PublicEventOut, GuestCheckoutIn, GuestTicketOut
 from app.core.deps import get_current_user, get_current_active_member
+from app.core import ameriabank
 from app.core import email as mailer
 from app.core import notify
+from app.core.config import settings
+from app.core.payment_log import log_payment_event
 
 router = APIRouter(prefix="/events", tags=["events"])
 
+LANG_MAP = {"en": "en", "hy": "am", "ru": "ru"}
+
+
+def _paid_guest_count(event: Event) -> int:
+    return sum(1 for g in event.guest_tickets if g.status in ameriabank.PAID_STATUSES)
+
 
 def _serialize_event(event: Event, user_id: int) -> EventOut:
-    seats_taken = len(event.rsvps)
+    guest_seats_taken = _paid_guest_count(event)
+    seats_taken = len(event.rsvps) + guest_seats_taken
     user_has_rsvp = any(r.user_id == user_id for r in event.rsvps)
     return EventOut(
         id=event.id,
@@ -33,12 +46,23 @@ def _serialize_event(event: Event, user_id: int) -> EventOut:
         seats_available=max(event.max_seats - seats_taken, 0),
         user_has_rsvp=user_has_rsvp,
         cover_url=event.cover_url,
+        ticket_price=event.ticket_price,
+        max_guest_tickets=event.max_guest_tickets,
+        guest_seats_taken=guest_seats_taken,
     )
 
 
 def _serialize_public(event: Event) -> PublicEventOut:
-    seats_taken = len(event.rsvps)
+    guest_seats_taken = _paid_guest_count(event)
+    seats_taken = len(event.rsvps) + guest_seats_taken
     available = max(event.max_seats - seats_taken, 0)
+    guest_tickets_available = None
+    guest_tickets_full = False
+    if event.ticket_price is not None:
+        guest_tickets_available = available
+        if event.max_guest_tickets is not None:
+            guest_tickets_available = min(available, max(event.max_guest_tickets - guest_seats_taken, 0))
+        guest_tickets_full = guest_tickets_available <= 0
     return PublicEventOut(
         id=event.id,
         title=event.title,
@@ -51,6 +75,9 @@ def _serialize_public(event: Event) -> PublicEventOut:
         seats_available=available,
         is_full=available == 0,
         cover_url=event.cover_url,
+        ticket_price=event.ticket_price,
+        guest_tickets_available=guest_tickets_available,
+        guest_tickets_full=guest_tickets_full,
     )
 
 
@@ -228,3 +255,154 @@ def self_checkin(
     db.commit()
     mailer.track_event_async(current_user.email, "event_checked_in", {"event_title": event.title})
     mailer.sync_member_to_brevo(db, current_user)
+
+
+# ── one-time guest tickets (no account required) ───────────────────────────────
+
+@router.post("/{event_id}/guest-checkout")
+def guest_checkout(event_id: int, payload: GuestCheckoutIn, db: Session = Depends(get_db)):
+    """Start a one-time ticket purchase for someone without a member account.
+    Existing members are turned away here and pointed at login/subscribe
+    instead — a one-time ticket is meant for first-time visitors, not as a
+    way to dodge membership."""
+    if not (settings.AMERIABANK_CLIENT_ID and settings.AMERIABANK_USERNAME and settings.AMERIABANK_PASSWORD):
+        raise HTTPException(status_code=503, detail="Ticket purchases are not configured")
+
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if event.ticket_price is None:
+        raise HTTPException(status_code=400, detail="This event doesn't offer one-time tickets — membership required")
+    if event.event_date < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="This event has already happened")
+
+    email = payload.email.strip().lower()
+    if db.query(User).filter(User.email == email).first():
+        raise HTTPException(
+            status_code=409,
+            detail="An account already exists for this email — please log in and subscribe instead of buying a one-time ticket",
+        )
+
+    guest_seats_taken = _paid_guest_count(event)
+    seats_taken = len(event.rsvps) + guest_seats_taken
+    if seats_taken >= event.max_seats:
+        raise HTTPException(status_code=409, detail="This event is fully booked")
+    if event.max_guest_tickets is not None and guest_seats_taken >= event.max_guest_tickets:
+        raise HTTPException(status_code=409, detail="All one-time tickets for this event are sold out")
+
+    ticket = GuestTicket(
+        event_id=event.id, full_name=payload.full_name, email=email,
+        amount=event.ticket_price, currency=settings.AMERIABANK_CURRENCY, status="started",
+    )
+    db.add(ticket)
+    db.commit()
+    db.refresh(ticket)
+
+    try:
+        ticket.order_id = ameriabank.next_order_id(db)
+    except ameriabank.AmeriaBankError as exc:
+        ticket.status = "error"
+        ticket.response_message = str(exc)
+        db.commit()
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    db.commit()
+
+    init_request = {"OrderID": ticket.order_id, "Amount": float(event.ticket_price), "Currency": ticket.currency, "BackURL": settings.AMERIABANK_GUEST_BACK_URL}
+    try:
+        resp = ameriabank.init_payment(
+            order_id=ticket.order_id,
+            amount=event.ticket_price,
+            description=f"{event.title} — one-time ticket ({payload.full_name})",
+            back_url=settings.AMERIABANK_GUEST_BACK_URL,
+        )
+    except ameriabank.AmeriaBankError as exc:
+        ticket.status = "error"
+        ticket.response_message = str(exc)
+        db.commit()
+        log_payment_event(db, ticket.id, "init_payment", request_payload=init_request, response_payload={"error": str(exc)}, success=False)
+        raise HTTPException(status_code=502, detail="Could not start payment — please try again shortly") from exc
+
+    init_ok = resp.get("ResponseCode") == 1
+    log_payment_event(db, ticket.id, "init_payment", request_payload=init_request, response_payload=resp, success=init_ok)
+    if not init_ok:
+        ticket.status = "error"
+        ticket.response_message = resp.get("ResponseMessage")
+        db.commit()
+        raise HTTPException(status_code=502, detail=resp.get("ResponseMessage") or "Payment initialization failed")
+
+    ticket.payment_id = resp.get("PaymentID")
+    db.commit()
+
+    mailer.track_event_async(email, "guest_checkout_started", {"event_title": event.title, "amount": float(event.ticket_price)})
+
+    lang = LANG_MAP.get(payload.lang_pref, "en")
+    return {"url": ameriabank.payment_page_url(ticket.payment_id, lang)}
+
+
+@router.api_route("/guest-checkout/callback", methods=["GET", "POST"])
+async def guest_checkout_callback(request: Request, db: Session = Depends(get_db)):
+    """BackURL target for one-time guest ticket purchases — same verify-before-
+    trust pattern as /payments/callback, kept as a separate route/table so
+    guest purchases can never touch membership_status or the User model."""
+    if request.method == "POST":
+        params = dict(await request.form())
+    else:
+        params = dict(request.query_params)
+
+    payment_id = params.get("paymentID") or params.get("PaymentID")
+    order_id_raw = params.get("orderID") or params.get("OrderID")
+
+    ticket = None
+    if payment_id:
+        ticket = db.query(GuestTicket).filter(GuestTicket.payment_id == payment_id).first()
+    if not ticket and order_id_raw:
+        try:
+            ticket = db.query(GuestTicket).filter(GuestTicket.order_id == int(order_id_raw)).first()
+        except ValueError:
+            ticket = None
+
+    outcome = "failed"
+    if ticket and ticket.payment_id:
+        verify_request = {"PaymentID": ticket.payment_id}
+        try:
+            details = ameriabank.get_payment_details(ticket.payment_id)
+        except ameriabank.AmeriaBankError as exc:
+            details = None
+            log_payment_event(db, ticket.id, "verify_callback", request_payload=verify_request, response_payload={"error": str(exc)}, success=False)
+
+        if details:
+            was_already_paid = ticket.status in ameriabank.PAID_STATUSES
+            ticket.response_code = details.get("ResponseCode")
+            ticket.response_message = details.get("ResponseMessage")
+            ticket.card_number = details.get("CardNumber")
+            ticket.approval_code = details.get("ApprovalCode")
+            ticket.rrn = details.get("rrn")
+
+            ticket.status = ameriabank.status_from_details(details)
+            is_success = ameriabank.is_paid(details)
+            if is_success:
+                outcome = "success"
+            db.commit()
+            log_payment_event(db, ticket.id, "verify_callback", request_payload=verify_request, response_payload=details, success=is_success)
+
+            if not was_already_paid:
+                event = db.query(Event).filter(Event.id == ticket.event_id).first()
+                if is_success:
+                    if event:
+                        mailer.send_guest_ticket_confirmation(
+                            ticket.email, ticket.full_name, event.title,
+                            event.event_date.strftime("%B %d, %Y at %H:%M"), event.location,
+                        )
+                    mailer.track_event_async(ticket.email, "guest_ticket_purchased", {
+                        "event_title": event.title if event else None, "amount": float(ticket.amount),
+                    })
+                    parts = ticket.full_name.split(" ", 1)
+                    mailer.sync_contact_async(ticket.email, {
+                        "FIRSTNAME": parts[0], "LASTNAME": parts[1] if len(parts) > 1 else "",
+                        "SIGNUP_METHOD": "guest_ticket",
+                    })
+                else:
+                    mailer.track_event_async(ticket.email, "guest_checkout_failed", {"response_message": ticket.response_message})
+
+    target = settings.AMERIABANK_GUEST_SUCCESS_URL if outcome == "success" else settings.AMERIABANK_GUEST_CANCEL_URL
+    return RedirectResponse(url=f"{target}?ticket={outcome}")

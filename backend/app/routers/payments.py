@@ -18,19 +18,6 @@ router = APIRouter(prefix="/payments", tags=["payments"])
 LANG_MAP = {"en": "en", "hy": "am", "ru": "ru"}
 
 
-def _next_order_id(row_id: int) -> int:
-    order_id = settings.AMERIABANK_ORDER_ID_START + row_id - 1
-    if settings.AMERIABANK_TEST_MODE and order_id > settings.AMERIABANK_ORDER_ID_END:
-        raise HTTPException(
-            status_code=503,
-            detail=(
-                "Ameriabank test OrderID range exhausted — request a new range from "
-                "the bank or set AMERIABANK_TEST_MODE=false once credentials go live."
-            ),
-        )
-    return order_id
-
-
 @router.post("/create-checkout")
 def create_checkout(
     db: Session = Depends(get_db),
@@ -46,7 +33,13 @@ def create_checkout(
     db.commit()
     db.refresh(row)
 
-    row.order_id = _next_order_id(row.id)
+    try:
+        row.order_id = ameriabank.next_order_id(db)
+    except ameriabank.AmeriaBankError as exc:
+        row.status = "error"
+        row.response_message = str(exc)
+        db.commit()
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     db.commit()
 
     init_request = {"OrderID": row.order_id, "Amount": float(amount), "Currency": row.currency, "BackURL": settings.AMERIABANK_BACK_URL}

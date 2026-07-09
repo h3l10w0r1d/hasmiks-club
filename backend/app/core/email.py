@@ -257,6 +257,20 @@ def send_rsvp_confirmation(to: str, name: str, event_title: str, event_date: str
     send_async(to, name, f"RSVP Confirmed: {event_title}", html)
 
 
+def send_guest_ticket_confirmation(to: str, name: str, event_title: str, event_date: str, location: str) -> None:
+    html = _wrap(f"""
+    <h2>You're in, {name}! 🎟️</h2>
+    <p>Your one-time ticket for <strong>{event_title}</strong> is confirmed — no membership needed, just show up!</p>
+    <div class="meta">
+      <p>📍 <strong>Location:</strong> {location}</p>
+      <p>🗓 <strong>Date:</strong> {event_date}</p>
+    </div>
+    <p>We look forward to seeing you there!</p>
+    <p>Hasmik's Club</p>
+    """)
+    send_async(to, name, f"Ticket Confirmed: {event_title}", html)
+
+
 def send_rsvp_cancelled(to: str, name: str, event_title: str) -> None:
     html = _wrap(f"""
     <h2>RSVP cancelled</h2>

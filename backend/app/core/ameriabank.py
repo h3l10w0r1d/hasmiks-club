@@ -115,3 +115,24 @@ def status_from_details(details: dict) -> str:
 def is_paid(details: dict) -> bool:
     """True if a GetPaymentDetails response shows the buyer actually paid."""
     return status_from_details(details) in PAID_STATUSES
+
+
+def next_order_id(db) -> int:
+    """Next Ameriabank OrderID, unique across BOTH membership payments and
+    one-time guest tickets — Ameriabank requires order IDs to be globally
+    unique regardless of which local table they're tracked in, so this
+    can't just be "highest row id in one table + offset" once there are two
+    tables drawing from the same namespace."""
+    from sqlalchemy import func as sa_func
+    from app.models.ameria_payment import AmeriaPayment
+    from app.models.guest_ticket import GuestTicket
+
+    max_membership = db.query(sa_func.max(AmeriaPayment.order_id)).scalar() or 0
+    max_guest = db.query(sa_func.max(GuestTicket.order_id)).scalar() or 0
+    next_id = max(max_membership, max_guest, settings.AMERIABANK_ORDER_ID_START - 1) + 1
+    if settings.AMERIABANK_TEST_MODE and next_id > settings.AMERIABANK_ORDER_ID_END:
+        raise AmeriaBankError(
+            "Ameriabank test OrderID range exhausted — request a new range from "
+            "the bank or set AMERIABANK_TEST_MODE=false once credentials go live."
+        )
+    return next_id

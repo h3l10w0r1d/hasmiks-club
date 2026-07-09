@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { Flower2, MapPin, CalendarDays } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
@@ -9,6 +9,7 @@ import { getMe } from '../api/members'
 import { createCheckout } from '../api/payments'
 import GlobalHeader from '../components/GlobalHeader'
 import ConfirmDialog from '../components/ConfirmDialog'
+import GuestCheckoutModal from '../components/GuestCheckoutModal'
 
 /* ─── i18n ──────────────────────────────────────────────────────────────── */
 const copy = {
@@ -36,6 +37,11 @@ const copy = {
     rsvpSuccess:  'You\'re in! Check your email for details.',
     cancelSuccess:'RSVP cancelled.',
     error:        'Something went wrong — please try again.',
+    // one-time guest ticket
+    buyTicket:    price => `Buy a one-time ticket — ֏${Number(price).toLocaleString()}`,
+    ticketSuccess:'Ticket confirmed! Check your email for details.',
+    ticketFailed: 'Your ticket payment didn\'t go through — please try again.',
+    guestSoldOut: 'One-time tickets are sold out for this event.',
   },
   hy: {
     pageTitle:    "Առաջիկա հանդիպումներ — Hasmik's Club",
@@ -58,6 +64,10 @@ const copy = {
     rsvpSuccess:  'Գրանցված եք: Ստուգե՛ք ձեր էլ. փոստը:',
     cancelSuccess:'Գրանցումը չեղարկված է:',
     error:        'Ինչ-որ բան սխալ գնաց — խնդրում ենք կրկին փորձել:',
+    buyTicket:    price => `Գնել մեկանգամյա տոմս — ֏${Number(price).toLocaleString()}`,
+    ticketSuccess:'Տոմսը հաստատված է: Ստուգե՛ք ձեր էլ. փոստը:',
+    ticketFailed: 'Տոմսի վճարումը չհաջողվեց — խնդրում ենք կրկին փորձել:',
+    guestSoldOut: 'Այս միջոցառման մեկանգամյա տոմսերը սպառված են:',
   },
 }
 
@@ -80,6 +90,7 @@ function SeatsBadge({ ev, t }) {
 export default function EventsPage({ lang = 'en' }) {
   const { user, setUser, loading: authLoading } = useAuth()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
   const t = copy[lang] ?? copy.en
 
   const [events, setEvents] = useState([])
@@ -88,10 +99,21 @@ export default function EventsPage({ lang = 'en' }) {
   const [toast, setToast] = useState(null)       // { msg, type }
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(null) // event to confirm-cancel, or null
+  const [guestModalEvent, setGuestModalEvent] = useState(null) // event to buy a one-time ticket for, or null
 
   const showToast = useCallback((msg, type = 'success') => {
     setToast({ msg, type })
     setTimeout(() => setToast(null), 4000)
+  }, [])
+
+  // Land here after a guest ticket purchase — Ameriabank redirects back to
+  // /events?ticket=success|failed since a guest has no dashboard to return to.
+  useEffect(() => {
+    const ticket = searchParams.get('ticket')
+    if (!ticket) return
+    showToast(ticket === 'success' ? t.ticketSuccess : t.ticketFailed, ticket === 'success' ? 'success' : 'error')
+    setSearchParams(p => { p.delete('ticket'); return p }, { replace: true })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   /* fetch events — authenticated route returns rsvp state */
@@ -274,9 +296,20 @@ export default function EventsPage({ lang = 'en' }) {
                     {busy[ev.id] ? '…' : bp.label}
                   </button>
 
-                  {/* unauthenticated hint */}
+                  {/* unauthenticated hint + one-time ticket option */}
                   {!user && (
-                    <span style={styles.hint}>{t.memberOnly}</span>
+                    <>
+                      <span style={styles.hint}>{t.memberOnly}</span>
+                      {ev.ticket_price != null && !ev.is_full && (
+                        ev.guest_tickets_full ? (
+                          <span style={styles.hint}>{t.guestSoldOut}</span>
+                        ) : (
+                          <button style={styles.btnOutline} onClick={() => setGuestModalEvent(ev)}>
+                            {t.buyTicket(ev.ticket_price)}
+                          </button>
+                        )
+                      )}
+                    </>
                   )}
                 </div>
               </div>
@@ -304,6 +337,10 @@ export default function EventsPage({ lang = 'en' }) {
           onConfirm={() => { doCancelRsvp(confirmCancel); setConfirmCancel(null) }}
           onCancel={() => setConfirmCancel(null)}
         />
+      )}
+
+      {guestModalEvent && (
+        <GuestCheckoutModal lang={lang} event={guestModalEvent} onClose={() => setGuestModalEvent(null)} />
       )}
     </div>
   )

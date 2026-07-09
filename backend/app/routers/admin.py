@@ -17,11 +17,12 @@ from app.models.ameria_payment_log import AmeriaPaymentLog
 from app.models.audit_log import AuditLog
 from app.models.content import ContentItem, MemberContent
 from app.models.event import Event
+from app.models.guest_ticket import GuestTicket
 from app.models.notification import Notification
 from app.models.rsvp import RSVP
 from app.models.user import User
 from app.schemas.content import ContentCreate, ContentOut
-from app.schemas.event import EventCreate, EventOut
+from app.schemas.event import EventCreate, EventOut, GuestTicketOut
 from app.schemas.user import UserOut, AdminUserUpdate
 from app.core import ameriabank
 from app.core import email as mailer
@@ -37,7 +38,8 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def _event_out(event: Event) -> EventOut:
-    seats_taken = len(event.rsvps)
+    guest_seats_taken = sum(1 for g in event.guest_tickets if g.status in ameriabank.PAID_STATUSES)
+    seats_taken = len(event.rsvps) + guest_seats_taken
     return EventOut(
         id=event.id, title=event.title, title_hy=event.title_hy,
         description=event.description, description_hy=event.description_hy,
@@ -45,6 +47,8 @@ def _event_out(event: Event) -> EventOut:
         max_seats=event.max_seats, seats_taken=seats_taken,
         seats_available=max(event.max_seats - seats_taken, 0), user_has_rsvp=False,
         cover_url=event.cover_url,
+        ticket_price=event.ticket_price, max_guest_tickets=event.max_guest_tickets,
+        guest_seats_taken=guest_seats_taken,
     )
 
 
@@ -277,6 +281,22 @@ def get_checkin_token(
         event.checkin_token = _secrets.token_urlsafe(16)
         db.commit()
     return {"event_id": event_id, "token": event.checkin_token, "checkin_url": f"/checkin/{event_id}?token={event.checkin_token}"}
+
+
+@router.get("/events/{event_id}/guest-tickets", response_model=List[GuestTicketOut])
+def list_guest_tickets(
+    event_id: int,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_permission('manage_events')),
+):
+    """One-time ticket buyers for this event, paid or not — useful at the
+    door alongside the member RSVP list."""
+    return (
+        db.query(GuestTicket)
+        .filter(GuestTicket.event_id == event_id)
+        .order_by(GuestTicket.created_at)
+        .all()
+    )
 
 
 @router.post("/events", response_model=EventOut, status_code=status.HTTP_201_CREATED)

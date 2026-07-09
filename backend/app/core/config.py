@@ -54,6 +54,11 @@ class Settings(BaseSettings):
     AMERIABANK_BACK_URL: str = "https://hasmiks-club.onrender.com/payments/callback"
     AMERIABANK_SUCCESS_URL: str = "https://www.hasmiksclub.am/dashboard"
     AMERIABANK_CANCEL_URL: str = "https://www.hasmiksclub.am/events"
+    # One-time guest event tickets — a guest has no dashboard to land on, so
+    # both routes go back to the public events page instead.
+    AMERIABANK_GUEST_BACK_URL: str = "https://hasmiks-club.onrender.com/events/guest-checkout/callback"
+    AMERIABANK_GUEST_SUCCESS_URL: str = "https://www.hasmiksclub.am/events"
+    AMERIABANK_GUEST_CANCEL_URL: str = "https://www.hasmiksclub.am/events"
 
     class Config:
         env_file = ".env"
