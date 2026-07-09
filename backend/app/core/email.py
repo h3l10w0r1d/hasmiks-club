@@ -67,9 +67,15 @@ def _sync_contact(email: str, attributes: dict) -> None:
     if settings.BREVO_LIST_ID:
         payload["listIds"] = [settings.BREVO_LIST_ID]
     try:
-        httpx.post(f"{_BREVO}/contacts", json=payload, headers=_brevo_headers(), timeout=10)
+        resp = httpx.post(f"{_BREVO}/contacts", json=payload, headers=_brevo_headers(), timeout=10)
+        # A single malformed attribute (e.g. a phone-shaped field Brevo
+        # validates by name) rejects the WHOLE payload with a 4xx — every
+        # other attribute in this call silently fails to sync too. Log it so
+        # that's diagnosable instead of invisible.
+        if resp.status_code >= 400:
+            logger.warning("Brevo contact sync rejected for %s: %s %s", email, resp.status_code, resp.text)
     except Exception:
-        pass
+        logger.exception("Brevo contact sync failed for %s", email)
 
 
 def sync_contact_async(email: str, attributes: dict) -> None:
@@ -101,7 +107,13 @@ def _base_attributes(user) -> dict:
         "REFERRAL_CODE": user.referral_code or "",
     }
     if user.whatsapp or user.phone:
-        attrs["SMS"] = user.whatsapp or user.phone
+        # Brevo's SMS/WHATSAPP/LANDLINE_NUMBER attributes enforce phone-number
+        # format server-side despite showing "type": "text" in the schema —
+        # a malformed value there gets the WHOLE contact sync rejected (400),
+        # silently dropping every other attribute too. The phone field here is
+        # free-text with no validation, so real data isn't reliably E.164.
+        # PHONE is a plain custom text attribute with no such enforcement.
+        attrs["PHONE"] = user.whatsapp or user.phone
     if user.joined_at:
         attrs["JOINED_AT"] = user.joined_at.date().isoformat()
     if user.referred_by_id and user.referred_by:
@@ -177,9 +189,11 @@ def _track_event(email: str, event_name: str, event_properties: Optional[dict]) 
     if event_properties:
         payload["event_properties"] = event_properties
     try:
-        httpx.post(f"{_BREVO}/events", json=payload, headers=_brevo_headers(), timeout=10)
+        resp = httpx.post(f"{_BREVO}/events", json=payload, headers=_brevo_headers(), timeout=10)
+        if resp.status_code >= 400:
+            logger.warning("Brevo event '%s' rejected for %s: %s %s", event_name, email, resp.status_code, resp.text)
     except Exception:
-        pass
+        logger.exception("Brevo event '%s' failed for %s", event_name, email)
 
 
 def track_event_async(email: str, event_name: str, event_properties: Optional[dict] = None) -> None:
