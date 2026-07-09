@@ -117,6 +117,7 @@ async def payment_callback(request: Request, db: Session = Depends(get_db)):
             log_payment_event(db, row.id, "verify_callback", request_payload=verify_request, response_payload={"error": str(exc)}, success=False)
 
         if details:
+            was_already_paid = row.status in ameriabank.PAID_STATUSES
             row.response_code = details.get("ResponseCode")
             row.response_message = details.get("ResponseMessage")
             row.card_number = details.get("CardNumber")
@@ -133,7 +134,13 @@ async def payment_callback(request: Request, db: Session = Depends(get_db)):
             db.commit()
             log_payment_event(db, row.id, "verify_callback", request_payload=verify_request, response_payload=details, success=is_success)
 
-            if user:
+            # Ameriabank's redirect can legitimately hit this callback more
+            # than once for the same payment (double-click, back/forward,
+            # a defensive retry) — the DB write above is naturally idempotent,
+            # but firing payment_succeeded/sync every time would double-count
+            # revenue events in Brevo. Only fire on the actual transition into
+            # a paid state.
+            if user and not was_already_paid:
                 if is_success:
                     mailer.track_event_async(user.email, "payment_succeeded", {"amount": float(row.amount), "order_id": row.order_id})
                     mailer.sync_member_to_brevo(db, user)
