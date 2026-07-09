@@ -169,6 +169,7 @@ def decline_application(user_id: int, db: Session = Depends(get_db), admin: User
     db.commit()
     db.refresh(user)
     mailer.send_application_declined(user.email, user.full_name)
+    mailer.track_event_async(user.email, "application_declined")
     mailer.sync_member_to_brevo(db, user)
     return user
 
@@ -333,6 +334,8 @@ def create_content(payload: ContentCreate, db: Session = Depends(get_db), admin:
     audit_log(db, f"create_content: {payload.title} (auto-unlocked for {len(active_users)} active members)", admin_id=admin.id, entity_type="content")
     db.commit()
     db.refresh(item)
+    for user in active_users:
+        mailer.track_event_async(user.email, "content_unlocked", {"title": item.title, "type": item.type})
     return _content_out(item, True)
 
 
@@ -370,6 +373,10 @@ def unlock_content(content_id: int, user_id: int, db: Session = Depends(get_db),
         notify.push(db, user_id, "content", f"New content unlocked for you: {item.title}", link="/dashboard?tab=library")
     audit_log(db, f"unlock_content: {item.title} for user #{user_id}", admin_id=admin.id, entity_type="content", entity_id=content_id)
     db.commit()
+    if not exists:
+        user = db.query(User).filter(User.id == user_id).first()
+        if user:
+            mailer.track_event_async(user.email, "content_unlocked", {"title": item.title, "type": item.type})
     return _content_out(item, True)
 
 
@@ -380,14 +387,18 @@ def unlock_content_for_all_active(content_id: int, db: Session = Depends(get_db)
         raise HTTPException(status_code=404, detail="Content not found")
     active_users = db.query(User).filter(User.membership_status == "active").all()
     count = 0
+    newly_unlocked = []
     for user in active_users:
         exists = db.query(MemberContent).filter(MemberContent.user_id == user.id, MemberContent.content_id == content_id).first()
         if not exists:
             db.add(MemberContent(user_id=user.id, content_id=content_id))
             notify.push(db, user.id, "content", f"New content unlocked: {item.title}", link="/dashboard?tab=library")
+            newly_unlocked.append(user)
             count += 1
     audit_log(db, f"unlock_content_all: {item.title} ({count} members)", admin_id=admin.id, entity_type="content", entity_id=content_id)
     db.commit()
+    for user in newly_unlocked:
+        mailer.track_event_async(user.email, "content_unlocked", {"title": item.title, "type": item.type})
     return _content_out(item, True)
 
 

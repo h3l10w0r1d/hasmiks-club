@@ -66,10 +66,32 @@ async def _send_event_reminders() -> None:
         db.close()
 
 
+async def _flag_no_shows() -> None:
+    """Fire event_no_show for RSVPs never checked in, ~24h after the event —
+    same [23h, 25h] window shape as the reminder job above, just looking
+    backward instead of forward."""
+    now = datetime.now(timezone.utc)
+    window_start = now - timedelta(hours=25)
+    window_end = now - timedelta(hours=23)
+    db = SessionLocal()
+    try:
+        past_events = db.query(Event).filter(
+            Event.event_date >= window_start,
+            Event.event_date <= window_end,
+        ).all()
+        for event in past_events:
+            for rsvp in event.rsvps:
+                if not rsvp.checked_in:
+                    mailer.track_event_async(rsvp.user.email, "event_no_show", {"event_title": event.title})
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _grant_admin_on_startup()
     scheduler.add_job(_send_event_reminders, IntervalTrigger(hours=1), id="event_reminders", replace_existing=True)
+    scheduler.add_job(_flag_no_shows, IntervalTrigger(hours=1), id="no_show_flags", replace_existing=True)
     scheduler.start()
     yield
     scheduler.shutdown()

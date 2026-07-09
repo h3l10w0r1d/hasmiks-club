@@ -19,10 +19,17 @@ from app.schemas.user import (
 from app.core.deps import get_current_user
 from app.core.config import settings
 from app.core.telegram_auth import TelegramSignInRequest, verify_telegram_payload
+from app.core import email as mailer
+from app.core.email import _is_profile_complete
 
 router = APIRouter(prefix="/members", tags=["members"])
 
 MAX_PROFILE_PHOTOS = 6
+
+
+def _maybe_fire_profile_completed(user: User, was_complete: bool) -> None:
+    if not was_complete and _is_profile_complete(user):
+        mailer.track_event_async(user.email, "profile_completed")
 
 
 def _configure_cloudinary():
@@ -46,10 +53,13 @@ def update_profile(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    was_complete = _is_profile_complete(current_user)
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(current_user, field, value)
     db.commit()
     db.refresh(current_user)
+    _maybe_fire_profile_completed(current_user, was_complete)
+    mailer.sync_member_to_brevo(db, current_user)
     return current_user
 
 
@@ -59,6 +69,7 @@ async def upload_photo(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    was_complete = _is_profile_complete(current_user)
     _configure_cloudinary()
     if file.content_type not in ("image/jpeg", "image/png", "image/webp", "image/gif"):
         raise HTTPException(status_code=400, detail="Only image files are allowed")
@@ -73,6 +84,8 @@ async def upload_photo(
     current_user.photo_url = result["secure_url"]
     db.commit()
     db.refresh(current_user)
+    _maybe_fire_profile_completed(current_user, was_complete)
+    mailer.sync_member_to_brevo(db, current_user)
     return current_user
 
 
@@ -140,6 +153,8 @@ def link_telegram(
         current_user.telegram_username = payload.username
     db.commit()
     db.refresh(current_user)
+    mailer.track_event_async(current_user.email, "telegram_connected")
+    mailer.sync_member_to_brevo(db, current_user)
     return current_user
 
 

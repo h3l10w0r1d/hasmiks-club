@@ -79,6 +79,11 @@ def sync_contact_async(email: str, attributes: dict) -> None:
     threading.Thread(target=_sync_contact, args=(email, attributes), daemon=True).start()
 
 
+def _is_profile_complete(user) -> bool:
+    has_contact = bool(user.phone or user.whatsapp or user.facebook_url or user.telegram_username)
+    return bool(user.bio and user.photo_url and has_contact)
+
+
 def _base_attributes(user) -> dict:
     parts = (user.full_name or "").split(" ", 1)
     signup_method = "google" if user.google_id else "telegram" if user.telegram_id else "email"
@@ -89,22 +94,35 @@ def _base_attributes(user) -> dict:
         "APPLICATION_STATUS": user.application_status,
         "SIGNUP_METHOD": signup_method,
         "LANG_PREF": user.lang_pref or "en",
+        "IS_VERIFIED": bool(user.is_verified),
+        "ONBOARDING_DONE": bool(user.onboarding_completed),
+        "TELEGRAM_LINKED": bool(user.telegram_id),
+        "PROFILE_COMPLETE": _is_profile_complete(user),
+        "REFERRAL_CODE": user.referral_code or "",
     }
     if user.whatsapp or user.phone:
         attrs["SMS"] = user.whatsapp or user.phone
     if user.joined_at:
         attrs["JOINED_AT"] = user.joined_at.date().isoformat()
+    if user.referred_by_id and user.referred_by:
+        attrs["REFERRED_BY_NAME"] = user.referred_by.full_name
     return attrs
 
 
 def _engagement_attributes(db: Session, user) -> dict:
     """Computed attributes that need a DB round-trip — event/payment history."""
+    from sqlalchemy import func
+
     from app.models.rsvp import RSVP
     from app.models.event import Event
     from app.models.ameria_payment import AmeriaPayment
+    from app.models.content import MemberContent
+    from app.models.user import User
 
     attrs: dict = {
         "EVENTS_ATTENDED": db.query(RSVP).filter(RSVP.user_id == user.id, RSVP.checked_in == True).count(),
+        "REFERRAL_COUNT": db.query(User).filter(User.referred_by_id == user.id).count(),
+        "CONTENT_UNLOCKED": db.query(MemberContent).filter(MemberContent.user_id == user.id).count(),
     }
 
     last_event_date = (
@@ -126,6 +144,13 @@ def _engagement_attributes(db: Session, user) -> dict:
     if last_payment:
         attrs["LAST_PAYMENT_DATE"] = last_payment.created_at.date().isoformat()
         attrs["LAST_PAYMENT_STATUS"] = last_payment.status
+
+    lifetime_value = (
+        db.query(func.coalesce(func.sum(AmeriaPayment.amount), 0))
+        .filter(AmeriaPayment.user_id == user.id, AmeriaPayment.status == "approved")
+        .scalar()
+    )
+    attrs["LIFETIME_VALUE"] = float(lifetime_value or 0)
 
     return attrs
 

@@ -141,6 +141,8 @@ def cancel_rsvp(event_id: int, db: Session = Depends(get_db), current_user: User
                     promoted_user.email, promoted_user.full_name, event.title,
                     event.event_date.strftime("%B %d, %Y at %H:%M"), event.location,
                 )
+                mailer.track_event_async(promoted_user.email, "event_waitlist_promoted", {"event_title": event.title})
+                mailer.sync_member_to_brevo(db, promoted_user)
         mailer.send_rsvp_cancelled(current_user.email, current_user.full_name, event.title)
         mailer.track_event_async(current_user.email, "event_rsvp_cancelled", {"event_title": event.title})
         mailer.sync_member_to_brevo(db, current_user)
@@ -177,6 +179,7 @@ def join_waitlist(event_id: int, db: Session = Depends(get_db), current_user: Us
     )
     db.commit()
     mailer.send_waitlist_joined(current_user.email, current_user.full_name, event.title, position)
+    mailer.track_event_async(current_user.email, "event_waitlist_joined", {"event_title": event.title, "position": position})
     return {"position": position, "event_id": event_id}
 
 
