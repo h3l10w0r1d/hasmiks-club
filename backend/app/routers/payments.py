@@ -5,6 +5,7 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.core import ameriabank
+from app.core import email as mailer
 from app.core.config import settings
 from app.core.deps import get_current_user
 from app.core.payment_log import log_payment_event
@@ -75,6 +76,8 @@ def create_checkout(
     row.payment_id = resp.get("PaymentID")
     db.commit()
 
+    mailer.track_event_async(current_user.email, "checkout_started", {"amount": float(amount)})
+
     lang = LANG_MAP.get(current_user.lang_pref, "en")
     return {"url": ameriabank.payment_page_url(row.payment_id, lang)}
 
@@ -122,13 +125,20 @@ async def payment_callback(request: Request, db: Session = Depends(get_db)):
 
             row.status = ameriabank.status_from_details(details)
             is_success = ameriabank.is_paid(details)
+            user = db.query(User).filter(User.id == row.user_id).first()
             if is_success:
-                user = db.query(User).filter(User.id == row.user_id).first()
                 if user:
                     user.membership_status = "active"
                 outcome = "success"
             db.commit()
             log_payment_event(db, row.id, "verify_callback", request_payload=verify_request, response_payload=details, success=is_success)
+
+            if user:
+                if is_success:
+                    mailer.track_event_async(user.email, "payment_succeeded", {"amount": float(row.amount), "order_id": row.order_id})
+                    mailer.sync_member_to_brevo(db, user)
+                else:
+                    mailer.track_event_async(user.email, "payment_failed", {"response_message": row.response_message})
 
     target = settings.AMERIABANK_SUCCESS_URL if outcome == "success" else settings.AMERIABANK_CANCEL_URL
     return RedirectResponse(url=f"{target}?payment={outcome}")

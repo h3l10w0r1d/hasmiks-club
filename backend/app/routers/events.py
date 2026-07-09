@@ -104,6 +104,8 @@ def rsvp(event_id: int, db: Session = Depends(get_db), current_user: User = Depe
         current_user.email, current_user.full_name, event.title,
         event.event_date.strftime("%B %d, %Y at %H:%M"), event.location,
     )
+    mailer.track_event_async(current_user.email, "event_rsvp", {"event_title": event.title, "event_date": event.event_date.isoformat()})
+    mailer.sync_member_to_brevo(db, current_user)
     return rsvp_obj
 
 
@@ -140,6 +142,8 @@ def cancel_rsvp(event_id: int, db: Session = Depends(get_db), current_user: User
                     event.event_date.strftime("%B %d, %Y at %H:%M"), event.location,
                 )
         mailer.send_rsvp_cancelled(current_user.email, current_user.full_name, event.title)
+        mailer.track_event_async(current_user.email, "event_rsvp_cancelled", {"event_title": event.title})
+        mailer.sync_member_to_brevo(db, current_user)
 
     db.commit()
 
@@ -219,3 +223,5 @@ def self_checkin(
         raise HTTPException(status_code=400, detail="You don't have an RSVP for this event")
     rsvp.checked_in = True
     db.commit()
+    mailer.track_event_async(current_user.email, "event_checked_in", {"event_title": event.title})
+    mailer.sync_member_to_brevo(db, current_user)

@@ -1,10 +1,14 @@
 """
-All outbound transactional email (via Resend) + Brevo CRM contact management.
+All outbound transactional email (via Resend) + Brevo CRM contact/event sync.
 Both talk to their REST APIs directly via httpx — no SDKs needed.
 """
 import logging
 import threading
+from typing import Optional
+
 import httpx
+from sqlalchemy.orm import Session
+
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -56,19 +60,10 @@ def send_async(to_email: str, to_name: str, subject: str, html: str) -> None:
 
 # ── contact management (Brevo CRM) ─────────────────────────────────────────────
 
-def _sync_contact(email: str, name: str, membership_status: str) -> None:
+def _sync_contact(email: str, attributes: dict) -> None:
     if not settings.BREVO_API_KEY:
         return
-    parts = name.split(" ", 1)
-    payload: dict = {
-        "email": email,
-        "attributes": {
-            "FIRSTNAME": parts[0],
-            "LASTNAME": parts[1] if len(parts) > 1 else "",
-            "MEMBERSHIP_STATUS": membership_status,
-        },
-        "updateEnabled": True,
-    }
+    payload: dict = {"email": email, "attributes": attributes, "updateEnabled": True}
     if settings.BREVO_LIST_ID:
         payload["listIds"] = [settings.BREVO_LIST_ID]
     try:
@@ -77,27 +72,96 @@ def _sync_contact(email: str, name: str, membership_status: str) -> None:
         pass
 
 
-def sync_contact_async(email: str, name: str, membership_status: str) -> None:
+def sync_contact_async(email: str, attributes: dict) -> None:
+    """Create-or-update a Brevo contact with the given attribute dict."""
     if not email:
         return  # Telegram-only members have no email — nothing to sync
-    threading.Thread(target=_sync_contact, args=(email, name, membership_status), daemon=True).start()
+    threading.Thread(target=_sync_contact, args=(email, attributes), daemon=True).start()
 
 
-def update_contact_status(email: str, membership_status: str) -> None:
-    """Update membership status attribute on an existing Brevo contact."""
-    if not settings.BREVO_API_KEY or not email:
+def _base_attributes(user) -> dict:
+    parts = (user.full_name or "").split(" ", 1)
+    signup_method = "google" if user.google_id else "telegram" if user.telegram_id else "email"
+    attrs: dict = {
+        "FIRSTNAME": parts[0],
+        "LASTNAME": parts[1] if len(parts) > 1 else "",
+        "MEMBERSHIP_STATUS": user.membership_status,
+        "APPLICATION_STATUS": user.application_status,
+        "SIGNUP_METHOD": signup_method,
+        "LANG_PREF": user.lang_pref or "en",
+    }
+    if user.whatsapp or user.phone:
+        attrs["SMS"] = user.whatsapp or user.phone
+    if user.joined_at:
+        attrs["JOINED_AT"] = user.joined_at.date().isoformat()
+    return attrs
+
+
+def _engagement_attributes(db: Session, user) -> dict:
+    """Computed attributes that need a DB round-trip — event/payment history."""
+    from app.models.rsvp import RSVP
+    from app.models.event import Event
+    from app.models.ameria_payment import AmeriaPayment
+
+    attrs: dict = {
+        "EVENTS_ATTENDED": db.query(RSVP).filter(RSVP.user_id == user.id, RSVP.checked_in == True).count(),
+    }
+
+    last_event_date = (
+        db.query(Event.event_date)
+        .join(RSVP, RSVP.event_id == Event.id)
+        .filter(RSVP.user_id == user.id)
+        .order_by(Event.event_date.desc())
+        .first()
+    )
+    if last_event_date:
+        attrs["LAST_EVENT_DATE"] = last_event_date[0].date().isoformat()
+
+    last_payment = (
+        db.query(AmeriaPayment)
+        .filter(AmeriaPayment.user_id == user.id)
+        .order_by(AmeriaPayment.created_at.desc())
+        .first()
+    )
+    if last_payment:
+        attrs["LAST_PAYMENT_DATE"] = last_payment.created_at.date().isoformat()
+        attrs["LAST_PAYMENT_STATUS"] = last_payment.status
+
+    return attrs
+
+
+def sync_member_to_brevo(db: Session, user) -> None:
+    """Push the full attribute set for this member to Brevo (create-or-update).
+
+    Call this after anything that changes a synced field: membership status,
+    application status, an RSVP/check-in, or a payment.
+    """
+    if not user.email or not settings.BREVO_API_KEY:
         return
-    def _do():
-        try:
-            httpx.put(
-                f"{_BREVO}/contacts/{email}",
-                json={"attributes": {"MEMBERSHIP_STATUS": membership_status}},
-                headers=_brevo_headers(),
-                timeout=10,
-            )
-        except Exception:
-            pass
-    threading.Thread(target=_do, daemon=True).start()
+    attrs = _base_attributes(user)
+    attrs.update(_engagement_attributes(db, user))
+    sync_contact_async(user.email, attrs)
+
+
+# ── behavioral events (Brevo marketing automation triggers) ────────────────────
+
+def _track_event(email: str, event_name: str, event_properties: Optional[dict]) -> None:
+    if not settings.BREVO_API_KEY:
+        return
+    payload: dict = {"event_name": event_name, "identifiers": {"email_id": email}}
+    if event_properties:
+        payload["event_properties"] = event_properties
+    try:
+        httpx.post(f"{_BREVO}/events", json=payload, headers=_brevo_headers(), timeout=10)
+    except Exception:
+        pass
+
+
+def track_event_async(email: str, event_name: str, event_properties: Optional[dict] = None) -> None:
+    """Fire a timestamped behavioral event Brevo automations can trigger on."""
+    if not email:
+        return  # Telegram-only members have no email — nothing to track
+    threading.Thread(target=_track_event, args=(email, event_name, event_properties), daemon=True).start()
 
 
 # ── email templates ────────────────────────────────────────────────────────────

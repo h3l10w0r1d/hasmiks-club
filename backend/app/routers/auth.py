@@ -61,6 +61,18 @@ def _gen_referral_code(db: Session) -> str:
     return secrets.token_hex(4).upper()
 
 
+def _track_new_signup(db: Session, user: User, method: str, referrer: "User | None") -> None:
+    """CRM side-effects shared by every signup path: sync the new contact,
+    fire the account_registered / application_submitted events, and credit
+    the referrer (if any) with a referral_signup event."""
+    mailer.sync_member_to_brevo(db, user)
+    mailer.track_event_async(user.email, "account_registered", {"method": method, "referred": referrer is not None})
+    if user.application_status == "pending":
+        mailer.track_event_async(user.email, "application_submitted")
+    if referrer is not None:
+        mailer.track_event_async(referrer.email, "referral_signup", {"referred_user_name": user.full_name})
+
+
 @router.post("/register", response_model=TokenOut, status_code=status.HTTP_201_CREATED)
 def register(payload: UserRegister, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == payload.email).first():
@@ -71,6 +83,7 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
 
     # Resolve referral code → referred_by_id
     referred_by_id = None
+    referrer = None
     if payload.referral_code:
         referrer = db.query(User).filter(User.referral_code == payload.referral_code.upper()).first()
         if referrer:
@@ -105,7 +118,7 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
         mailer.send_application_received(user.email, user.full_name)
     else:
         mailer.send_welcome(user.email, user.full_name)
-    mailer.sync_contact_async(user.email, user.full_name, user.membership_status)
+    _track_new_signup(db, user, "email", referrer)
 
     token = create_access_token(str(user.id))
     return TokenOut(access_token=token, user=UserOut.model_validate(user))
@@ -143,6 +156,7 @@ def google_sign_in(payload: GoogleSignInRequest, db: Session = Depends(get_db)):
 
     user = db.query(User).filter(User.google_id == google_sub).first()
     is_new = False
+    referrer = None
 
     if not user:
         # Auto-link: same email already registered (e.g. via email/password) → attach this Google account.
@@ -185,7 +199,7 @@ def google_sign_in(payload: GoogleSignInRequest, db: Session = Depends(get_db)):
             mailer.send_application_received(user.email, user.full_name)
         else:
             mailer.send_welcome(user.email, user.full_name)
-        mailer.sync_contact_async(user.email, user.full_name, user.membership_status)
+        _track_new_signup(db, user, "google", referrer)
 
     token = create_access_token(str(user.id))
     return TokenOut(access_token=token, user=UserOut.model_validate(user))
@@ -200,6 +214,7 @@ def telegram_sign_in(payload: TelegramSignInRequest, db: Session = Depends(get_d
     full_name = f"{payload.first_name} {payload.last_name}".strip() if payload.last_name else payload.first_name
     user = db.query(User).filter(User.telegram_id == payload.id).first()
     is_new = False
+    referrer = None
 
     if not user:
         # Telegram never provides an email, so there's nothing reliable to auto-link
@@ -240,9 +255,10 @@ def telegram_sign_in(payload: TelegramSignInRequest, db: Session = Depends(get_d
     _ensure_admin(user, db)
 
     if is_new:
-        # No email to send a welcome/application-received notice to — sync_contact_async
-        # and send_* already no-op safely when email is None, so nothing further needed.
-        mailer.sync_contact_async(user.email, user.full_name, user.membership_status)
+        # No email to send a welcome/application-received notice to — the CRM
+        # calls in _track_new_signup already no-op safely when email is None,
+        # except the referral_signup event, which still fires to the referrer.
+        _track_new_signup(db, user, "telegram", referrer)
 
     token = create_access_token(str(user.id))
     return TokenOut(access_token=token, user=UserOut.model_validate(user))

@@ -105,7 +105,7 @@ def update_member(
     db.commit()
     db.refresh(user)
     if user.membership_status != old_status:
-        mailer.update_contact_status(user.email, user.membership_status)
+        mailer.sync_member_to_brevo(db, user)
         if user.membership_status == "active":
             notify.push(db, user.id, "system", "Your membership is now active! Welcome to Hasmik's Club 🌸")
             db.commit()
@@ -154,6 +154,8 @@ def approve_application(user_id: int, db: Session = Depends(get_db), admin: User
     db.commit()
     db.refresh(user)
     mailer.send_application_approved(user.email, user.full_name)
+    mailer.sync_member_to_brevo(db, user)
+    mailer.track_event_async(user.email, "application_approved")
     return user
 
 
@@ -167,6 +169,7 @@ def decline_application(user_id: int, db: Session = Depends(get_db), admin: User
     db.commit()
     db.refresh(user)
     mailer.send_application_declined(user.email, user.full_name)
+    mailer.sync_member_to_brevo(db, user)
     return user
 
 
