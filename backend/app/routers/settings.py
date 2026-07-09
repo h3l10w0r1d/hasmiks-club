@@ -25,4 +25,5 @@ def public_settings(db: Session = Depends(get_db)):
         "club_instagram": _db_setting(db, "club_instagram", ""),
         "club_location": _db_setting(db, "club_location", ""),
         "club_email": _db_setting(db, "club_email", ""),
+        "club_phone": _db_setting(db, "club_phone", ""),
     }

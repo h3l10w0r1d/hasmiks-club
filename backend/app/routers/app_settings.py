@@ -24,6 +24,8 @@ PUBLIC_KEYS = {
     "club_description",
     "club_instagram",
     "club_location",
+    "club_email",
+    "club_phone",
 }
 
 ALL_KEYS = PUBLIC_KEYS | {

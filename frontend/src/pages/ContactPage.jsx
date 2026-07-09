@@ -11,7 +11,7 @@ const copy = {
     eyebrow: 'Get in Touch',
     title: "We'd love to hear from you.",
     sub: "Questions about joining, our gatherings, or anything else? Reach us through any of the channels below — Telegram is the fastest way.",
-    telegram: 'Telegram', instagram: 'Instagram', email: 'Email', location: 'Location',
+    telegram: 'Telegram', instagram: 'Instagram', email: 'Email', location: 'Location', phone: 'Phone',
     telegramValue: 'Message us on Telegram',
     formTitle: 'Send us a message',
     name: 'Your name', emailLabel: 'Your email', message: 'Message',
@@ -25,7 +25,7 @@ const copy = {
     eyebrow: 'Կապ մեզ հետ',
     title: 'Ուրախ կլինենք լսել քեզնից։',
     sub: "Հարցե՞ր ունես անդամակցության, հանդիպումների կամ այլ բանի մասին։ Կապվիր մեզ հետ ստորև նշված ցանկացած եղանակով․ ամենաարագը Telegram-ն է։",
-    telegram: 'Telegram', instagram: 'Instagram', email: 'Էլ. փոստ', location: 'Հասցե',
+    telegram: 'Telegram', instagram: 'Instagram', email: 'Էլ. փոստ', location: 'Հասցե', phone: 'Հեռախոս',
     telegramValue: 'Գրիր մեզ Telegram-ում',
     formTitle: 'Ուղարկիր մեզ հաղորդագրություն',
     name: 'Քո անունը', emailLabel: 'Քո էլ. փոստը', message: 'Հաղորդագրություն',
@@ -50,6 +50,7 @@ export default function ContactPage({ lang = 'en', setLang }) {
   const igUrl = igHandle ? `https://instagram.com/${igHandle}` : ''
   const location = settings?.club_location || ''
   const email = settings?.club_email || ''
+  const phone = settings?.club_phone || ''
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -92,6 +93,12 @@ export default function ContactPage({ lang = 'en', setLang }) {
               <a className="contact-card" href={`mailto:${email}`}>
                 <span className="cc-label">{c.email}</span>
                 <span className="cc-value">{email}</span>
+              </a>
+            )}
+            {phone && (
+              <a className="contact-card" href={`tel:${phone.replace(/[^\d+]/g, '')}`}>
+                <span className="cc-label">{c.phone}</span>
+                <span className="cc-value">{phone}</span>
               </a>
             )}
             {location && (
