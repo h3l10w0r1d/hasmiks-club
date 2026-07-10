@@ -340,7 +340,7 @@ def list_guest_tickets(
 def _guest_ticket_out(t: GuestTicket, event: "Event | None" = None) -> GuestTicketOut:
     return GuestTicketOut(
         id=t.id, event_id=t.event_id, event_title=event.title if event else None,
-        full_name=t.full_name, email=t.email, amount=t.amount, status=t.status,
+        full_name=t.full_name, email=t.email, phone=t.phone, amount=t.amount, status=t.status,
         email_verified=t.email_verified, checked_in=t.checked_in, created_at=t.created_at,
     )
 

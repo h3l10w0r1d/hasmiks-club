@@ -14,8 +14,8 @@ export const selfCheckin = (eventId, token) => client.post(`/events/${eventId}/c
 export const getCheckinToken = (eventId) => client.get(`/admin/events/${eventId}/checkin-token`).then(r => r.data)
 
 // one-time guest ticket (no account), 3 steps: start (emails a code) -> verify -> checkout (returns { url })
-export const guestTicketStart = (eventId, { full_name, email, lang_pref }) =>
-  client.post(`/events/${eventId}/guest-ticket/start`, { full_name, email, lang_pref }).then((r) => r.data)
+export const guestTicketStart = (eventId, { full_name, email, phone, lang_pref }) =>
+  client.post(`/events/${eventId}/guest-ticket/start`, { full_name, email, phone, lang_pref }).then((r) => r.data)
 export const guestTicketResendCode = (eventId, ticketId) =>
   client.post(`/events/${eventId}/guest-ticket/${ticketId}/resend-code`).then((r) => r.data)
 export const guestTicketVerify = (eventId, ticketId, code) =>

@@ -1,12 +1,15 @@
 import { useEffect, useRef, useState } from 'react'
 import { X } from 'lucide-react'
 import { guestTicketStart, guestTicketResendCode, guestTicketVerify, guestTicketCheckout } from '../api/events'
+import CountryPhoneInput from './CountryPhoneInput'
+import { COUNTRIES } from '../data/countries'
 
 const copy = {
   en: {
     title: 'Buy a one-time ticket',
     name: 'Your name',
     email: 'Your email',
+    phoneRequired: 'Phone number is required',
     priceLabel: price => `Ticket price: ֏${Number(price).toLocaleString()}`,
     submit: 'Send verification code',
     submitting: 'Sending code…',
@@ -28,6 +31,7 @@ const copy = {
     title: 'Գնել մեկանգամյա տոմս',
     name: 'Ձեր անունը',
     email: 'Ձեր էլ. հասցեն',
+    phoneRequired: 'Հեռախոսահամարը պարտադիր է',
     priceLabel: price => `Տոմսի արժեքը՝ ֏${Number(price).toLocaleString()}`,
     submit: 'Ուղարկել հաստատման կոդը',
     submitting: 'Ուղարկվում է…',
@@ -52,6 +56,8 @@ export default function GuestCheckoutModal({ lang = 'en', event, onClose }) {
   const [step, setStep] = useState('form') // form | code | paying
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
+  const [phoneCountry, setPhoneCountry] = useState(COUNTRIES[0])
+  const [phoneNumber, setPhoneNumber] = useState('')
   const [ticketId, setTicketId] = useState(null)
   const [code, setCode] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -76,7 +82,8 @@ export default function GuestCheckoutModal({ lang = 'en', event, onClose }) {
     setAccountExists(false)
     setSubmitting(true)
     try {
-      const { ticket_id, resend_available_in } = await guestTicketStart(event.id, { full_name: fullName, email, lang_pref: lang })
+      const phone = `${phoneCountry.code} ${phoneNumber}`.trim()
+      const { ticket_id, resend_available_in } = await guestTicketStart(event.id, { full_name: fullName, email, phone, lang_pref: lang })
       setTicketId(ticket_id)
       setResendIn(resend_available_in)
       setStep('code')
@@ -228,6 +235,14 @@ export default function GuestCheckoutModal({ lang = 'en', event, onClose }) {
                     style={{ border: '1px solid #DDD0BA', borderRadius: 8, padding: '12px 14px', fontSize: 16, fontFamily: 'inherit', color: '#180C04' }}
                   />
                 </label>
+                <CountryPhoneInput
+                  lang={lang}
+                  country={phoneCountry}
+                  onCountryChange={setPhoneCountry}
+                  number={phoneNumber}
+                  onNumberChange={setPhoneNumber}
+                  required
+                />
 
                 {error && <p style={{ fontSize: 16, color: '#7E3434', fontWeight: 500, margin: 0 }}>{error}</p>}
 

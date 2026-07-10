@@ -21,6 +21,7 @@ class GuestTicket(Base):
     event_id = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
     full_name = Column(String, nullable=False)
     email = Column(String, nullable=False, index=True)
+    phone = Column(String(32), nullable=True)
     amount = Column(Numeric(12, 2), nullable=False)
     currency = Column(String(3), nullable=False, default="051")
     order_id = Column(Integer, unique=True, index=True, nullable=True)

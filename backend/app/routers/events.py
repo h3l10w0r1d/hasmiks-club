@@ -330,15 +330,18 @@ def _reject_duplicate_paid_ticket(db: Session, event_id: int, email: str, full_n
 
 @router.post("/{event_id}/guest-ticket/start", response_model=GuestCheckoutStartOut, status_code=status.HTTP_201_CREATED)
 def guest_ticket_start(event_id: int, payload: GuestCheckoutIn, db: Session = Depends(get_db)):
-    """Step 1 of 3: collect name+email, email a 6-digit code. Nothing is
+    """Step 1 of 3: collect name+email+phone, email a 6-digit code. Nothing is
     charged yet — a typo'd email would otherwise mean a paid ticket that's
     unreachable, so ownership is confirmed before any payment starts."""
     email = payload.email.strip().lower()
+    phone = (payload.phone or "").strip()
+    if not phone:
+        raise HTTPException(status_code=400, detail="Phone number is required")
     event = _validate_guest_checkout_request(db, event_id, email)
     _reject_duplicate_paid_ticket(db, event_id, email, payload.full_name)
 
     ticket = GuestTicket(
-        event_id=event.id, full_name=payload.full_name, email=email,
+        event_id=event.id, full_name=payload.full_name, email=email, phone=phone,
         amount=event.ticket_price, currency=settings.AMERIABANK_CURRENCY, status="unverified",
         verification_code=_gen_code(), verification_sent_at=datetime.now(timezone.utc),
     )
@@ -472,6 +475,7 @@ def member_guest_ticket_checkout(
 
     ticket = GuestTicket(
         event_id=event.id, full_name=current_user.full_name, email=current_user.email,
+        phone=current_user.whatsapp or current_user.phone,
         amount=event.ticket_price, currency=settings.AMERIABANK_CURRENCY, status="started",
         email_verified=True,
     )

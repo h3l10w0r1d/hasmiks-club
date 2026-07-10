@@ -750,7 +750,7 @@ export default function AdminPage() {
     if (guestTicketStatusFilter !== 'all' && t.status !== guestTicketStatusFilter) return false
     if (!guestTicketQuery) return true
     const q = guestTicketQuery.toLowerCase()
-    return t.full_name.toLowerCase().includes(q) || t.email.toLowerCase().includes(q) || (t.event_title || '').toLowerCase().includes(q)
+    return t.full_name.toLowerCase().includes(q) || t.email.toLowerCase().includes(q) || (t.event_title || '').toLowerCase().includes(q) || (t.phone || '').toLowerCase().includes(q)
   })
 
   const currentTab = TABS.find(t => t.key === tab)
@@ -1933,7 +1933,7 @@ export default function AdminPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       className="pl-9"
-                      placeholder="Search by name, email, or event…"
+                      placeholder="Search by name, email, phone, or event…"
                       value={guestTicketQuery}
                       onChange={e => setGuestTicketQuery(e.target.value)}
                     />
@@ -1959,6 +1959,7 @@ export default function AdminPage() {
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Email</TableHead>
+                        <TableHead>Phone</TableHead>
                         <TableHead>Event</TableHead>
                         <TableHead>Amount</TableHead>
                         <TableHead>Status</TableHead>
@@ -1969,13 +1970,14 @@ export default function AdminPage() {
                     </TableHeader>
                     <TableBody>
                       {isLoading('one_timers')
-                        ? <TableSkeleton cols={8} />
+                        ? <TableSkeleton cols={9} />
                         : filteredGuestTickets.length === 0
-                          ? <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-12">No one-time ticket purchases yet</TableCell></TableRow>
+                          ? <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-12">No one-time ticket purchases yet</TableCell></TableRow>
                           : filteredGuestTickets.map(t => (
                             <TableRow key={t.id}>
                               <TableCell className="font-medium text-sm">{t.full_name}</TableCell>
                               <TableCell className="text-muted-foreground text-xs">{t.email}</TableCell>
+                              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">{t.phone || '—'}</TableCell>
                               <TableCell className="text-sm">{t.event_title || '—'}</TableCell>
                               <TableCell className="text-sm">{t.amount} AMD</TableCell>
                               <TableCell><Badge variant={STATUS_BADGE[t.status] || 'muted'}>{t.status}</Badge></TableCell>

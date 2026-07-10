@@ -68,6 +68,7 @@ class PublicEventOut(BaseModel):
 class GuestCheckoutIn(BaseModel):
     full_name: str
     email: str
+    phone: Optional[str] = None
     lang_pref: Optional[str] = "en"
 
 
@@ -90,6 +91,7 @@ class GuestTicketOut(BaseModel):
     event_title: Optional[str] = None
     full_name: str
     email: str
+    phone: Optional[str] = None
     amount: Decimal
     status: str
     email_verified: bool = False
