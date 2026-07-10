@@ -34,7 +34,7 @@ import {
   adminGetApplications, adminApproveApplication, adminDeclineApplication,
   adminGetReferrals,
   adminGetEvents, adminGetEventAttendees, adminCreateEvent, adminUpdateEvent, adminDeleteEvent,
-  adminToggleCheckin,
+  adminToggleCheckin, adminToggleGuestTicketCheckin,
   adminGetContent, adminCreateContent, adminUpdateContent, adminDeleteContent,
   adminUnlockContent, adminUnlockContentForAll,
   adminUploadImage,
@@ -487,10 +487,15 @@ export default function AdminPage() {
     try { const list = await adminGetEventAttendees(evId); setAttendees(a => ({ ...a, [evId]: list })) }
     catch { flash('Failed to load attendees', true) }
   }
-  const handleCheckin = async (evId, userId) => {
+  const handleCheckin = async (evId, attendee) => {
     try {
-      const res = await adminToggleCheckin(evId, userId)
-      setAttendees(a => ({ ...a, [evId]: a[evId].map(att => att.id === userId ? { ...att, checked_in: res.checked_in } : att) }))
+      const res = attendee.source === 'guest'
+        ? await adminToggleGuestTicketCheckin(evId, attendee.id)
+        : await adminToggleCheckin(evId, attendee.id)
+      setAttendees(a => ({
+        ...a,
+        [evId]: a[evId].map(att => (att.id === attendee.id && att.source === attendee.source) ? { ...att, checked_in: res.checked_in } : att),
+      }))
     } catch { flash('Check-in failed', true) }
   }
 
@@ -1163,13 +1168,15 @@ export default function AdminPage() {
                       {attendees[ev.id] && (
                         <div className="border-t border-border bg-muted/30 px-5 py-4">
                           {attendees[ev.id].length === 0
-                            ? <p className="text-sm text-muted-foreground">No RSVPs yet.</p>
+                            ? <p className="text-sm text-muted-foreground">No RSVPs or one-time tickets yet.</p>
                             : (
                               <>
                                 <div className="flex items-center gap-3 mb-3 text-xs text-muted-foreground">
                                   <span>
                                     <strong className="text-emerald-600">{attendees[ev.id].filter(a => a.checked_in).length}</strong> / {attendees[ev.id].length} checked in
                                   </span>
+                                  <span>·</span>
+                                  <span>{attendees[ev.id].filter(a => a.source === 'guest').length} one-timer{attendees[ev.id].filter(a => a.source === 'guest').length !== 1 ? 's' : ''}</span>
                                 </div>
                                 <Table>
                                   <TableHeader>
@@ -1182,7 +1189,7 @@ export default function AdminPage() {
                                   </TableHeader>
                                   <TableBody>
                                     {attendees[ev.id].map(a => (
-                                      <TableRow key={a.id}>
+                                      <TableRow key={`${a.source}-${a.id}`}>
                                         <TableCell>
                                           <div className="flex items-center gap-2">
                                             <MemberAvatar name={a.full_name} size="sm" />
@@ -1190,12 +1197,12 @@ export default function AdminPage() {
                                           </div>
                                         </TableCell>
                                         <TableCell className="text-muted-foreground text-sm">{a.email}</TableCell>
-                                        <TableCell><Badge variant={a.membership_status === 'active' ? 'success' : 'muted'}>{a.membership_status}</Badge></TableCell>
+                                        <TableCell><Badge variant={a.source === 'guest' ? 'secondary' : a.membership_status === 'active' ? 'success' : 'muted'}>{a.source === 'guest' ? 'one-timer' : a.membership_status}</Badge></TableCell>
                                         <TableCell>
                                           <Button
                                             size="sm"
                                             variant={a.checked_in ? 'success' : 'outline'}
-                                            onClick={() => handleCheckin(ev.id, a.id)}
+                                            onClick={() => handleCheckin(ev.id, a)}
                                           >
                                             {a.checked_in ? <><CheckCircle2 className="h-3.5 w-3.5" /> Present</> : 'Mark present'}
                                           </Button>

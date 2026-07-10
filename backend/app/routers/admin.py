@@ -229,7 +229,8 @@ def list_events(db: Session = Depends(get_db), _: User = Depends(require_permiss
 
 
 class AttendeeOut(BaseModel):
-    id: int
+    id: int  # user.id for source="member", GuestTicket.id for source="guest"
+    source: str = "member"  # member | guest — which table `id` refers to, and which checkin endpoint to use
     full_name: str
     email: Optional[str] = None
     membership_status: str
@@ -239,6 +240,10 @@ class AttendeeOut(BaseModel):
 
 @router.get("/events/{event_id}/attendees", response_model=List[AttendeeOut])
 def event_attendees(event_id: int, db: Session = Depends(get_db), _: User = Depends(require_permission('manage_events'))):
+    """Everyone actually attending this event — subscribed members who RSVP'd
+    AND one-time guest-ticket buyers, merged into a single door list. These
+    are two entirely separate tables (RSVP vs GuestTicket), so without this
+    merge an admin checking who's coming would only ever see half the room."""
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -247,9 +252,19 @@ def event_attendees(event_id: int, db: Session = Depends(get_db), _: User = Depe
         u = db.query(User).filter(User.id == r.user_id).first()
         if u:
             result.append(AttendeeOut(
-                id=u.id, full_name=u.full_name, email=u.email,
+                id=u.id, source="member", full_name=u.full_name, email=u.email,
                 membership_status=u.membership_status, checked_in=r.checked_in,
             ))
+    guest_tickets = (
+        db.query(GuestTicket)
+        .filter(GuestTicket.event_id == event_id, GuestTicket.status.in_(ameriabank.PAID_STATUSES))
+        .all()
+    )
+    for t in guest_tickets:
+        result.append(AttendeeOut(
+            id=t.id, source="guest", full_name=t.full_name, email=t.email,
+            membership_status="one-timer", checked_in=t.checked_in,
+        ))
     return result
 
 
@@ -266,6 +281,26 @@ def toggle_checkin(
     audit_log(db, f"{action}: user #{user_id} at event #{event_id}", admin_id=admin.id, entity_type="event", entity_id=event_id)
     db.commit()
     return {"checked_in": rsvp.checked_in}
+
+
+@router.post("/events/{event_id}/guest-tickets/{ticket_id}/checkin")
+def toggle_guest_ticket_checkin(
+    event_id: int, ticket_id: int,
+    db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_events')),
+):
+    """Manual toggle for the merged attendee list — same purpose as
+    toggle_checkin above but for a GuestTicket, so the door list's checkbox
+    works uniformly whether the row is a member or a one-timer. The QR
+    scanner (POST /admin/guest-tickets/checkin) remains the normal path;
+    this covers the manual override case (lost phone, QR won't scan, etc.)."""
+    ticket = db.query(GuestTicket).filter(GuestTicket.id == ticket_id, GuestTicket.event_id == event_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    ticket.checked_in = not ticket.checked_in
+    action = "checkin" if ticket.checked_in else "checkout"
+    audit_log(db, f"{action}: guest ticket #{ticket_id} at event #{event_id}", admin_id=admin.id, entity_type="guest_ticket", entity_id=ticket_id)
+    db.commit()
+    return {"checked_in": ticket.checked_in}
 
 
 @router.get("/events/{event_id}/checkin-token")

@@ -21,6 +21,7 @@ export const adminCreateEvent         = (data)       => client.post('/admin/even
 export const adminUpdateEvent         = (id, data)   => client.patch(`/admin/events/${id}`, data).then(r => r.data)
 export const adminDeleteEvent         = (id)         => client.delete(`/admin/events/${id}`)
 export const adminToggleCheckin       = (evId, uid)  => client.post(`/admin/events/${evId}/checkin/${uid}`).then(r => r.data)
+export const adminToggleGuestTicketCheckin = (evId, ticketId) => client.post(`/admin/events/${evId}/guest-tickets/${ticketId}/checkin`).then(r => r.data)
 
 // content
 export const adminGetContent          = ()           => client.get('/admin/content').then(r => r.data)
