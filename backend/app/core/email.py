@@ -4,6 +4,7 @@ Both talk to their REST APIs directly via httpx — no SDKs needed.
 """
 import logging
 import threading
+from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
@@ -204,41 +205,63 @@ def track_event_async(email: str, event_name: str, event_properties: Optional[di
 
 
 # ── email templates ────────────────────────────────────────────────────────────
+# Card-based layout (logo banner + stacked white rounded cards) matching the
+# site's actual brand palette (--rose #7E3434, --deep #180C04, --sand/--cream
+# warm neutrals — see frontend/src/App.css :root). The logo is the real
+# production-hosted wordmark, not a data: URI — Gmail and most other webmail
+# clients strip inline base64 images from HTML mail (see _qr_image_url above
+# for the same lesson learned the hard way with the check-in QR).
+
+_LOGO_URL = "https://www.hasmiksclub.am/logo-full.png"
 
 _STYLE = """
 <style>
-  body { font-family: Georgia, serif; color: #2c1a1a; background: #fff8f5; margin: 0; padding: 0; }
-  .wrap { max-width: 560px; margin: 40px auto; background: #fff; border-radius: 16px;
-          padding: 40px; box-shadow: 0 4px 20px rgba(192,57,75,.08); }
-  .logo { font-size: 22px; color: #c0394b; font-weight: 700; margin-bottom: 24px; }
-  .logo span { color: #8b1a2a; }
-  h2 { color: #2c1a1a; margin: 0 0 16px; }
-  p { line-height: 1.7; color: #444; margin: 0 0 16px; }
-  .btn { display: inline-block; background: #c0394b; color: #fff !important; padding: 12px 28px;
-         border-radius: 8px; text-decoration: none; font-weight: 600; margin: 8px 0; }
-  .meta { background: #fdf0f0; border-radius: 10px; padding: 16px; margin: 16px 0; }
-  .meta p { margin: 4px 0; color: #555; font-size: 14px; }
-  .footer { margin-top: 32px; font-size: 12px; color: #aaa; border-top: 1px solid #f0e0e5; padding-top: 16px; }
+  body { font-family: Georgia, 'Noto Serif Armenian', serif; color: #180C04; background: #F3ECE0; margin: 0; padding: 0; }
+  .email-wrap { max-width: 600px; margin: 0 auto; padding: 36px 16px; }
+  .logo-block { text-align: center; padding: 8px 0 28px; }
+  .logo-block img { max-width: 220px; width: 55%; height: auto; }
+  .card { background: #ffffff; border: 1px solid #E4D8C5; border-radius: 16px; overflow: hidden; margin-bottom: 20px; }
+  .card-body { padding: 32px 34px; }
+  h2 { color: #180C04; font-size: 22px; font-weight: 600; margin: 0 0 16px; line-height: 1.35; }
+  p { line-height: 1.75; color: #48301E; font-size: 15px; margin: 0 0 16px; }
+  .btn { display: inline-block; background: #7E3434; color: #ffffff !important; padding: 14px 30px;
+         border-radius: 10px; text-decoration: none; font-weight: 700; margin: 6px 0 4px; font-size: 15px; }
+  .meta { background: #FBF6EC; border: 1px solid #EFE1C8; border-radius: 12px; padding: 18px 20px; margin: 20px 0; }
+  .meta p { margin: 6px 0; color: #48301E; font-size: 14px; }
+  .small { font-size: 13px; color: #82715C; }
+  .signoff { color: #180C04; }
+  .footer-card { background: #FBF8F3; }
+  .footer-card .card-body { padding: 22px 34px; }
+  .footer-card p { color: #A99B8A; font-size: 12px; margin: 4px 0; line-height: 1.6; }
 </style>
 """
 
 
 def _wrap(body: str) -> str:
-    return f"""<!DOCTYPE html><html><head>{_STYLE}</head><body>
-    <div class="wrap">
-      <div class="logo">Hasmik's <span>Club</span></div>
-      {body}
-      <div class="footer">You received this email because you are a member of Hasmik's Club.</div>
+    year = datetime.now(timezone.utc).year
+    return f"""<!DOCTYPE html><html><head><meta charset="utf-8">{_STYLE}</head><body>
+    <div class="email-wrap">
+      <div class="logo-block">
+        <img src="{_LOGO_URL}" alt="Hasmik's Club" />
+      </div>
+      <div class="card"><div class="card-body">
+        {body}
+      </div></div>
+      <div class="card footer-card"><div class="card-body">
+        <p>© {year} Hasmik's Club. All rights reserved.</p>
+        <p>You're receiving this email because you're part of the Hasmik's Club community — a circle of Armenian women built on warmth, connection, and shared culture.</p>
+      </div></div>
     </div></body></html>"""
 
 
 def send_welcome(to: str, name: str) -> None:
     html = _wrap(f"""
     <h2>Welcome, {name}! 🌸</h2>
-    <p>We're so happy you joined Hasmik's Club — a warm, intimate community for Armenian women.</p>
-    <p>Your account is ready. Visit your dashboard to explore upcoming events and exclusive content.</p>
+    <p>We're so happy you joined Hasmik's Club — a warm, intimate community built for Armenian women to gather, connect, and celebrate our shared culture together.</p>
+    <p>Your account is ready to go. Inside your dashboard you'll find upcoming events to RSVP for, a growing library of exclusive content, and a directory to meet the rest of our community.</p>
     <a href="https://www.hasmiksclub.am/dashboard" class="btn">Go to my dashboard</a>
-    <p>With love,<br><strong>The Hasmik's Club team</strong></p>
+    <p class="small">If you ever have questions or just want to say hello, our team is always happy to hear from you.</p>
+    <p class="signoff">With love,<br><strong>The Hasmik's Club team</strong></p>
     """)
     send_async(to, name, "Welcome to Hasmik's Club 🌸", html)
 
@@ -246,13 +269,14 @@ def send_welcome(to: str, name: str) -> None:
 def send_rsvp_confirmation(to: str, name: str, event_title: str, event_date: str, location: str) -> None:
     html = _wrap(f"""
     <h2>You're confirmed, {name}! ✅</h2>
-    <p>Your spot for <strong>{event_title}</strong> is reserved.</p>
+    <p>Your spot for <strong>{event_title}</strong> is officially reserved — we can't wait to spend the evening with you.</p>
     <div class="meta">
       <p>📍 <strong>Location:</strong> {location}</p>
       <p>🗓 <strong>Date:</strong> {event_date}</p>
     </div>
-    <p>We look forward to seeing you there!</p>
-    <p>Hasmik's Club</p>
+    <p>Plans change — if something comes up, you can cancel your RSVP anytime from your dashboard so we can offer your spot to someone on the waitlist.</p>
+    <a href="https://www.hasmiksclub.am/dashboard" class="btn">View my events</a>
+    <p class="signoff">We look forward to seeing you there!<br><strong>Hasmik's Club</strong></p>
     """)
     send_async(to, name, f"RSVP Confirmed: {event_title}", html)
 
@@ -286,11 +310,11 @@ def _qr_image_url(payload: str) -> Optional[str]:
 def send_guest_verification_code(to: str, name: str, code: str, event_title: str) -> None:
     html = _wrap(f"""
     <h2>Confirm your email, {name}</h2>
-    <p>Enter this code to finish getting your ticket for <strong>{event_title}</strong>:</p>
+    <p>You're one step away from your ticket for <strong>{event_title}</strong>. Enter this 6-digit code on the checkout page to confirm it's really you and continue to payment:</p>
     <div class="meta" style="text-align:center;">
-      <p style="font-size:32px;font-weight:700;letter-spacing:0.3em;color:#c0394b;margin:0;">{code}</p>
+      <p style="font-size:32px;font-weight:700;letter-spacing:0.3em;color:#7E3434;margin:0;">{code}</p>
     </div>
-    <p style="font-size:13px;color:#888;">This code expires in 10 minutes. If you didn't request this, you can ignore this email — no ticket will be created without it.</p>
+    <p class="small">This code expires in 10 minutes. If you didn't request this, you can safely ignore this email — no ticket or charge will happen without it.</p>
     """)
     send_async(to, name, f"Your verification code: {code}", html)
 
@@ -303,19 +327,19 @@ def send_guest_ticket_confirmation(to: str, name: str, event_title: str, event_d
             qr_html = f"""
             <div style="text-align:center;margin:24px 0;">
               <img src="{qr_url}" alt="Check-in QR code" width="200" height="200" style="width:200px;height:200px;border:8px solid #fff;box-shadow:0 2px 12px rgba(0,0,0,.1);" />
-              <p style="font-size:13px;color:#888;margin-top:8px;">Show this QR code at the door — no need to print it, your phone screen works fine.</p>
+              <p class="small" style="margin-top:8px;">Show this QR code at the door — no need to print it, your phone screen works just fine.</p>
             </div>
             """
     html = _wrap(f"""
     <h2>You're in, {name}! 🎟️</h2>
-    <p>Your one-time ticket for <strong>{event_title}</strong> is confirmed — no membership needed, just show up!</p>
+    <p>Your one-time ticket for <strong>{event_title}</strong> is confirmed — no membership needed, just show up and enjoy the evening.</p>
     <div class="meta">
       <p>📍 <strong>Location:</strong> {location}</p>
       <p>🗓 <strong>Date:</strong> {event_date}</p>
     </div>
     {qr_html}
-    <p>We look forward to seeing you there!</p>
-    <p>Hasmik's Club</p>
+    <p>Hold on to this email — your QR code above is what our team will scan you in with at the door, so no separate printout or ID check is needed.</p>
+    <p class="signoff">We look forward to seeing you there!<br><strong>Hasmik's Club</strong></p>
     """)
     send_async(to, name, f"Ticket Confirmed: {event_title}", html)
 
@@ -323,9 +347,9 @@ def send_guest_ticket_confirmation(to: str, name: str, event_title: str, event_d
 def send_rsvp_cancelled(to: str, name: str, event_title: str) -> None:
     html = _wrap(f"""
     <h2>RSVP cancelled</h2>
-    <p>Hi {name}, your RSVP for <strong>{event_title}</strong> has been cancelled.</p>
-    <p>You can always re-register if plans change.</p>
-    <a href="https://www.hasmiksclub.am/dashboard" class="btn">View events</a>
+    <p>Hi {name}, your RSVP for <strong>{event_title}</strong> has been cancelled as requested, and your spot has been released back to the group.</p>
+    <p>We hope you can join us at a future gathering — new events go up regularly, and we'd love to see you there.</p>
+    <a href="https://www.hasmiksclub.am/dashboard" class="btn">Browse upcoming events</a>
     """)
     send_async(to, name, f"RSVP Cancelled: {event_title}", html)
 
@@ -333,13 +357,13 @@ def send_rsvp_cancelled(to: str, name: str, event_title: str) -> None:
 def send_event_reminder(to: str, name: str, event_title: str, event_date: str, location: str) -> None:
     html = _wrap(f"""
     <h2>See you tomorrow, {name}! 🌺</h2>
-    <p>Just a reminder that <strong>{event_title}</strong> is happening tomorrow.</p>
+    <p>Just a friendly reminder that <strong>{event_title}</strong> is happening tomorrow — we're looking forward to a wonderful evening together.</p>
     <div class="meta">
       <p>📍 <strong>Location:</strong> {location}</p>
       <p>🗓 <strong>Date:</strong> {event_date}</p>
     </div>
-    <p>We can't wait to see you!</p>
-    <p>Hasmik's Club</p>
+    <p>If your plans have changed and you can no longer make it, please cancel your RSVP from your dashboard so we can offer the spot to someone on the waitlist.</p>
+    <p class="signoff">We can't wait to see you!<br><strong>Hasmik's Club</strong></p>
     """)
     send_async(to, name, f"Tomorrow: {event_title} 🗓", html)
 
@@ -347,9 +371,9 @@ def send_event_reminder(to: str, name: str, event_title: str, event_date: str, l
 def send_verification(to: str, name: str, verify_url: str) -> None:
     html = _wrap(f"""
     <h2>Verify your email, {name}!</h2>
-    <p>Thanks for joining Hasmik's Club. Please verify your email address to get started.</p>
+    <p>Thanks so much for joining Hasmik's Club. Before you can dive in, please confirm this is really your email address — it only takes one click.</p>
     <a href="{verify_url}" class="btn">Verify my email</a>
-    <p style="font-size:13px;color:#888;">This link expires in 24 hours.</p>
+    <p class="small">This link expires in 24 hours. If you didn't create a Hasmik's Club account, you can safely ignore this email.</p>
     """)
     send_async(to, name, "Please verify your email — Hasmik's Club", html)
 
@@ -357,8 +381,8 @@ def send_verification(to: str, name: str, verify_url: str) -> None:
 def send_waitlist_joined(to: str, name: str, event_title: str, position: int) -> None:
     html = _wrap(f"""
     <h2>You're on the waitlist, {name}!</h2>
-    <p>You're <strong>#{position}</strong> on the waitlist for <strong>{event_title}</strong>.</p>
-    <p>We'll email you immediately if a spot opens up.</p>
+    <p><strong>{event_title}</strong> is currently full, but you're all set at position <strong>#{position}</strong> on the waitlist.</p>
+    <p>The moment a spot opens up, you'll be automatically registered and we'll email you right away — no need to keep checking back.</p>
     """)
     send_async(to, name, f"Waitlist #{position}: {event_title}", html)
 
@@ -366,12 +390,14 @@ def send_waitlist_joined(to: str, name: str, event_title: str, position: int) ->
 def send_waitlist_promoted(to: str, name: str, event_title: str, event_date: str, location: str) -> None:
     html = _wrap(f"""
     <h2>Great news, {name}! A spot opened up 🎉</h2>
-    <p>You've been automatically registered for <strong>{event_title}</strong>.</p>
+    <p>A seat for <strong>{event_title}</strong> just became available, and you've been automatically moved off the waitlist and registered — no action needed from you.</p>
     <div class="meta">
       <p>📍 <strong>Location:</strong> {location}</p>
       <p>🗓 <strong>Date:</strong> {event_date}</p>
     </div>
-    <p>See you there!</p>
+    <p>If something's come up and you can no longer attend, please let us know by cancelling your RSVP so the spot can go to the next person waiting.</p>
+    <a href="https://www.hasmiksclub.am/dashboard" class="btn">View my events</a>
+    <p class="signoff">See you there!<br><strong>Hasmik's Club</strong></p>
     """)
     send_async(to, name, f"You're in! Spot opened for {event_title}", html)
 
@@ -388,9 +414,9 @@ def send_broadcast(to: str, name: str, subject: str, body: str) -> None:
 def send_telegram_invite(to: str, name: str, invite_url: str) -> None:
     html = _wrap(f"""
     <h2>You're in, {name}! 🎉</h2>
-    <p>Your Hasmik's Club membership is now active. Join our private Telegram group to connect with the community:</p>
+    <p>Your Hasmik's Club membership is now active — welcome! The best way to stay close to the community day-to-day is our private Telegram group, where members share updates, photos, and plan get-togethers between events.</p>
     <a href="{invite_url}" class="btn">Join Telegram Group →</a>
-    <p style="font-size:13px;color:#888;">This is a one-time invite link. Please do not share it.</p>
+    <p class="small">This is a one-time invite link tied to your membership — please don't share it with anyone else.</p>
     """)
     send_async(to, name, "Welcome to Hasmik's Club — join us on Telegram", html)
 
@@ -398,9 +424,9 @@ def send_telegram_invite(to: str, name: str, invite_url: str) -> None:
 def send_application_received(to: str, name: str) -> None:
     html = _wrap(f"""
     <h2>Application received, {name}!</h2>
-    <p>Thank you for applying to join Hasmik's Club. We've received your application and will review it shortly.</p>
-    <p>You'll receive an email once your application has been reviewed. We appreciate your patience!</p>
-    <p>With warmth,<br><strong>The Hasmik's Club team</strong></p>
+    <p>Thank you so much for applying to join Hasmik's Club. Your application has landed safely with our team, and we'll take the time to review it carefully.</p>
+    <p>You'll receive an email as soon as a decision has been made — we appreciate your patience in the meantime, and we're excited about the possibility of welcoming you into the community.</p>
+    <p class="signoff">With warmth,<br><strong>The Hasmik's Club team</strong></p>
     """)
     send_async(to, name, "Application received — Hasmik's Club", html)
 
@@ -408,9 +434,10 @@ def send_application_received(to: str, name: str) -> None:
 def send_application_approved(to: str, name: str) -> None:
     html = _wrap(f"""
     <h2>You're in, {name}! 🌸</h2>
-    <p>Your application to join Hasmik's Club has been approved. Welcome to our community!</p>
+    <p>Your application to join Hasmik's Club has been approved — welcome to our community! We're so glad to have you with us.</p>
+    <p>Head to your dashboard to complete your profile, browse upcoming events, and start exploring everything membership includes.</p>
     <a href="https://www.hasmiksclub.am/dashboard" class="btn">Go to my dashboard</a>
-    <p>With love,<br><strong>The Hasmik's Club team</strong></p>
+    <p class="signoff">With love,<br><strong>The Hasmik's Club team</strong></p>
     """)
     send_async(to, name, "You've been approved — Hasmik's Club 🌸", html)
 
@@ -418,8 +445,9 @@ def send_application_approved(to: str, name: str) -> None:
 def send_application_declined(to: str, name: str) -> None:
     html = _wrap(f"""
     <h2>Thank you for your interest, {name}</h2>
-    <p>After careful consideration, we are unable to offer you a spot at this time. We hope to welcome you in the future.</p>
-    <p>With warmth,<br><strong>The Hasmik's Club team</strong></p>
+    <p>We really appreciate you taking the time to apply to Hasmik's Club. After careful consideration, we're not able to offer you a spot at this time.</p>
+    <p>This isn't necessarily the end of the road — our community continues to grow, and we hope there may be an opportunity to welcome you in the future.</p>
+    <p class="signoff">With warmth,<br><strong>The Hasmik's Club team</strong></p>
     """)
     send_async(to, name, "Regarding your Hasmik's Club application", html)
 
@@ -427,8 +455,8 @@ def send_application_declined(to: str, name: str) -> None:
 def send_password_reset(to: str, name: str, reset_url: str) -> None:
     html = _wrap(f"""
     <h2>Reset your password</h2>
-    <p>Hi {name}, we received a request to reset your Hasmik's Club password.</p>
+    <p>Hi {name}, we received a request to reset the password on your Hasmik's Club account. Click below to choose a new one:</p>
     <a href="{reset_url}" class="btn">Reset Password</a>
-    <p style="font-size:13px;color:#888;">This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+    <p class="small">This link expires in 1 hour. If you didn't request this, you can safely ignore this email — your password will stay unchanged.</p>
     """)
     send_async(to, name, "Reset your Hasmik's Club password", html)
