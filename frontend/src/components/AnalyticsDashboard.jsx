@@ -43,6 +43,12 @@ function SectionTitle({ children, sub }) {
 
 const FMT = { style: 'decimal', maximumFractionDigits: 1 }
 function pct(v) { return v != null ? `${v}%` : '—' }
+function amd(v) { return `֏${Math.round(v ?? 0).toLocaleString()}` }
+
+const PAYMENT_STATUS_COLORS = {
+  deposited: GREEN, autoauthorized: GREEN, approved: BLUE, started: GRAY,
+  declined: ROSE, void: ROSE, error: ROSE, refunded: AMBER,
+}
 
 function StatusPill({ status }) {
   const colors = { active: GREEN, inactive: ROSE, cancelled: GRAY }
@@ -372,6 +378,125 @@ function ActivityFeed({ items }) {
   )
 }
 
+function RevenueTrendChart({ data }) {
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <ComposedChart data={data} margin={{ top: 4, right: 16, left: -10, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#f0e8ea" />
+        <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+        <YAxis yAxisId="left" tick={{ fontSize: 11 }} tickFormatter={amd} />
+        <YAxis yAxisId="right" orientation="right" tick={{ fontSize: 11 }} tickFormatter={amd} />
+        <Tooltip content={<TT />} formatter={amd} />
+        <Legend wrapperStyle={{ fontSize: 12 }} />
+        <Bar yAxisId="left" dataKey="membership" name="Membership" stackId="rev" fill={ROSE} />
+        <Bar yAxisId="left" dataKey="guest_tickets" name="Guest Tickets" stackId="rev" fill={PEACH} radius={[4, 4, 0, 0]} />
+        <Line yAxisId="right" dataKey="cumulative" name="Cumulative Total" stroke={DEEP} strokeWidth={2} dot={false} />
+      </ComposedChart>
+    </ResponsiveContainer>
+  )
+}
+
+function PaymentStatusChart({ data }) {
+  return (
+    <ResponsiveContainer width="100%" height={Math.max(180, data.length * 40)}>
+      <BarChart data={data} layout="vertical" margin={{ top: 0, right: 60, left: 8, bottom: 0 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#f0e8ea" horizontal={false} />
+        <XAxis type="number" tick={{ fontSize: 11 }} tickFormatter={amd} />
+        <YAxis type="category" dataKey="status" width={90} tick={{ fontSize: 11 }} />
+        <Tooltip formatter={(v, name) => name === 'amount' ? [amd(v), 'Amount'] : [v, 'Count']} />
+        <Bar dataKey="amount" name="amount" radius={[0, 4, 4, 0]}
+          label={{ position: 'right', formatter: (v) => amd(v), fontSize: 11 }}>
+          {data.map((entry) => (
+            <Cell key={entry.status} fill={PAYMENT_STATUS_COLORS[entry.status] || GRAY} />
+          ))}
+        </Bar>
+      </BarChart>
+    </ResponsiveContainer>
+  )
+}
+
+function TopPayingMembersTable({ members }) {
+  if (!members.length) return <p style={{ color: GRAY, fontSize: 13 }}>No paid transactions yet.</p>
+  return (
+    <table className="admin-table" style={{ fontSize: 13 }}>
+      <thead>
+        <tr><th>#</th><th>Member</th><th>Payments</th><th>Lifetime Value</th></tr>
+      </thead>
+      <tbody>
+        {members.map((m, i) => (
+          <tr key={m.id}>
+            <td style={{ color: i < 3 ? ROSE : GRAY, fontWeight: 700 }}>{i + 1}</td>
+            <td>
+              <div style={{ fontWeight: 600 }}>{m.full_name}</div>
+              <div style={{ fontSize: 11, color: GRAY }}>{m.email}</div>
+            </td>
+            <td>{m.payment_count}</td>
+            <td><strong style={{ color: ROSE }}>{amd(m.lifetime_value)}</strong></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+function RevenueByEventTable({ rows }) {
+  if (!rows.length) return <p style={{ color: GRAY, fontSize: 13 }}>No one-time ticket sales yet.</p>
+  return (
+    <table className="admin-table" style={{ fontSize: 13 }}>
+      <thead>
+        <tr><th>Event</th><th>Tickets Sold</th><th>Revenue</th></tr>
+      </thead>
+      <tbody>
+        {rows.map(r => (
+          <tr key={r.event_id}>
+            <td><strong>{r.title}</strong></td>
+            <td>{r.ticket_count}</td>
+            <td><strong style={{ color: ROSE }}>{amd(r.revenue)}</strong></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
+function TransactionStatusPill({ status }) {
+  const color = PAYMENT_STATUS_COLORS[status] || GRAY
+  return (
+    <span style={{ background: color + '22', color, borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 600 }}>
+      {status}
+    </span>
+  )
+}
+
+function TransactionsTable({ rows, emptyMsg }) {
+  if (!rows.length) return <p style={{ color: GRAY, fontSize: 13 }}>{emptyMsg}</p>
+  return (
+    <table className="admin-table" style={{ fontSize: 13 }}>
+      <thead>
+        <tr><th>Date</th><th>Payer</th><th>Type</th><th>Amount</th><th>Status</th></tr>
+      </thead>
+      <tbody>
+        {rows.map(t => (
+          <tr key={t.id}>
+            <td className="admin-td-muted">{new Date(t.created_at).toLocaleString()}</td>
+            <td>
+              <div style={{ fontWeight: 600 }}>{t.name}</div>
+              <div style={{ fontSize: 11, color: GRAY }}>{t.email}</div>
+            </td>
+            <td>
+              <span style={{ fontSize: 11, background: '#f0e0e5', color: ROSE, borderRadius: 10, padding: '2px 8px' }}>
+                {t.type === 'membership' ? 'Membership' : 'Guest Ticket'}
+              </span>
+            </td>
+            <td><strong>{amd(t.amount)}</strong></td>
+            <td><TransactionStatusPill status={t.status} /></td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  )
+}
+
 // ── main component ────────────────────────────────────────────────────────────
 
 export default function AnalyticsDashboard() {
@@ -389,6 +514,7 @@ export default function AnalyticsDashboard() {
 
   const NAV = [
     { id: 'overview',   label: 'Overview' },
+    { id: 'financials', label: 'Financials' },
     { id: 'members',    label: 'Members' },
     { id: 'events',     label: 'Events' },
     { id: 'content',    label: 'Content' },
@@ -404,7 +530,7 @@ export default function AnalyticsDashboard() {
   if (err || !data) return <p style={{ color: ROSE }}>{err || 'No data'}</p>
 
   const { overview, member_growth, cohorts, events, rsvp_trend,
-          content_engagement, top_members, disengaged, at_risk, recent_activity } = data
+          content_engagement, top_members, disengaged, at_risk, recent_activity, financials } = data
 
   return (
     <div>
@@ -442,6 +568,65 @@ export default function AnalyticsDashboard() {
             RSVP Trend — Last 12 Months
           </SectionTitle>
           <RsvpTrendChart data={rsvp_trend} />
+        </div>
+      )}
+
+      {/* ── FINANCIALS ── */}
+      {section === 'financials' && (
+        <div>
+          <h2 className="dash-section-title">Revenue</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+            <KpiCard label="Total Revenue" value={amd(financials.overview.total_revenue)} color={ROSE} />
+            <KpiCard label="This Month" value={amd(financials.overview.revenue_this_month)} color={GREEN}
+              sub={financials.overview.revenue_mom_growth != null
+                ? `${financials.overview.revenue_mom_growth > 0 ? '+' : ''}${financials.overview.revenue_mom_growth}% vs last month`
+                : null} />
+            <KpiCard label="Membership Revenue" value={amd(financials.overview.membership_revenue)} color={DEEP} />
+            <KpiCard label="Guest Ticket Revenue" value={amd(financials.overview.guest_ticket_revenue)} color={AMBER} />
+            <KpiCard label="Paid Transactions" value={financials.overview.total_paid_transactions} color={BLUE}
+              sub={`${amd(financials.overview.avg_transaction_value)} avg`} />
+            <KpiCard label="Conversion Rate" value={pct(financials.overview.conversion_rate)}
+              color={financials.overview.conversion_rate >= 80 ? GREEN : financials.overview.conversion_rate >= 50 ? AMBER : ROSE}
+              sub={`${financials.overview.total_failed_transactions} failed`} />
+            <KpiCard label="Refunded" value={amd(financials.overview.total_refunded)} color={ROSE} />
+          </div>
+
+          <SectionTitle sub="Membership vs one-time guest ticket revenue, plus running total — last 12 months">
+            Revenue Trend
+          </SectionTitle>
+          <RevenueTrendChart data={financials.revenue_trend} />
+
+          <SectionTitle sub="Every payment attempt across both membership and guest-ticket checkouts, by outcome">
+            Payment Funnel
+          </SectionTitle>
+          {financials.payment_status_breakdown.length
+            ? <PaymentStatusChart data={financials.payment_status_breakdown} />
+            : <p style={{ color: GRAY }}>No transactions yet.</p>
+          }
+
+          <SectionTitle sub="Members ranked by total amount paid, all-time">
+            Top Paying Members
+          </SectionTitle>
+          <TopPayingMembersTable members={financials.top_paying_members} />
+
+          <SectionTitle sub="One-time guest ticket revenue per event">
+            Revenue by Event
+          </SectionTitle>
+          <RevenueByEventTable rows={financials.revenue_by_event} />
+
+          <SectionTitle sub="Last 30 payment attempts, membership and guest tickets combined">
+            Recent Transactions
+          </SectionTitle>
+          <div className="admin-table-wrap">
+            <TransactionsTable rows={financials.recent_transactions} emptyMsg="No transactions yet." />
+          </div>
+
+          <SectionTitle sub="Declined, errored, or voided payments — worth a follow-up">
+            Failed Payments
+          </SectionTitle>
+          <div className="admin-table-wrap">
+            <TransactionsTable rows={financials.failed_transactions} emptyMsg="No failed payments — clean record!" />
+          </div>
         </div>
       )}
 
