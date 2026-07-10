@@ -5,6 +5,7 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import RedirectResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -297,6 +298,28 @@ def _validate_guest_checkout_request(db: Session, event_id: int, email: str) -> 
     return event
 
 
+def _reject_duplicate_paid_ticket(db: Session, event_id: int, email: str, full_name: str) -> None:
+    """Same email + same name buying the same one-off event twice almost
+    always means an accidental double-charge (double-click, retried after a
+    slow redirect) rather than a real second attendee — a genuine plus-one
+    just uses their own name, which this doesn't touch."""
+    existing = (
+        db.query(GuestTicket)
+        .filter(
+            GuestTicket.event_id == event_id,
+            GuestTicket.email == email,
+            func.lower(GuestTicket.full_name) == full_name.strip().lower(),
+            GuestTicket.status.in_(ameriabank.PAID_STATUSES),
+        )
+        .first()
+    )
+    if existing:
+        raise HTTPException(
+            status_code=409,
+            detail="You already have a paid ticket for this event under this name. Buying for someone else? Use their name instead.",
+        )
+
+
 @router.post("/{event_id}/guest-ticket/start", response_model=GuestCheckoutStartOut, status_code=status.HTTP_201_CREATED)
 def guest_ticket_start(event_id: int, payload: GuestCheckoutIn, db: Session = Depends(get_db)):
     """Step 1 of 3: collect name+email, email a 6-digit code. Nothing is
@@ -304,6 +327,7 @@ def guest_ticket_start(event_id: int, payload: GuestCheckoutIn, db: Session = De
     unreachable, so ownership is confirmed before any payment starts."""
     email = payload.email.strip().lower()
     event = _validate_guest_checkout_request(db, event_id, email)
+    _reject_duplicate_paid_ticket(db, event_id, email, payload.full_name)
 
     ticket = GuestTicket(
         event_id=event.id, full_name=payload.full_name, email=email,
@@ -378,6 +402,7 @@ def guest_ticket_checkout(event_id: int, ticket_id: int, payload: GuestCheckoutI
         raise HTTPException(status_code=403, detail="Please verify your email first")
 
     event = _validate_guest_checkout_request(db, event_id, ticket.email)
+    _reject_duplicate_paid_ticket(db, event_id, ticket.email, ticket.full_name)
 
     try:
         ticket.order_id = ameriabank.next_order_id(db)
