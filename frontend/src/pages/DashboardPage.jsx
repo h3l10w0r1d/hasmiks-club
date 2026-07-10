@@ -16,7 +16,7 @@ import 'yet-another-react-lightbox/plugins/captions.css'
 import 'yet-another-react-lightbox/plugins/thumbnails.css'
 import { useAuth } from '../context/AuthContext'
 import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum, addProfilePhoto, deleteProfilePhoto, getMemberProfile, unlinkTelegram } from '../api/members'
-import { getEvents, rsvp, cancelRsvp, joinWaitlist, leaveWaitlist, getWaitlistPosition } from '../api/events'
+import { getEvents, rsvp, cancelRsvp, joinWaitlist, leaveWaitlist, getWaitlistPosition, memberGuestTicketCheckout } from '../api/events'
 import { getLibrary } from '../api/content'
 import { getPublicSettings, createCheckout } from '../api/payments'
 import { refreshToken as apiRefresh } from '../api/auth'
@@ -135,6 +135,7 @@ export default function DashboardPage({ lang, setLang }) {
   const [rsvpError, setRsvpError] = useState('')
   const [confirmDialog, setConfirmDialog] = useState(null)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
+  const [oneTimeTicketLoading, setOneTimeTicketLoading] = useState(null) // eventId currently checking out, or null
   const [telegramUrl, setTelegramUrl] = useState('')
   const [photoUploading, setPhotoUploading] = useState(false)
   const [selectedContent, setSelectedContent] = useState(null)
@@ -371,6 +372,19 @@ export default function DashboardPage({ lang, setLang }) {
     } catch (err) {
       const detail = err?.response?.data?.detail
       setRsvpError(detail || (lang === 'hy' ? 'Սխալ տեղի ունեցավ' : 'Something went wrong'))
+    }
+  }
+
+  const handleBuyOneTimeTicket = async (ev) => {
+    setRsvpError('')
+    setOneTimeTicketLoading(ev.id)
+    try {
+      const { url } = await memberGuestTicketCheckout(ev.id, lang)
+      window.location.href = url
+    } catch (err) {
+      const detail = err?.response?.data?.detail
+      setRsvpError(detail || (lang === 'hy' ? 'Սխալ տեղի ունեցավ' : 'Something went wrong'))
+      setOneTimeTicketLoading(null)
     }
   }
 
@@ -709,9 +723,26 @@ export default function DashboardPage({ lang, setLang }) {
                       ) : nextEvent.user_has_rsvp ? (
                         <button className="plan-btn plan-btn-outline" onClick={() => handleRsvpClick(nextEvent)}>{t.cancelRsvp}</button>
                       ) : nextEvent.seats_available > 0 ? (
-                        isActive
-                          ? <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(nextEvent)}>{t.rsvpBtn}</button>
-                          : <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Բաժանորդագրվեք՝ գրանցվելու համար' : 'Subscribe to RSVP'}</button>
+                        isActive ? (
+                          <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(nextEvent)}>{t.rsvpBtn}</button>
+                        ) : (
+                          <>
+                            <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Բաժանորդագրվեք՝ գրանցվելու համար' : 'Subscribe to RSVP'}</button>
+                            {nextEvent.ticket_price != null && !(nextEvent.max_guest_tickets != null && nextEvent.guest_seats_taken >= nextEvent.max_guest_tickets) && (
+                              <button
+                                className="plan-btn plan-btn-outline"
+                                disabled={oneTimeTicketLoading === nextEvent.id}
+                                onClick={() => handleBuyOneTimeTicket(nextEvent)}
+                              >
+                                {oneTimeTicketLoading === nextEvent.id
+                                  ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…')
+                                  : (lang === 'hy'
+                                    ? `Գնել մեկանգամյա տոմս — ֏${Number(nextEvent.ticket_price).toLocaleString()}`
+                                    : `Buy a one-time ticket — ֏${Number(nextEvent.ticket_price).toLocaleString()}`)}
+                              </button>
+                            )}
+                          </>
+                        )
                       ) : null}
                     </div>
                   </div>
@@ -1059,7 +1090,22 @@ export default function DashboardPage({ lang, setLang }) {
                             {rsvpDone[ev.id] ? (
                               <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
                             ) : !isActive ? (
-                              <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Բաժանորդագրվեք՝ գրանցվելու համար' : 'Subscribe to RSVP'}</button>
+                              <>
+                                <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Բաժանորդագրվեք՝ գրանցվելու համար' : 'Subscribe to RSVP'}</button>
+                                {ev.ticket_price != null && ev.seats_available > 0 && !(ev.max_guest_tickets != null && ev.guest_seats_taken >= ev.max_guest_tickets) && (
+                                  <button
+                                    className="plan-btn plan-btn-outline"
+                                    disabled={oneTimeTicketLoading === ev.id}
+                                    onClick={() => handleBuyOneTimeTicket(ev)}
+                                  >
+                                    {oneTimeTicketLoading === ev.id
+                                      ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…')
+                                      : (lang === 'hy'
+                                        ? `Գնել մեկանգամյա տոմս — ֏${Number(ev.ticket_price).toLocaleString()}`
+                                        : `Buy a one-time ticket — ֏${Number(ev.ticket_price).toLocaleString()}`)}
+                                  </button>
+                                )}
+                              </>
                             ) : ev.user_has_rsvp ? (
                               <button className="plan-btn plan-btn-outline" onClick={() => handleRsvpClick(ev)}>{t.cancelRsvp}</button>
                             ) : ev.seats_available > 0 ? (

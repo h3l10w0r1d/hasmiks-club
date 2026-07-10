@@ -16,7 +16,7 @@ from app.models.user import User
 from app.models.guest_ticket import GuestTicket
 from app.schemas.event import (
     EventCreate, EventOut, RSVPOut, PublicEventOut,
-    GuestCheckoutIn, GuestVerifyIn, GuestCheckoutStartOut, GuestTicketOut,
+    GuestCheckoutIn, GuestVerifyIn, GuestCheckoutStartOut, GuestTicketOut, MemberGuestTicketIn,
 )
 from app.core.deps import get_current_user, get_current_active_member
 from app.core import ameriabank
@@ -273,10 +273,9 @@ def _gen_code() -> str:
     return f"{secrets.randbelow(1_000_000):06d}"
 
 
-def _validate_guest_checkout_request(db: Session, event_id: int, email: str) -> Event:
-    """Shared guardrails for both the initial guest-ticket request and the
-    seat re-check right before payment starts (seats can fill in the gap
-    while someone is typing their verification code)."""
+def _validate_event_ticket_available(db: Session, event_id: int) -> Event:
+    """Guardrails shared by both the anonymous-guest and logged-in-member
+    one-time-ticket flows: does this event, does it still sell them."""
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
@@ -284,17 +283,26 @@ def _validate_guest_checkout_request(db: Session, event_id: int, email: str) -> 
         raise HTTPException(status_code=400, detail="This event doesn't offer one-time tickets — membership required")
     if event.event_date < datetime.now(timezone.utc):
         raise HTTPException(status_code=400, detail="This event has already happened")
-    if db.query(User).filter(User.email == email).first():
-        raise HTTPException(
-            status_code=409,
-            detail="An account already exists for this email — please log in and subscribe instead of buying a one-time ticket",
-        )
     guest_seats_taken = _paid_guest_count(event)
     seats_taken = len(event.rsvps) + guest_seats_taken
     if seats_taken >= event.max_seats:
         raise HTTPException(status_code=409, detail="This event is fully booked")
     if event.max_guest_tickets is not None and guest_seats_taken >= event.max_guest_tickets:
         raise HTTPException(status_code=409, detail="All one-time tickets for this event are sold out")
+    return event
+
+
+def _validate_guest_checkout_request(db: Session, event_id: int, email: str) -> Event:
+    """Anonymous-guest flow only: also blocks emails that already have an
+    account, since those people should use the member checkout instead (see
+    /guest-ticket/member-checkout) — an account-holder identity shouldn't be
+    self-declared through the unauthenticated guest form."""
+    event = _validate_event_ticket_available(db, event_id)
+    if db.query(User).filter(User.email == email).first():
+        raise HTTPException(
+            status_code=409,
+            detail="An account already exists for this email — please log in to buy a one-time ticket",
+        )
     return event
 
 
@@ -403,6 +411,73 @@ def guest_ticket_checkout(event_id: int, ticket_id: int, payload: GuestCheckoutI
 
     event = _validate_guest_checkout_request(db, event_id, ticket.email)
     _reject_duplicate_paid_ticket(db, event_id, ticket.email, ticket.full_name)
+
+    try:
+        ticket.order_id = ameriabank.next_order_id(db)
+    except ameriabank.AmeriaBankError as exc:
+        ticket.status = "error"
+        ticket.response_message = str(exc)
+        db.commit()
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    db.commit()
+
+    init_request = {"OrderID": ticket.order_id, "Amount": float(event.ticket_price), "Currency": ticket.currency, "BackURL": settings.AMERIABANK_GUEST_BACK_URL}
+    try:
+        resp = ameriabank.init_payment(
+            order_id=ticket.order_id,
+            amount=event.ticket_price,
+            description=f"{event.title} — one-time ticket ({ticket.full_name})",
+            back_url=settings.AMERIABANK_GUEST_BACK_URL,
+        )
+    except ameriabank.AmeriaBankError as exc:
+        ticket.status = "error"
+        ticket.response_message = str(exc)
+        db.commit()
+        log_guest_ticket_event(db, ticket.id, "init_payment", request_payload=init_request, response_payload={"error": str(exc)}, success=False)
+        raise HTTPException(status_code=502, detail="Could not start payment — please try again shortly") from exc
+
+    init_ok = resp.get("ResponseCode") == 1
+    log_guest_ticket_event(db, ticket.id, "init_payment", request_payload=init_request, response_payload=resp, success=init_ok)
+    if not init_ok:
+        ticket.status = "error"
+        ticket.response_message = resp.get("ResponseMessage")
+        db.commit()
+        raise HTTPException(status_code=502, detail=resp.get("ResponseMessage") or "Payment initialization failed")
+
+    ticket.payment_id = resp.get("PaymentID")
+    db.commit()
+
+    mailer.track_event_async(ticket.email, "guest_checkout_started", {"event_title": event.title, "amount": float(event.ticket_price)})
+
+    lang = LANG_MAP.get(payload.lang_pref, "en")
+    return {"url": ameriabank.payment_page_url(ticket.payment_id, lang)}
+
+
+@router.post("/{event_id}/guest-ticket/member-checkout")
+def member_guest_ticket_checkout(
+    event_id: int, payload: MemberGuestTicketIn,
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user),
+):
+    """Subscribing isn't mandatory just because someone has an account — a
+    logged-in member without an active membership can still buy a one-time
+    ticket to events that offer one, the same as an anonymous guest would.
+    Skips email verification since the account's email is already trusted,
+    and skips the account-conflict check the anonymous flow has (this *is*
+    the account)."""
+    if not (settings.AMERIABANK_CLIENT_ID and settings.AMERIABANK_USERNAME and settings.AMERIABANK_PASSWORD):
+        raise HTTPException(status_code=503, detail="Ticket purchases are not configured")
+
+    event = _validate_event_ticket_available(db, event_id)
+    _reject_duplicate_paid_ticket(db, event_id, current_user.email, current_user.full_name)
+
+    ticket = GuestTicket(
+        event_id=event.id, full_name=current_user.full_name, email=current_user.email,
+        amount=event.ticket_price, currency=settings.AMERIABANK_CURRENCY, status="started",
+        email_verified=True,
+    )
+    db.add(ticket)
+    db.commit()
+    db.refresh(ticket)
 
     try:
         ticket.order_id = ameriabank.next_order_id(db)

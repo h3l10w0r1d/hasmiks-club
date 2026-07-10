@@ -22,3 +22,7 @@ export const guestTicketVerify = (eventId, ticketId, code) =>
   client.post(`/events/${eventId}/guest-ticket/${ticketId}/verify`, { code }).then((r) => r.data)
 export const guestTicketCheckout = (eventId, ticketId, { full_name, email, lang_pref }) =>
   client.post(`/events/${eventId}/guest-ticket/${ticketId}/checkout`, { full_name, email, lang_pref }).then((r) => r.data)
+
+// logged-in-but-not-subscribed members buy a one-time ticket directly, no OTP needed (account email is already trusted)
+export const memberGuestTicketCheckout = (eventId, lang_pref) =>
+  client.post(`/events/${eventId}/guest-ticket/member-checkout`, { lang_pref }).then((r) => r.data)

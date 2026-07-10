@@ -75,6 +75,10 @@ class GuestVerifyIn(BaseModel):
     code: str
 
 
+class MemberGuestTicketIn(BaseModel):
+    lang_pref: Optional[str] = "en"
+
+
 class GuestCheckoutStartOut(BaseModel):
     ticket_id: int
     resend_available_in: int  # seconds until a resend is allowed
