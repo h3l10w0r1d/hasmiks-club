@@ -13,6 +13,12 @@ export const getWaitlistPosition = (eventId) => client.get(`/events/${eventId}/w
 export const selfCheckin = (eventId, token) => client.post(`/events/${eventId}/checkin-self`, null, { params: { token } })
 export const getCheckinToken = (eventId) => client.get(`/admin/events/${eventId}/checkin-token`).then(r => r.data)
 
-// one-time guest ticket (no account) — returns { url } to redirect to for payment
-export const guestCheckout = (eventId, { full_name, email, lang_pref }) =>
-  client.post(`/events/${eventId}/guest-checkout`, { full_name, email, lang_pref }).then((r) => r.data)
+// one-time guest ticket (no account), 3 steps: start (emails a code) -> verify -> checkout (returns { url })
+export const guestTicketStart = (eventId, { full_name, email, lang_pref }) =>
+  client.post(`/events/${eventId}/guest-ticket/start`, { full_name, email, lang_pref }).then((r) => r.data)
+export const guestTicketResendCode = (eventId, ticketId) =>
+  client.post(`/events/${eventId}/guest-ticket/${ticketId}/resend-code`).then((r) => r.data)
+export const guestTicketVerify = (eventId, ticketId, code) =>
+  client.post(`/events/${eventId}/guest-ticket/${ticketId}/verify`, { code }).then((r) => r.data)
+export const guestTicketCheckout = (eventId, ticketId, { full_name, email, lang_pref }) =>
+  client.post(`/events/${eventId}/guest-ticket/${ticketId}/checkout`, { full_name, email, lang_pref }).then((r) => r.data)

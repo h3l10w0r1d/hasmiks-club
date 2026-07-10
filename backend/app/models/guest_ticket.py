@@ -35,4 +35,18 @@ class GuestTicket(Base):
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
+    # Email ownership check — a mistyped email means a paid ticket nobody can
+    # ever retrieve, so this is verified BEFORE the Ameriabank checkout starts,
+    # not after. See events.py's guest-ticket start/verify/checkout split.
+    email_verified = Column(Boolean, nullable=False, default=False, server_default='false')
+    verification_code = Column(String(6), nullable=True)
+    verification_sent_at = Column(DateTime(timezone=True), nullable=True)
+    verification_attempts = Column(Integer, nullable=False, default=0, server_default='0')
+
+    # Door check-in — a random per-ticket secret embedded in the QR code sent
+    # with the confirmation email, distinct from Event.checkin_token (which is
+    # one shared code members self-scan with their own phone). This one is
+    # scanned BY STAFF, since a guest has no logged-in account to self-check.
+    checkin_token = Column(String(32), nullable=True, unique=True, index=True)
+
     event = relationship("Event", back_populates="guest_tickets")

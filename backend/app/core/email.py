@@ -257,7 +257,43 @@ def send_rsvp_confirmation(to: str, name: str, event_title: str, event_date: str
     send_async(to, name, f"RSVP Confirmed: {event_title}", html)
 
 
-def send_guest_ticket_confirmation(to: str, name: str, event_title: str, event_date: str, location: str) -> None:
+def _qr_data_uri(payload: str) -> str:
+    """Render a QR code PNG in-memory and return it as a data: URI — no
+    separate image host needed, and it never depends on a third-party QR
+    rendering service being up when someone opens the email."""
+    import base64
+    import io
+    import qrcode
+
+    img = qrcode.make(payload, box_size=8, border=2)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    b64 = base64.b64encode(buf.getvalue()).decode("ascii")
+    return f"data:image/png;base64,{b64}"
+
+
+def send_guest_verification_code(to: str, name: str, code: str, event_title: str) -> None:
+    html = _wrap(f"""
+    <h2>Confirm your email, {name}</h2>
+    <p>Enter this code to finish getting your ticket for <strong>{event_title}</strong>:</p>
+    <div class="meta" style="text-align:center;">
+      <p style="font-size:32px;font-weight:700;letter-spacing:0.3em;color:#c0394b;margin:0;">{code}</p>
+    </div>
+    <p style="font-size:13px;color:#888;">This code expires in 10 minutes. If you didn't request this, you can ignore this email — no ticket will be created without it.</p>
+    """)
+    send_async(to, name, f"Your verification code: {code}", html)
+
+
+def send_guest_ticket_confirmation(to: str, name: str, event_title: str, event_date: str, location: str, checkin_payload: Optional[str] = None) -> None:
+    qr_html = ""
+    if checkin_payload:
+        qr_uri = _qr_data_uri(checkin_payload)
+        qr_html = f"""
+        <div style="text-align:center;margin:24px 0;">
+          <img src="{qr_uri}" alt="Check-in QR code" style="width:200px;height:200px;border:8px solid #fff;box-shadow:0 2px 12px rgba(0,0,0,.1);" />
+          <p style="font-size:13px;color:#888;margin-top:8px;">Show this QR code at the door — no need to print it, your phone screen works fine.</p>
+        </div>
+        """
     html = _wrap(f"""
     <h2>You're in, {name}! 🎟️</h2>
     <p>Your one-time ticket for <strong>{event_title}</strong> is confirmed — no membership needed, just show up!</p>
@@ -265,6 +301,7 @@ def send_guest_ticket_confirmation(to: str, name: str, event_title: str, event_d
       <p>📍 <strong>Location:</strong> {location}</p>
       <p>🗓 <strong>Date:</strong> {event_date}</p>
     </div>
+    {qr_html}
     <p>We look forward to seeing you there!</p>
     <p>Hasmik's Club</p>
     """)

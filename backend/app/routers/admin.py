@@ -1,6 +1,7 @@
 import csv
 import io
 import json
+import secrets
 from datetime import datetime, timezone
 from typing import List, Optional
 
@@ -291,12 +292,89 @@ def list_guest_tickets(
 ):
     """One-time ticket buyers for this event, paid or not — useful at the
     door alongside the member RSVP list."""
-    return (
+    event = db.query(Event).filter(Event.id == event_id).first()
+    tickets = (
         db.query(GuestTicket)
         .filter(GuestTicket.event_id == event_id)
         .order_by(GuestTicket.created_at)
         .all()
     )
+    return [_guest_ticket_out(t, event) for t in tickets]
+
+
+def _guest_ticket_out(t: GuestTicket, event: "Event | None" = None) -> GuestTicketOut:
+    return GuestTicketOut(
+        id=t.id, event_id=t.event_id, event_title=event.title if event else None,
+        full_name=t.full_name, email=t.email, amount=t.amount, status=t.status,
+        email_verified=t.email_verified, checked_in=t.checked_in, created_at=t.created_at,
+    )
+
+
+@router.get("/guest-tickets", response_model=List[GuestTicketOut])
+def list_all_guest_tickets(
+    status_filter: str | None = None,
+    event_id: int | None = None,
+    q: str | None = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_permission('manage_events')),
+):
+    """Every one-time ticket purchase across every event — the "one-timers"
+    panel. Optionally filter by status, a specific event, or search name/email."""
+    query = db.query(GuestTicket)
+    if status_filter:
+        query = query.filter(GuestTicket.status == status_filter)
+    if event_id:
+        query = query.filter(GuestTicket.event_id == event_id)
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter((GuestTicket.full_name.ilike(like)) | (GuestTicket.email.ilike(like)))
+    tickets = query.order_by(GuestTicket.created_at.desc()).all()
+    events_by_id = {e.id: e for e in db.query(Event).filter(Event.id.in_({t.event_id for t in tickets})).all()}
+    return [_guest_ticket_out(t, events_by_id.get(t.event_id)) for t in tickets]
+
+
+class GuestCheckinIn(BaseModel):
+    payload: str
+
+
+@router.post("/guest-tickets/checkin")
+def guest_ticket_checkin(
+    payload: GuestCheckinIn,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_permission('manage_events')),
+):
+    """Scanned from a guest's confirmation-email QR code — validates the
+    per-ticket secret token (not just a guessable ticket id) before marking
+    anyone checked in."""
+    raw = payload.payload.strip()
+    parts = raw.split(":")
+    if len(parts) != 3 or parts[0] != "HC-GT":
+        raise HTTPException(status_code=400, detail="Not a valid ticket QR code")
+    try:
+        ticket_id = int(parts[1])
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Not a valid ticket QR code")
+    token = parts[2]
+
+    ticket = db.query(GuestTicket).filter(GuestTicket.id == ticket_id).first()
+    if not ticket or not ticket.checkin_token or not secrets.compare_digest(ticket.checkin_token, token):
+        raise HTTPException(status_code=404, detail="Ticket not found — this QR code may be invalid")
+    if ticket.status not in ameriabank.PAID_STATUSES:
+        raise HTTPException(status_code=400, detail="This ticket was never paid for — do not admit")
+
+    event = db.query(Event).filter(Event.id == ticket.event_id).first()
+    already = ticket.checked_in
+    if not already:
+        ticket.checked_in = True
+        audit_log(db, f"guest_checkin: {ticket.full_name} <{ticket.email}> for event #{ticket.event_id}", admin_id=admin.id, entity_type="guest_ticket", entity_id=ticket.id)
+        db.commit()
+
+    return {
+        "already_checked_in": already,
+        "full_name": ticket.full_name, "email": ticket.email,
+        "event_title": event.title if event else None,
+        "event_date": event.event_date.isoformat() if event else None,
+    }
 
 
 @router.post("/events", response_model=EventOut, status_code=status.HTTP_201_CREATED)

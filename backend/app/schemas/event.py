@@ -71,13 +71,24 @@ class GuestCheckoutIn(BaseModel):
     lang_pref: Optional[str] = "en"
 
 
+class GuestVerifyIn(BaseModel):
+    code: str
+
+
+class GuestCheckoutStartOut(BaseModel):
+    ticket_id: int
+    resend_available_in: int  # seconds until a resend is allowed
+
+
 class GuestTicketOut(BaseModel):
     id: int
     event_id: int
+    event_title: Optional[str] = None
     full_name: str
     email: str
     amount: Decimal
     status: str
+    email_verified: bool = False
     checked_in: bool
     created_at: datetime
 

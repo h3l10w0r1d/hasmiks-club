@@ -9,6 +9,7 @@ import {
   SendHorizonal, StickyNote, Filter, UserCheck,
   Inbox, GalleryHorizontal, Settings2, Trophy, Link2, Plus, Trash2, ExternalLink,
   Shield, MapPin, Pencil, Unlock, CreditCard, RotateCcw, Ban, ScrollText, Crop,
+  Ticket, QrCode, BadgeCheck,
 } from 'lucide-react'
 
 import { Button }       from '../components/ui/button'
@@ -43,6 +44,7 @@ import {
   adminGetSettings, adminSaveSettings,
   adminGetRoles, adminUpdateRole,
   adminGetPayments, adminRefreshPayment, adminRefundPayment, adminCancelPayment, adminGetPaymentLogs,
+  adminGetGuestTickets,
 } from '../api/admin'
 
 // ── permissions ───────────────────────────────────────────────────────────────
@@ -94,6 +96,7 @@ const TABS = [
   { key: 'gallery',      icon: GalleryHorizontal, label: 'Gallery'      },
   { key: 'analytics',    icon: BarChart3,         label: 'Analytics'    },
   { key: 'payments',     icon: CreditCard,        label: 'Payments'     },
+  { key: 'one_timers',   icon: Ticket,            label: 'One-Timers'   },
   { key: 'broadcast',    icon: Mail,              label: 'Broadcast'    },
   { key: 'audit',        icon: ClipboardList,     label: 'Audit Log'    },
   { key: 'settings',     icon: Settings2,         label: 'Settings'     },
@@ -103,7 +106,7 @@ const TAB_GROUPS = [
   { label: 'OVERVIEW', keys: ['today'] },
   { label: 'PEOPLE',   keys: ['members', 'applications', 'roles'] },
   { label: 'CONTENT',  keys: ['events', 'content', 'gallery'] },
-  { label: 'INSIGHTS', keys: ['analytics', 'payments'] },
+  { label: 'INSIGHTS', keys: ['analytics', 'payments', 'one_timers'] },
   { label: 'OUTREACH', keys: ['broadcast'] },
   { label: 'CONFIG',   keys: ['audit', 'settings'] },
 ]
@@ -117,6 +120,7 @@ const TAB_PERMISSION_MAP = {
   gallery:      'manage_gallery',
   analytics:    'view_analytics',
   payments:     'manage_payments',
+  one_timers:   'manage_events',
   broadcast:    'broadcast',
   audit:        'view_audit',
   settings:     'manage_settings',
@@ -330,6 +334,10 @@ export default function AdminPage() {
   const [logsData,        setLogsData]         = useState([])
   const [logsLoading,     setLogsLoading]      = useState(false)
 
+  const [guestTickets,     setGuestTickets]     = useState([])
+  const [guestTicketQuery, setGuestTicketQuery] = useState('')
+  const [guestTicketStatusFilter, setGuestTicketStatusFilter] = useState('all')
+
   const flash = (msg, isErr = false) => {
     setToast({ msg, type: isErr ? 'error' : 'success' })
     setTimeout(() => setToast(null), 3200)
@@ -354,6 +362,7 @@ export default function AdminPage() {
   useEffect(() => { if (tab === 'analytics')    load('referrals')    }, [tab])
   useEffect(() => { if (tab === 'roles')        load('roles')        }, [tab])
   useEffect(() => { if (tab === 'payments')     load('payments')     }, [tab])
+  useEffect(() => { if (tab === 'one_timers')   load('one_timers')   }, [tab])
 
   const load = async (t) => {
     setLoad(t, true)
@@ -367,6 +376,7 @@ export default function AdminPage() {
       if (t === 'referrals')    setReferrals(await adminGetReferrals())
       if (t === 'roles')        setRoles(await adminGetRoles())
       if (t === 'payments')     setPayments(await adminGetPayments())
+      if (t === 'one_timers')   setGuestTickets(await adminGetGuestTickets())
       if (t === 'settings') {
         const s = await adminGetSettings()
         setAdminSettings(s)
@@ -730,6 +740,12 @@ export default function AdminPage() {
     return true
   })
   const filteredContent = content.filter(c => contentFilter === 'all' || c.type === contentFilter)
+  const filteredGuestTickets = guestTickets.filter(t => {
+    if (guestTicketStatusFilter !== 'all' && t.status !== guestTicketStatusFilter) return false
+    if (!guestTicketQuery) return true
+    const q = guestTicketQuery.toLowerCase()
+    return t.full_name.toLowerCase().includes(q) || t.email.toLowerCase().includes(q) || (t.event_title || '').toLowerCase().includes(q)
+  })
 
   const currentTab = TABS.find(t => t.key === tab)
 
@@ -1850,6 +1866,97 @@ export default function AdminPage() {
                                   ]} />
                                 </div>
                               </TableCell>
+                            </TableRow>
+                          ))
+                      }
+                    </TableBody>
+                  </Table>
+                </Card>
+              </div>
+            )
+          })()}
+
+          {/* ══ ONE-TIMERS (guest event tickets) ══ */}
+          {tab === 'one_timers' && (() => {
+            const verifiedCount = guestTickets.filter(t => t.email_verified).length
+            const paidCount     = guestTickets.filter(t => ['deposited', 'autoauthorized'].includes(t.status)).length
+            const checkedInCount = guestTickets.filter(t => t.checked_in).length
+            const STATUS_BADGE = {
+              unverified: 'muted', started: 'muted', deposited: 'success', autoauthorized: 'success',
+              error: 'destructive', declined: 'destructive', refunded: 'secondary', void: 'muted',
+            }
+            return (
+              <div className="space-y-6">
+                <SectionHeader title="One-Timers" sub="Guests who bought a single event ticket without an account">
+                  <Button variant="outline" size="sm" onClick={() => navigate('/admin/scan')}>
+                    <QrCode className="h-3.5 w-3.5" /> Open Scanner
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={() => load('one_timers')}>
+                    <RefreshCw className="h-3.5 w-3.5" /> Refresh List
+                  </Button>
+                </SectionHeader>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <KpiCard icon={Ticket}      label="Total"        value={guestTickets.length} loading={isLoading('one_timers')} />
+                  <KpiCard icon={BadgeCheck}  label="Email verified" value={verifiedCount}     loading={isLoading('one_timers')} />
+                  <KpiCard icon={CreditCard}  label="Paid"         value={paidCount}           loading={isLoading('one_timers')} valueClass="text-emerald-600" />
+                  <KpiCard icon={CheckCircle2} label="Checked in"  value={checkedInCount}       loading={isLoading('one_timers')} valueClass="text-primary" />
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      className="pl-9"
+                      placeholder="Search by name, email, or event…"
+                      value={guestTicketQuery}
+                      onChange={e => setGuestTicketQuery(e.target.value)}
+                    />
+                  </div>
+                  <select
+                    className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                    value={guestTicketStatusFilter}
+                    onChange={e => setGuestTicketStatusFilter(e.target.value)}
+                  >
+                    <option value="all">All statuses</option>
+                    <option value="unverified">Unverified</option>
+                    <option value="started">Started</option>
+                    <option value="deposited">Deposited</option>
+                    <option value="error">Error</option>
+                    <option value="declined">Declined</option>
+                    <option value="refunded">Refunded</option>
+                  </select>
+                </div>
+
+                <Card>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Event</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Verified</TableHead>
+                        <TableHead>Checked in</TableHead>
+                        <TableHead>Purchased</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading('one_timers')
+                        ? <TableSkeleton cols={8} />
+                        : filteredGuestTickets.length === 0
+                          ? <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-12">No one-time ticket purchases yet</TableCell></TableRow>
+                          : filteredGuestTickets.map(t => (
+                            <TableRow key={t.id}>
+                              <TableCell className="font-medium text-sm">{t.full_name}</TableCell>
+                              <TableCell className="text-muted-foreground text-xs">{t.email}</TableCell>
+                              <TableCell className="text-sm">{t.event_title || '—'}</TableCell>
+                              <TableCell className="text-sm">{t.amount} AMD</TableCell>
+                              <TableCell><Badge variant={STATUS_BADGE[t.status] || 'muted'}>{t.status}</Badge></TableCell>
+                              <TableCell>{t.email_verified ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <XCircle className="h-4 w-4 text-muted-foreground" />}</TableCell>
+                              <TableCell>{t.checked_in ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <XCircle className="h-4 w-4 text-muted-foreground" />}</TableCell>
+                              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">{t.created_at ? fmtDateTime(t.created_at) : '—'}</TableCell>
                             </TableRow>
                           ))
                       }

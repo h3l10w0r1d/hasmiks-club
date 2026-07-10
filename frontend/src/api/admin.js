@@ -86,3 +86,7 @@ export const adminRefreshPayment      = (id)         => client.post(`/admin/paym
 export const adminRefundPayment       = (id, amount) => client.post(`/admin/payments/${id}/refund`, { amount }).then(r => r.data)
 export const adminCancelPayment       = (id)         => client.post(`/admin/payments/${id}/cancel`).then(r => r.data)
 export const adminGetPaymentLogs      = (id)         => client.get(`/admin/payments/${id}/logs`).then(r => r.data)
+
+// one-time guest tickets
+export const adminGetGuestTickets     = (params)     => client.get('/admin/guest-tickets', { params }).then(r => r.data)
+export const adminGuestTicketCheckin  = (payload)    => client.post('/admin/guest-tickets/checkin', { payload }).then(r => r.data)
