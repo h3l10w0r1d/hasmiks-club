@@ -17,6 +17,7 @@ import RegisterPage from './pages/RegisterPage'
 import DashboardPage from './pages/DashboardPage'
 import AdminPage from './pages/AdminPage'
 import GuestScanPage from './pages/GuestScanPage'
+import AdminMemberDetailPage from './pages/AdminMemberDetailPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import EventsPage from './pages/EventsPage'
@@ -127,6 +128,11 @@ function AppRoutes() {
       <Route path="/admin/scan" element={
         <AdminRoute>
           <GuestScanPage />
+        </AdminRoute>
+      } />
+      <Route path="/admin/members/:id" element={
+        <AdminRoute>
+          <AdminMemberDetailPage />
         </AdminRoute>
       } />
       <Route path="/forgot-password" element={<ForgotPasswordPage lang={lang} />} />

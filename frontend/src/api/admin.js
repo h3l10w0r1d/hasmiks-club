@@ -2,6 +2,7 @@ import client from './client'
 
 // members
 export const adminGetMembers          = ()           => client.get('/admin/members').then(r => r.data)
+export const adminGetMemberDetail     = (id)         => client.get(`/admin/members/${id}/detail`).then(r => r.data)
 export const adminUpdateMember        = (id, data)   => client.patch(`/admin/members/${id}`, data).then(r => r.data)
 export const adminDeleteMember        = (id)         => client.delete(`/admin/members/${id}`)
 export const adminSendTelegramInvite  = (id)         => client.post(`/admin/members/${id}/telegram-invite`).then(r => r.data)

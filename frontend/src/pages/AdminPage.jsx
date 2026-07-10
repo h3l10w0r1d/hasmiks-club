@@ -9,7 +9,7 @@ import {
   SendHorizonal, StickyNote, Filter, UserCheck,
   Inbox, GalleryHorizontal, Settings2, Trophy, Link2, Plus, Trash2, ExternalLink,
   Shield, MapPin, Pencil, Unlock, CreditCard, RotateCcw, Ban, ScrollText, Crop,
-  Ticket, QrCode, BadgeCheck, Menu, X, Gift,
+  Ticket, QrCode, BadgeCheck, Menu, X, Gift, Eye,
 } from 'lucide-react'
 
 import { Button }       from '../components/ui/button'
@@ -28,6 +28,9 @@ import { DateTimePicker } from '../components/ui/datetimepicker'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
 import GalleryManager from '../components/GalleryManager'
 import CropModal from '../components/CropModal'
+import {
+  initials, fmtDate, fmtDateTime, KpiCard, SectionHeader, Field, TableSkeleton, MemberAvatar,
+} from '../components/ui/AdminShared'
 
 import {
   adminGetMembers, adminUpdateMember, adminDeleteMember, adminSendTelegramInvite, adminCancelAutoRenew,
@@ -142,73 +145,6 @@ const DEFAULT_SETTINGS = {
 
 const EMPTY_EVENT   = { title: '', title_hy: '', description: '', description_hy: '', location: '', event_date: '', max_seats: 20, cover_url: '', ticket_price: '', max_guest_tickets: '' }
 const EMPTY_CONTENT = { type: 'recipe', title: '', title_hy: '', description: '', description_hy: '', file_url: '', cover_url: '' }
-
-function initials(name = '') {
-  return name.split(' ').filter(Boolean).map(w => w[0]).join('').toUpperCase().slice(0, 2)
-}
-function fmtDate(iso) {
-  return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
-}
-function fmtDateTime(iso) {
-  return new Date(iso).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
-}
-
-function KpiCard({ icon: Icon, label, value, valueClass = '', loading }) {
-  if (loading) return <Card><CardContent className="p-5"><Skeleton className="h-4 w-20 mb-3" /><Skeleton className="h-9 w-12" /></CardContent></Card>
-  return (
-    <Card>
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{label}</span>
-          {Icon && <Icon className="h-4 w-4 text-muted-foreground/50" />}
-        </div>
-        <div className={`font-serif text-4xl font-semibold leading-none ${valueClass}`}>{value}</div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function SectionHeader({ title, sub, children }) {
-  return (
-    <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
-      <div>
-        <h1 className="font-serif text-3xl font-light text-foreground leading-tight">{title}</h1>
-        {sub && <p className="text-xs text-muted-foreground mt-1 uppercase tracking-wide">{sub}</p>}
-      </div>
-      {children && <div className="flex gap-2 flex-wrap">{children}</div>}
-    </div>
-  )
-}
-
-function Field({ label, children, className = '' }) {
-  return (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
-      <Label>{label}</Label>
-      {children}
-    </div>
-  )
-}
-
-function TableSkeleton({ cols, rows = 5 }) {
-  return (
-    <>{Array.from({ length: rows }).map((_, i) => (
-      <TableRow key={i}>
-        {Array.from({ length: cols }).map((_, j) => (
-          <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-        ))}
-      </TableRow>
-    ))}</>
-  )
-}
-
-function MemberAvatar({ name, size = 'md' }) {
-  const sz = size === 'sm' ? 'w-6 h-6 text-[10px]' : 'w-8 h-8 text-xs'
-  return (
-    <span className={`inline-flex items-center justify-center rounded-full bg-primary/10 text-primary font-bold flex-shrink-0 ${sz}`}>
-      {initials(name)}
-    </span>
-  )
-}
 
 // Inline image upload helper — shows file button next to URL field
 function ImageUploadField({ label, value, onChange, onUpload }) {
@@ -1037,10 +973,16 @@ export default function AdminPage() {
                           <Fragment key={m.id}>
                             <TableRow>
                               <TableCell>
-                                <div className="flex items-center gap-2.5">
+                                <div
+                                  className="flex items-center gap-2.5 cursor-pointer group"
+                                  onClick={() => navigate(`/admin/members/${m.id}`)}
+                                  role="link"
+                                  tabIndex={0}
+                                  onKeyDown={e => { if (e.key === 'Enter') navigate(`/admin/members/${m.id}`) }}
+                                >
                                   <MemberAvatar name={m.full_name} />
                                   <div>
-                                    <div className="font-medium text-sm flex items-center gap-1.5">
+                                    <div className="font-medium text-sm flex items-center gap-1.5 group-hover:text-primary group-hover:underline">
                                       {m.full_name}
                                       {m.is_admin && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Admin</Badge>}
                                     </div>
@@ -1071,6 +1013,7 @@ export default function AdminPage() {
                                     {m.membership_status === 'active' ? 'Deactivate' : 'Activate'}
                                   </Button>
                                   <RowMenu items={[
+                                    { icon: Eye, label: 'View full profile', onClick: () => navigate(`/admin/members/${m.id}`) },
                                     { icon: SendHorizonal, label: 'Send Telegram invite', onClick: () => handleSendTelegram(m) },
                                     { icon: StickyNote, label: m.admin_notes ? 'Edit private notes' : 'Add private notes', onClick: () => toggleNotes(m) },
                                     { icon: Shield, label: m.is_admin ? 'Revoke admin access' : 'Make admin', onClick: () => toggleAdmin(m) },

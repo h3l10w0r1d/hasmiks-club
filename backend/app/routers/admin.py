@@ -27,6 +27,11 @@ from app.schemas.content import ContentCreate, ContentOut
 from app.schemas.event import EventCreate, EventOut, GuestTicketOut
 from app.schemas.gift import GiftCardOut
 from app.schemas.user import UserOut, AdminUserUpdate
+from app.schemas.member_detail import (
+    MemberDetailOut, MemberRsvpOut, MemberUnlockedContentOut, MemberPaymentOut,
+    MemberGiftGivenOut, MemberGiftReceivedOut, MemberGuestTicketMatchOut,
+    MemberReferralOut, MemberAuditLogOut, ProfilePhotoOut,
+)
 from app.core import ameriabank
 from app.core import email as mailer
 from app.core import notify
@@ -160,6 +165,91 @@ def admin_cancel_auto_renew(user_id: int, db: Session = Depends(get_db), admin: 
     audit_log(db, f"cancel_auto_renew: {user.email}", admin_id=admin.id, entity_type="user", entity_id=user_id)
     db.commit()
     return {"auto_renew": False}
+
+
+@router.get("/members/{user_id}/detail", response_model=MemberDetailOut)
+def get_member_detail(user_id: int, db: Session = Depends(get_db), _: User = Depends(require_permission('manage_members'))):
+    """Everything about one member in a single bundled response — identity,
+    billing, activity, payments, gift cards given/received, guest tickets
+    (best-effort email match — GuestTicket has no user_id FK by design),
+    referrals both directions, and the admin audit trail for this account."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    referred_by = db.query(User).filter(User.id == user.referred_by_id).first() if user.referred_by_id else None
+    referrals = db.query(User).filter(User.referred_by_id == user.id).order_by(User.joined_at.desc()).all()
+
+    rsvps = db.query(RSVP).filter(RSVP.user_id == user.id).order_by(RSVP.created_at.desc()).all()
+    event_ids = {r.event_id for r in rsvps}
+    events_by_id = {e.id: e for e in db.query(Event).filter(Event.id.in_(event_ids)).all()} if event_ids else {}
+
+    unlocks = db.query(MemberContent).filter(MemberContent.user_id == user.id).order_by(MemberContent.unlocked_at.desc()).all()
+    content_ids = {u.content_id for u in unlocks}
+    content_by_id = {c.id: c for c in db.query(ContentItem).filter(ContentItem.id.in_(content_ids)).all()} if content_ids else {}
+
+    payments = db.query(AmeriaPayment).filter(AmeriaPayment.user_id == user.id).order_by(AmeriaPayment.created_at.desc()).all()
+
+    gifts_given = db.query(GiftCard).filter(GiftCard.giver_email == user.email).order_by(GiftCard.created_at.desc()).all() if user.email else []
+    gifts_received = db.query(GiftCard).filter(GiftCard.applied_to_user_id == user.id).order_by(GiftCard.created_at.desc()).all()
+
+    guest_tickets = db.query(GuestTicket).filter(GuestTicket.email == user.email).order_by(GuestTicket.created_at.desc()).all() if user.email else []
+    gt_event_ids = {g.event_id for g in guest_tickets}
+    gt_events_by_id = {e.id: e for e in db.query(Event).filter(Event.id.in_(gt_event_ids)).all()} if gt_event_ids else {}
+
+    audit_rows = (
+        db.query(AuditLog)
+        .filter(AuditLog.entity_type == "user", AuditLog.entity_id == user.id)
+        .order_by(AuditLog.created_at.desc())
+        .limit(200)
+        .all()
+    )
+    admin_ids = {r.admin_id for r in audit_rows if r.admin_id}
+    admins_by_id = {a.id: a.full_name for a in db.query(User).filter(User.id.in_(admin_ids)).all()} if admin_ids else {}
+
+    return MemberDetailOut(
+        id=user.id, email=user.email, full_name=user.full_name, photo_url=user.photo_url,
+        lang_pref=user.lang_pref, phone=user.phone, whatsapp=user.whatsapp,
+        facebook_url=user.facebook_url, telegram_username=user.telegram_username,
+        telegram_id=user.telegram_id, google_id=user.google_id, bio=user.bio,
+        admin_notes=user.admin_notes, is_verified=user.is_verified, show_in_directory=user.show_in_directory,
+        application_status=user.application_status, application_message=user.application_message,
+        onboarding_completed=user.onboarding_completed, joined_at=user.joined_at, updated_at=user.updated_at,
+        is_admin=user.is_admin, role=user.role, permissions=user.permissions,
+        membership_status=user.membership_status, membership_expires_at=user.membership_expires_at,
+        card_holder_id=user.card_holder_id, binding_active=user.binding_active,
+        next_billing_date=user.next_billing_date, renewal_attempts=user.renewal_attempts,
+        card_required_by=user.card_required_by,
+        referral_code=user.referral_code, referred_by_id=user.referred_by_id,
+        referred_by_name=referred_by.full_name if referred_by else None,
+        referred_by_email=referred_by.email if referred_by else None,
+        referrals=[MemberReferralOut(id=r.id, full_name=r.full_name, email=r.email,
+                                      membership_status=r.membership_status, joined_at=r.joined_at) for r in referrals],
+        profile_photos=[ProfilePhotoOut(id=p.id, url=p.url) for p in user.profile_photos],
+        rsvps=[MemberRsvpOut(id=r.id, event_id=r.event_id,
+                              event_title=events_by_id[r.event_id].title if r.event_id in events_by_id else "Unknown event",
+                              event_date=events_by_id[r.event_id].event_date if r.event_id in events_by_id else r.created_at,
+                              checked_in=r.checked_in, created_at=r.created_at) for r in rsvps],
+        unlocked_content=[MemberUnlockedContentOut(id=u.id, content_id=u.content_id,
+                              title=content_by_id[u.content_id].title if u.content_id in content_by_id else "Unknown",
+                              type=content_by_id[u.content_id].type if u.content_id in content_by_id else "",
+                              unlocked_at=u.unlocked_at) for u in unlocks],
+        payments=[MemberPaymentOut(id=p.id, order_id=p.order_id, amount=p.amount, currency=p.currency,
+                              status=p.status, response_message=p.response_message,
+                              card_number=p.card_number, created_at=p.created_at) for p in payments],
+        gift_cards_given=[MemberGiftGivenOut(id=g.id, recipient_name=g.recipient_name, recipient_email=g.recipient_email,
+                              gift_type=g.gift_type, duration_months=g.duration_months, amount=g.amount,
+                              status=g.status, created_at=g.created_at) for g in gifts_given],
+        gift_cards_received=[MemberGiftReceivedOut(id=g.id, giver_name=g.giver_name, giver_email=g.giver_email,
+                              gift_type=g.gift_type, duration_months=g.duration_months,
+                              redeemed_at=g.redeemed_at, created_at=g.created_at) for g in gifts_received],
+        guest_tickets_by_email=[MemberGuestTicketMatchOut(id=t.id, event_id=t.event_id,
+                              event_title=gt_events_by_id[t.event_id].title if t.event_id in gt_events_by_id else "Unknown event",
+                              amount=t.amount, status=t.status, checked_in=t.checked_in,
+                              created_at=t.created_at) for t in guest_tickets],
+        audit_log=[MemberAuditLogOut(id=a.id, admin_id=a.admin_id, admin_name=admins_by_id.get(a.admin_id),
+                              action=a.action, details=a.details, created_at=a.created_at) for a in audit_rows],
+    )
 
 
 # ── applications ──────────────────────────────────────────────────────────────
