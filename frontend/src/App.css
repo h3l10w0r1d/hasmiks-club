@@ -1702,16 +1702,6 @@ footer{
 .admin-flash.success{background:var(--rose-bg);color:var(--rose)}
 .admin-flash.error{background:#fde8e8;color:#b91c1c}
 
-@media(max-width:860px){
-  .admin-shell{flex-direction:column}
-  .admin-sidebar{width:100%;height:auto;position:relative;flex-direction:row;flex-wrap:wrap}
-  .admin-sidebar-nav{flex-direction:row;padding:8px;flex-wrap:wrap;gap:4px}
-  .admin-sidebar-item{padding:7px 12px;font-size:11px;gap:6px}
-  .admin-sidebar-footer{flex-direction:row;border-top:none;border-left:1px solid rgba(255,255,255,0.07);padding:8px 12px}
-  .admin-main{padding:24px 20px}
-  .admin-topbar{padding:0 20px}
-  .admin-kpi-row{grid-template-columns:repeat(2,1fr)}
-}
 
 /* forum: spinner utility */
 @keyframes spin { to { transform: rotate(360deg); } }

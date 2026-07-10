@@ -9,7 +9,7 @@ import {
   SendHorizonal, StickyNote, Filter, UserCheck,
   Inbox, GalleryHorizontal, Settings2, Trophy, Link2, Plus, Trash2, ExternalLink,
   Shield, MapPin, Pencil, Unlock, CreditCard, RotateCcw, Ban, ScrollText, Crop,
-  Ticket, QrCode, BadgeCheck,
+  Ticket, QrCode, BadgeCheck, Menu, X,
 } from 'lucide-react'
 
 import { Button }       from '../components/ui/button'
@@ -284,6 +284,7 @@ export default function AdminPage() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const [tab, setTab] = useState('today')
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState(null)   // { label, onConfirm, confirmLabel? }
 
   const [members,   setMembers]   = useState([])
@@ -759,8 +760,16 @@ export default function AdminPage() {
         <div className="admin-sidebar-logo">
           <span className="brand">Hasmik's <span>Club</span></span>
           <span className="badge-label">Admin Panel</span>
+          <button
+            className="admin-mobile-nav-toggle"
+            aria-label={mobileNavOpen ? 'Close menu' : 'Open menu'}
+            aria-expanded={mobileNavOpen}
+            onClick={() => setMobileNavOpen(o => !o)}
+          >
+            {mobileNavOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
-        <div className="admin-sidebar-nav">
+        <div className={`admin-sidebar-nav${mobileNavOpen ? ' mobile-open' : ''}`}>
           {TAB_GROUPS.map(group => (
             <div className="admin-nav-group" key={group.label}>
               <div className="admin-nav-group-label">{group.label}</div>
@@ -771,7 +780,7 @@ export default function AdminPage() {
                 if (reqPerm && !canDo(user, reqPerm)) return null
                 const { icon: Icon, label } = t
                 return (
-                  <button key={key} className={`admin-sidebar-item${tab === key ? ' active' : ''}`} onClick={() => setTab(key)}>
+                  <button key={key} className={`admin-sidebar-item${tab === key ? ' active' : ''}`} onClick={() => { setTab(key); setMobileNavOpen(false) }}>
                     <span className="si-icon"><Icon size={15} /></span>
                     {label}
                     {key === 'applications' && applications.length > 0 && (
@@ -782,6 +791,14 @@ export default function AdminPage() {
               })}
             </div>
           ))}
+          <div className="admin-mobile-nav-footer">
+            <button className="admin-sidebar-btn back" onClick={() => { setMobileNavOpen(false); navigate('/dashboard') }}>
+              <LayoutDashboard size={13} /> Member view
+            </button>
+            <button className="admin-sidebar-btn signout" onClick={() => { setMobileNavOpen(false); signOut(); navigate('/') }}>
+              <LogOut size={13} /> Sign out
+            </button>
+          </div>
         </div>
         <div className="admin-sidebar-footer">
           <div className="admin-sidebar-user">
@@ -796,6 +813,7 @@ export default function AdminPage() {
           </button>
         </div>
       </aside>
+      {mobileNavOpen && <div className="admin-mobile-nav-backdrop" onClick={() => setMobileNavOpen(false)} />}
 
       {/* ══ BODY ═════════════════════════════════════════════ */}
       <div className="flex flex-col flex-1 min-w-0 min-h-0">
