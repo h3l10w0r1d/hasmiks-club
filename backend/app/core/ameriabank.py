@@ -40,7 +40,7 @@ def _credentials() -> dict:
     }
 
 
-def init_payment(*, order_id: int, amount: float, description: str, back_url: str, currency: Optional[str] = None) -> dict:
+def init_payment(*, order_id: int, amount: float, description: str, back_url: str, currency: Optional[str] = None, card_holder_id: Optional[str] = None) -> dict:
     payload = {
         "ClientID": settings.AMERIABANK_CLIENT_ID,
         **_credentials(),
@@ -50,6 +50,12 @@ def init_payment(*, order_id: int, amount: float, description: str, back_url: st
         "BackURL": back_url,
         "Currency": currency or settings.AMERIABANK_CURRENCY,
     }
+    if card_holder_id:
+        # Registers this payment's card under card_holder_id once the buyer
+        # completes it — see "Binding Transactions" in the vPOS docs. Every
+        # later renewal charges that same card via make_binding_payment()
+        # with no redirect and no re-entering card details.
+        payload["CardHolderID"] = card_holder_id
     return _post("InitPayment", payload)
 
 
@@ -71,6 +77,57 @@ def refund_payment(payment_id: str, amount: float) -> dict:
 
 def payment_page_url(payment_id: str, lang: str = "en") -> str:
     return f"{settings.AMERIABANK_BASE_URL}/Payments/Pay?id={payment_id}&lang={lang}"
+
+
+# PaymentType values shared by the binding functions below (per vPOS docs' PaymentsEnum)
+_BINDING_PAYMENT_TYPE = 6
+
+
+def make_binding_payment(*, order_id: int, amount: float, description: str, back_url: str, card_holder_id: str, currency: Optional[str] = None) -> dict:
+    """Charge a previously-bound card directly — no redirect, no card entry.
+    Used for membership renewals once the first payment has established a
+    binding for this card_holder_id."""
+    payload = {
+        "ClientID": settings.AMERIABANK_CLIENT_ID,
+        **_credentials(),
+        "OrderID": order_id,
+        "Amount": float(amount),
+        "Description": description,
+        "BackURL": back_url,
+        "Currency": currency or settings.AMERIABANK_CURRENCY,
+        "CardHolderID": card_holder_id,
+        "PaymentType": _BINDING_PAYMENT_TYPE,
+    }
+    return _post("MakeBindingPayment", payload)
+
+
+def get_bindings() -> dict:
+    """Every bound card on the whole merchant account (the request has no
+    CardHolderID filter per the docs — each entry in the response's
+    CardBindingFileds list carries its own CardHolderID to match against)."""
+    return _post("GetBindings", {
+        "ClientID": settings.AMERIABANK_CLIENT_ID,
+        **_credentials(),
+        "PaymentType": _BINDING_PAYMENT_TYPE,
+    })
+
+
+def activate_binding(card_holder_id: str) -> dict:
+    return _post("ActivateBinding", {
+        "ClientID": settings.AMERIABANK_CLIENT_ID,
+        **_credentials(),
+        "PaymentType": _BINDING_PAYMENT_TYPE,
+        "CardHolderID": card_holder_id,
+    })
+
+
+def deactivate_binding(card_holder_id: str) -> dict:
+    return _post("DeactivateBinding", {
+        "ClientID": settings.AMERIABANK_CLIENT_ID,
+        **_credentials(),
+        "PaymentType": _BINDING_PAYMENT_TYPE,
+        "CardHolderID": card_holder_id,
+    })
 
 
 def is_success_code(response_code) -> bool:
@@ -118,18 +175,20 @@ def is_paid(details: dict) -> bool:
 
 
 def next_order_id(db) -> int:
-    """Next Ameriabank OrderID, unique across BOTH membership payments and
-    one-time guest tickets — Ameriabank requires order IDs to be globally
-    unique regardless of which local table they're tracked in, so this
-    can't just be "highest row id in one table + offset" once there are two
-    tables drawing from the same namespace."""
+    """Next Ameriabank OrderID, unique across membership payments, one-time
+    guest tickets, AND gift cards — Ameriabank requires order IDs to be
+    globally unique regardless of which local table they're tracked in, so
+    this can't just be "highest row id in one table + offset" once several
+    tables draw from the same namespace."""
     from sqlalchemy import func as sa_func
     from app.models.ameria_payment import AmeriaPayment
     from app.models.guest_ticket import GuestTicket
+    from app.models.gift_card import GiftCard
 
     max_membership = db.query(sa_func.max(AmeriaPayment.order_id)).scalar() or 0
     max_guest = db.query(sa_func.max(GuestTicket.order_id)).scalar() or 0
-    next_id = max(max_membership, max_guest, settings.AMERIABANK_ORDER_ID_START - 1) + 1
+    max_gift = db.query(sa_func.max(GiftCard.order_id)).scalar() or 0
+    next_id = max(max_membership, max_guest, max_gift, settings.AMERIABANK_ORDER_ID_START - 1) + 1
     if settings.AMERIABANK_TEST_MODE and next_id > settings.AMERIABANK_ORDER_ID_END:
         raise AmeriaBankError(
             "Ameriabank test OrderID range exhausted — request a new range from "

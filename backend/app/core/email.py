@@ -209,7 +209,7 @@ def track_event_async(email: str, event_name: str, event_properties: Optional[di
 # site's actual brand palette (--rose #7E3434, --deep #180C04, --sand/--cream
 # warm neutrals — see frontend/src/App.css :root). The logo is the real
 # production-hosted wordmark, not a data: URI — Gmail and most other webmail
-# clients strip inline base64 images from HTML mail (see _qr_image_url above
+# clients strip inline base64 images from HTML mail (see qr_image_url above
 # for the same lesson learned the hard way with the check-in QR).
 
 _LOGO_URL = "https://www.hasmiksclub.am/logo-full.png"
@@ -281,7 +281,7 @@ def send_rsvp_confirmation(to: str, name: str, event_title: str, event_date: str
     send_async(to, name, f"RSVP Confirmed: {event_title}", html)
 
 
-def _qr_image_url(payload: str) -> Optional[str]:
+def qr_image_url(payload: str) -> Optional[str]:
     """Render a QR code PNG in-memory and host it on Cloudinary, returning a
     normal https:// URL. A data: URI looks correct in a browser preview but
     Gmail (and most other webmail clients) strip inline base64 images from
@@ -322,7 +322,7 @@ def send_guest_verification_code(to: str, name: str, code: str, event_title: str
 def send_guest_ticket_confirmation(to: str, name: str, event_title: str, event_date: str, location: str, checkin_payload: Optional[str] = None) -> None:
     qr_html = ""
     if checkin_payload:
-        qr_url = _qr_image_url(checkin_payload)
+        qr_url = qr_image_url(checkin_payload)
         if qr_url:
             qr_html = f"""
             <div style="text-align:center;margin:24px 0;">
@@ -460,3 +460,117 @@ def send_password_reset(to: str, name: str, reset_url: str) -> None:
     <p class="small">This link expires in 1 hour. If you didn't request this, you can safely ignore this email — your password will stay unchanged.</p>
     """)
     send_async(to, name, "Reset your Hasmik's Club password", html)
+
+
+# ── recurring membership billing ───────────────────────────────────────────────
+
+def send_renewal_succeeded(to: str, name: str, amount: float) -> None:
+    html = _wrap(f"""
+    <h2>You're all set, {name}! ✅</h2>
+    <p>Your Hasmik's Club membership just renewed automatically — ֏{amount:,.0f} was charged to your card on file, and your access continues uninterrupted.</p>
+    <p class="small">You can review your billing details or turn off auto-renew anytime from your dashboard.</p>
+    """)
+    send_async(to, name, "Your membership renewed — Hasmik's Club", html)
+
+
+def send_renewal_failed(to: str, name: str, attempts_left: int) -> None:
+    html = _wrap(f"""
+    <h2>We couldn't renew your membership, {name}</h2>
+    <p>Your card on file was declined for this month's membership renewal. We'll try again in a few days, but in the meantime you won't be able to register for new events until it's resolved.</p>
+    <p>Please update your card from your dashboard's billing section to avoid any interruption.</p>
+    <a href="https://www.hasmiksclub.am/dashboard" class="btn">Update my card</a>
+    <p class="small">We'll retry {attempts_left} more time{'s' if attempts_left != 1 else ''} before your membership lapses.</p>
+    """)
+    send_async(to, name, "Action needed: your membership renewal failed", html)
+
+
+def send_membership_lapsed(to: str, name: str) -> None:
+    html = _wrap(f"""
+    <h2>Your membership has lapsed, {name}</h2>
+    <p>After a few attempts, we weren't able to renew your Hasmik's Club membership, so it's now inactive. You're welcome back anytime — just add a card from your dashboard to resume.</p>
+    <a href="https://www.hasmiksclub.am/dashboard" class="btn">Resume my membership</a>
+    <p class="signoff">We'd love to have you back!<br><strong>Hasmik's Club</strong></p>
+    """)
+    send_async(to, name, "Your Hasmik's Club membership has lapsed", html)
+
+
+# ── gift cards ──────────────────────────────────────────────────────────────
+
+def send_gift_verification_code(to: str, name: str, code: str, recipient_name: str) -> None:
+    html = _wrap(f"""
+    <h2>Confirm your email, {name}</h2>
+    <p>You're one step away from sending a gift to <strong>{recipient_name}</strong>. Enter this 6-digit code on the checkout page to confirm it's really you and continue to payment:</p>
+    <div class="meta" style="text-align:center;">
+      <p style="font-size:32px;font-weight:700;letter-spacing:0.3em;color:#7E3434;margin:0;">{code}</p>
+    </div>
+    <p class="small">This code expires in 10 minutes. If you didn't request this, you can safely ignore this email — no gift or charge will happen without it.</p>
+    """)
+    send_async(to, name, f"Your verification code: {code}", html)
+
+
+def send_gift_giver_receipt(to: str, name: str, recipient_name: str, detail_line: str, amount) -> None:
+    html = _wrap(f"""
+    <h2>Your gift is on its way, {name}! 🎁</h2>
+    <p>Thank you for gifting <strong>{recipient_name}</strong> — your payment has gone through and we've reached out to them with the details.</p>
+    <div class="meta">
+      <p><strong>Gift:</strong> {detail_line}</p>
+      <p><strong>Amount paid:</strong> ֏{amount:,.0f}</p>
+      <p><strong>Recipient:</strong> {recipient_name}</p>
+    </div>
+    <p class="signoff">With warmth,<br><strong>The Hasmik's Club team</strong></p>
+    """)
+    send_async(to, name, "Your gift receipt — Hasmik's Club", html)
+
+
+def send_gift_claim_link(to: str, recipient_name: str, giver_name: Optional[str], duration_months: int, claim_url: str) -> None:
+    from_line = f"<strong>{giver_name}</strong> has gifted you" if giver_name else "You've been gifted"
+    html = _wrap(f"""
+    <h2>A gift for you, {recipient_name}! 🎁</h2>
+    <p>{from_line} <strong>{duration_months} month{'s' if duration_months != 1 else ''}</strong> of Hasmik's Club membership — a warm, intimate community for Armenian women.</p>
+    <p>Claim it below by setting a password, or continuing with Google or Telegram — takes less than a minute.</p>
+    <a href="{claim_url}" class="btn">Claim my gift</a>
+    <p class="small">This link is yours alone — no need to share it with anyone.</p>
+    """)
+    send_async(to, recipient_name, "You've received a gift — Hasmik's Club 🎁", html)
+
+
+def send_gift_applied_existing(to: str, recipient_name: str, giver_name: Optional[str], duration_months: int, expires_at: str) -> None:
+    from_line = f"<strong>{giver_name}</strong> has gifted you" if giver_name else "You've been gifted"
+    html = _wrap(f"""
+    <h2>A gift for you, {recipient_name}! 🎁</h2>
+    <p>{from_line} <strong>{duration_months} month{'s' if duration_months != 1 else ''}</strong> of Hasmik's Club membership, and since you already have an account, it's already active — no action needed.</p>
+    <div class="meta">
+      <p><strong>Active until:</strong> {expires_at}</p>
+    </div>
+    <a href="https://www.hasmiksclub.am/dashboard" class="btn">Go to my dashboard</a>
+    <p class="signoff">With warmth,<br><strong>The Hasmik's Club team</strong></p>
+    """)
+    send_async(to, recipient_name, "You've received a gift — Hasmik's Club 🎁", html)
+
+
+def send_gift_tickets(to: str, recipient_name: str, giver_name: Optional[str], tickets: list) -> None:
+    """tickets: list of {event_title, event_date, location, qr_url}"""
+    from_line = f"<strong>{giver_name}</strong> has gifted you" if giver_name else "You've been gifted"
+    cards = ""
+    for t in tickets:
+        qr_html = f"""
+        <div style="text-align:center;margin:16px 0;">
+          <img src="{t['qr_url']}" alt="Check-in QR code" width="180" height="180" style="width:180px;height:180px;border:8px solid #fff;box-shadow:0 2px 12px rgba(0,0,0,.1);" />
+        </div>
+        """ if t.get("qr_url") else ""
+        cards += f"""
+        <div class="meta">
+          <p style="font-size:16px;font-weight:600;margin-bottom:8px;">{t['event_title']}</p>
+          <p>📍 <strong>Location:</strong> {t['location']}</p>
+          <p>🗓 <strong>Date:</strong> {t['event_date']}</p>
+          {qr_html}
+        </div>
+        """
+    html = _wrap(f"""
+    <h2>A gift for you, {recipient_name}! 🎟️</h2>
+    <p>{from_line} {'a ticket' if len(tickets) == 1 else f'{len(tickets)} tickets'} to the event{'s' if len(tickets) != 1 else ''} below — no membership needed, just show up and enjoy.</p>
+    {cards}
+    <p>Hold on to this email — the QR code{'s' if len(tickets) != 1 else ''} above are what our team will scan you in with at the door, no separate printout needed.</p>
+    <p class="signoff">We look forward to seeing you there!<br><strong>Hasmik's Club</strong></p>
+    """)
+    send_async(to, recipient_name, "You've received a gift ticket — Hasmik's Club 🎟️", html)

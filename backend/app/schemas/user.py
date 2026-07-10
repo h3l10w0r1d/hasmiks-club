@@ -61,6 +61,12 @@ class UserOut(BaseModel):
     role: str = 'member'
     permissions: Optional[str] = None
     profile_photos: List[ProfilePhotoOut] = []
+    card_holder_id: Optional[str] = None
+    binding_active: bool = False
+    next_billing_date: Optional[datetime] = None
+    renewal_attempts: int = 0
+    card_required_by: Optional[datetime] = None
+    membership_expires_at: Optional[datetime] = None
 
     model_config = {"from_attributes": True}
 

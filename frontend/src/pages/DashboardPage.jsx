@@ -18,7 +18,7 @@ import { useAuth } from '../context/AuthContext'
 import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum, addProfilePhoto, deleteProfilePhoto, getMemberProfile, unlinkTelegram } from '../api/members'
 import { getEvents, rsvp, cancelRsvp, joinWaitlist, leaveWaitlist, getWaitlistPosition, memberGuestTicketCheckout } from '../api/events'
 import { getLibrary } from '../api/content'
-import { getPublicSettings, createCheckout } from '../api/payments'
+import { getPublicSettings, createCheckout, cancelAutoRenew } from '../api/payments'
 import { refreshToken as apiRefresh } from '../api/auth'
 import NotificationBell from '../components/NotificationBell'
 import OnboardingModal from '../components/OnboardingModal'
@@ -476,6 +476,29 @@ export default function DashboardPage({ lang, setLang }) {
     }
   }
 
+  const [cancelRenewLoading, setCancelRenewLoading] = useState(false)
+  const handleCancelAutoRenew = () => {
+    setConfirmDialog({
+      title: lang === 'hy' ? 'Անջատե՞լ ինքնավերականգնումը' : 'Turn off auto-renew?',
+      body: lang === 'hy'
+        ? 'Ձեր անդամակցությունը կմնա ակտիվ մինչև ընթացիկ ժամանակաշրջանի ավարտը, բայց այլևս ավտոմատ չի վերականգնվի:'
+        : "Your membership stays active until the current period ends, but won't renew automatically after that.",
+      confirmLabel: lang === 'hy' ? 'Անջատել' : 'Turn off',
+      onConfirm: async () => {
+        setCancelRenewLoading(true)
+        try {
+          await cancelAutoRenew()
+          const fresh = await getMe()
+          setUser(fresh)
+        } catch {
+          setMsg(lang === 'hy' ? 'Չհաջողվեց անջատել: Փորձե՛ք կրկին:' : 'Could not turn off auto-renew. Please try again.')
+        } finally {
+          setCancelRenewLoading(false)
+        }
+      },
+    })
+  }
+
   if (!user) return null
 
   // Pending application screen
@@ -518,34 +541,42 @@ export default function DashboardPage({ lang, setLang }) {
   }
 
   const isActive = user.membership_status === 'active'
+  const isPastDue = user.membership_status === 'past_due'
   const paymentFailed = searchParams.get('payment') === 'failed'
 
   // Ghost view: approved accounts that skipped or haven't completed payment can
   // still browse the dashboard, but aren't visible in the directory, can't post
   // in the forum, and can't RSVP to events (all enforced server-side too) until
   // they subscribe. This banner is their one persistent, always-visible path
-  // back to checkout — shown on every tab, not a full-page block.
+  // back to checkout — shown on every tab, not a full-page block. past_due
+  // (an auto-renewal charge failed, or the card-migration deadline lapsed)
+  // gets the same banner shape with different copy — a real prior member,
+  // not someone who was never subscribed.
   const membershipBanner = !isActive && (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
-      background: paymentFailed ? '#fdecea' : '#fff8f5',
-      border: `1px solid ${paymentFailed ? '#f3c6c0' : '#f5ddd0'}`,
+      background: (paymentFailed || isPastDue) ? '#fdecea' : '#fff8f5',
+      border: `1px solid ${(paymentFailed || isPastDue) ? '#f3c6c0' : '#f5ddd0'}`,
       borderRadius: 14, padding: '16px 20px', marginBottom: 28,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <CreditCard size={22} strokeWidth={1.5} color={paymentFailed ? '#c0392b' : 'var(--rose)'} style={{ flexShrink: 0 }} />
+        <CreditCard size={22} strokeWidth={1.5} color={(paymentFailed || isPastDue) ? '#c0392b' : 'var(--rose)'} style={{ flexShrink: 0 }} />
         <div>
-          <p style={{ fontSize: 14, fontWeight: 700, color: paymentFailed ? '#c0392b' : '#2c1a1a', margin: 0 }}>
-            {paymentFailed
-              ? (lang === 'hy' ? 'Վերջին վճարման փորձը չհաջողվեց' : 'Your last payment attempt failed')
-              : (lang === 'hy' ? 'Դուք դիտում եք որպես հյուր' : "You're browsing as a guest")}
+          <p style={{ fontSize: 14, fontWeight: 700, color: (paymentFailed || isPastDue) ? '#c0392b' : '#2c1a1a', margin: 0 }}>
+            {isPastDue
+              ? (lang === 'hy' ? 'Ձեր վերջին վճարումը չհաջողվեց' : 'Your last payment failed')
+              : paymentFailed
+                ? (lang === 'hy' ? 'Վերջին վճարման փորձը չհաջողվեց' : 'Your last payment attempt failed')
+                : (lang === 'hy' ? 'Դուք դիտում եք որպես հյուր' : "You're browsing as a guest")}
           </p>
           <p style={{ fontSize: 12.5, color: '#8a746a', margin: '2px 0 0' }}>
-            {paymentFailed
-              ? (lang === 'hy' ? 'Կրկին փորձեք, կամ կապվեք մեզ հետ, եթե խնդիրը կրկնվում է:' : 'Try again, or contact us if this keeps happening.')
-              : (lang === 'hy'
-                  ? 'Բաժանորդագրվեք՝ ֆորումում գրելու, հանդիպումներին գրանցվելու և համայնքին տեսանելի լինելու համար:'
-                  : 'Subscribe to post in the forum, RSVP to gatherings, and be visible to the community.')}
+            {isPastDue
+              ? (lang === 'hy' ? 'Թարմացրե՛ք ձեր քարտը՝ անդամակցությունը շարունակելու համար:' : 'Update your card to keep your membership active.')
+              : paymentFailed
+                ? (lang === 'hy' ? 'Կրկին փորձեք, կամ կապվեք մեզ հետ, եթե խնդիրը կրկնվում է:' : 'Try again, or contact us if this keeps happening.')
+                : (lang === 'hy'
+                    ? 'Բաժանորդագրվեք՝ ֆորումում գրելու, հանդիպումներին գրանցվելու և համայնքին տեսանելի լինելու համար:'
+                    : 'Subscribe to post in the forum, RSVP to gatherings, and be visible to the community.')}
           </p>
           {msg && <p style={{ fontSize: 12.5, color: '#c0392b', margin: '4px 0 0' }}>{msg}</p>}
         </div>
@@ -557,9 +588,11 @@ export default function DashboardPage({ lang, setLang }) {
       >
         {checkoutLoading
           ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…')
-          : paymentFailed
-            ? (lang === 'hy' ? 'Կրկին փորձել' : 'Try Again')
-            : (lang === 'hy' ? 'Բաժանորդագրվել' : 'Subscribe Now')}
+          : isPastDue
+            ? (lang === 'hy' ? 'Թարմացնել քարտը' : 'Update Card')
+            : paymentFailed
+              ? (lang === 'hy' ? 'Կրկին փորձել' : 'Try Again')
+              : (lang === 'hy' ? 'Բաժանորդագրվել' : 'Subscribe Now')}
       </button>
     </div>
   )
@@ -901,6 +934,58 @@ export default function DashboardPage({ lang, setLang }) {
                   style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, textDecoration: 'none', marginBottom: '24px', maxWidth: '280px' }}>
                   <Send size={15} /> {t.joinTelegram}
                 </a>
+              )}
+
+              {(isActive || isPastDue) && (
+                <div style={{ background: '#fff', border: '1px solid #f0dde0', borderRadius: 14, padding: '16px 20px', marginBottom: 24 }}>
+                  <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--deep)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <CreditCard size={15} /> {lang === 'hy' ? 'Վճարումներ' : 'Billing'}
+                  </p>
+
+                  {user.card_required_by && !user.binding_active && (
+                    <p style={{ fontSize: 12.5, color: '#c0392b', background: '#fdecea', border: '1px solid #f3c6c0', borderRadius: 8, padding: '8px 12px', marginBottom: 12 }}>
+                      {lang === 'hy'
+                        ? `Խնդրում ենք ավելացնել քարտ մինչև ${new Date(user.card_required_by).toLocaleDateString('hy-AM')}, հակառակ դեպքում անդամակցությունը կդադարի:`
+                        : `Please add a card by ${new Date(user.card_required_by).toLocaleDateString('en-GB')} to keep your membership from lapsing.`}
+                    </p>
+                  )}
+
+                  {user.binding_active ? (
+                    <>
+                      <p style={{ fontSize: 13, color: '#555', margin: '0 0 4px' }}>
+                        {lang === 'hy' ? 'Ինքնավերականգնում՝ ' : 'Auto-renew: '}<strong style={{ color: '#2e7d32' }}>{lang === 'hy' ? 'Միացված' : 'On'}</strong>
+                      </p>
+                      {user.next_billing_date && (
+                        <p style={{ fontSize: 12.5, color: '#888', margin: '0 0 12px' }}>
+                          {lang === 'hy' ? 'Հաջորդ վճարումը՝ ' : 'Next billing date: '}
+                          {new Date(user.next_billing_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB')}
+                        </p>
+                      )}
+                      <button
+                        onClick={handleCancelAutoRenew}
+                        disabled={cancelRenewLoading}
+                        style={{ background: 'none', border: '1px solid #ddd', borderRadius: 8, padding: '7px 14px', cursor: cancelRenewLoading ? 'default' : 'pointer', fontSize: 12.5, color: '#888', opacity: cancelRenewLoading ? 0.6 : 1 }}
+                      >
+                        {cancelRenewLoading
+                          ? (lang === 'hy' ? 'Անջատվում է…' : 'Turning off…')
+                          : (lang === 'hy' ? 'Անջատել ինքնավերականգնումը' : 'Turn off auto-renew')}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: 12.5, color: '#888', margin: '0 0 12px' }}>
+                        {lang === 'hy' ? 'Քարտ ավելացված չէ — ինքնավերականգնումն ակտիվ չէ:' : 'No card on file — auto-renew is off.'}
+                      </p>
+                      <button
+                        onClick={handleSubscribe}
+                        disabled={checkoutLoading}
+                        style={{ background: 'var(--rose)', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', cursor: checkoutLoading ? 'default' : 'pointer', fontSize: 12.5, fontWeight: 600, opacity: checkoutLoading ? 0.7 : 1 }}
+                      >
+                        {checkoutLoading ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…') : (lang === 'hy' ? 'Ավելացնել քարտ' : 'Add card')}
+                      </button>
+                    </>
+                  )}
+                </div>
               )}
 
               {user.referral_code && (

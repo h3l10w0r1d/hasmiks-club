@@ -10,6 +10,10 @@ class MembershipStatus(str, enum.Enum):
     active = "active"
     inactive = "inactive"
     cancelled = "cancelled"
+    past_due = "past_due"  # a renewal charge (or the one-time card-migration deadline)
+    # failed — treated identically to inactive for access control (not "active", so RSVP
+    # etc. are blocked exactly like a guest); the distinct value only exists so the dunning
+    # job and member-facing copy can say "your payment failed" instead of "never subscribed"
 
 
 class User(Base):
@@ -24,6 +28,26 @@ class User(Base):
     photo_url = Column(String, nullable=True)
     lang_pref = Column(String, default="en")
     membership_status = Column(String, default=MembershipStatus.inactive)
+    # Set only for gift-card-granted memberships (see GiftCard) — a scheduled
+    # job lapses membership_status back to inactive once this passes. Regular
+    # paying members never have this set (cleared if they ever start a real
+    # subscription, see payments.py's payment_callback).
+    membership_expires_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Recurring membership billing (Ameriabank vPOS "binding" transactions —
+    # see app/core/ameriabank.py). A member's first successful payment
+    # registers a binding under card_holder_id; every subsequent renewal
+    # charges that saved card directly with no re-entry of card details.
+    card_holder_id = Column(String(64), unique=True, nullable=True)
+    binding_active = Column(Boolean, nullable=False, default=False, server_default='false')
+    next_billing_date = Column(DateTime(timezone=True), nullable=True)
+    renewal_attempts = Column(Integer, nullable=False, default=0, server_default='0')
+    # Set once, at migration time, only for members who were already active
+    # with no card on file — gives them a window to add one before the same
+    # past_due/lapse rules that apply to a real failed renewal start applying
+    # to them too. Cleared the moment a card is actually added.
+    card_required_by = Column(DateTime(timezone=True), nullable=True)
+
     is_admin = Column(Boolean, default=False, nullable=False, server_default='false')
     role = Column(String(20), nullable=False, default='member', server_default='member')
     permissions = Column(Text, nullable=True)  # JSON list of strings, overrides role defaults if set

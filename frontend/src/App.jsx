@@ -24,6 +24,9 @@ import WelcomePage from './pages/WelcomePage'
 import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
 import TermsPage from './pages/TermsPage'
+import GiftPage from './pages/GiftPage'
+import GiftClaimPage from './pages/GiftClaimPage'
+import NotFoundPage from './pages/NotFoundPage'
 
 const SITE_URL = 'https://www.hasmiksclub.am'
 const OG_IMAGE = `${SITE_URL}/og-image.jpg`
@@ -132,6 +135,9 @@ function AppRoutes() {
       <Route path="/about" element={<AboutPage lang={lang} setLang={setLang} />} />
       <Route path="/contact" element={<ContactPage lang={lang} setLang={setLang} />} />
       <Route path="/terms" element={<TermsPage lang={lang} setLang={setLang} />} />
+      <Route path="/gift" element={<GiftPage lang={lang} />} />
+      <Route path="/gift/claim/:token" element={<GiftClaimPage lang={lang} />} />
+      <Route path="*" element={<NotFoundPage lang={lang} />} />
     </Routes>
   )
 }

@@ -19,6 +19,7 @@ class GuestTicket(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     event_id = Column(Integer, ForeignKey("events.id", ondelete="CASCADE"), nullable=False)
+    gift_card_id = Column(Integer, ForeignKey("gift_cards.id", ondelete="SET NULL"), nullable=True, index=True)
     full_name = Column(String, nullable=False)
     email = Column(String, nullable=False, index=True)
     phone = Column(String(32), nullable=True)

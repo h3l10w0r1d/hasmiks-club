@@ -5,6 +5,7 @@ export const adminGetMembers          = ()           => client.get('/admin/membe
 export const adminUpdateMember        = (id, data)   => client.patch(`/admin/members/${id}`, data).then(r => r.data)
 export const adminDeleteMember        = (id)         => client.delete(`/admin/members/${id}`)
 export const adminSendTelegramInvite  = (id)         => client.post(`/admin/members/${id}/telegram-invite`).then(r => r.data)
+export const adminCancelAutoRenew     = (id)         => client.post(`/admin/members/${id}/cancel-auto-renew`).then(r => r.data)
 
 // applications
 export const adminGetApplications     = ()           => client.get('/admin/applications').then(r => r.data)
@@ -91,3 +92,7 @@ export const adminGetPaymentLogs      = (id)         => client.get(`/admin/payme
 // one-time guest tickets
 export const adminGetGuestTickets     = (params)     => client.get('/admin/guest-tickets', { params }).then(r => r.data)
 export const adminGuestTicketCheckin  = (payload)    => client.post('/admin/guest-tickets/checkin', { payload }).then(r => r.data)
+
+// gift cards
+export const adminGetGiftCards        = (params)     => client.get('/admin/gift-cards', { params }).then(r => r.data)
+export const adminResendGiftCard      = (id)         => client.post(`/admin/gift-cards/${id}/resend`).then(r => r.data)

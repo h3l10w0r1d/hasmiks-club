@@ -26,6 +26,10 @@ PUBLIC_KEYS = {
     "club_location",
     "club_email",
     "club_phone",
+    "gift_price_1m",
+    "gift_price_3m",
+    "gift_price_6m",
+    "gift_price_12m",
 }
 
 ALL_KEYS = PUBLIC_KEYS | {

@@ -19,11 +19,13 @@ from app.models.audit_log import AuditLog
 from app.models.content import ContentItem, MemberContent
 from app.models.event import Event
 from app.models.guest_ticket import GuestTicket
+from app.models.gift_card import GiftCard
 from app.models.notification import Notification
 from app.models.rsvp import RSVP
 from app.models.user import User
 from app.schemas.content import ContentCreate, ContentOut
 from app.schemas.event import EventCreate, EventOut, GuestTicketOut
+from app.schemas.gift import GiftCardOut
 from app.schemas.user import UserOut, AdminUserUpdate
 from app.core import ameriabank
 from app.core import email as mailer
@@ -138,6 +140,26 @@ def send_telegram_invite(user_id: int, db: Session = Depends(get_db), admin: Use
     audit_log(db, "send_telegram_invite", admin_id=admin.id, entity_type="user", entity_id=user_id)
     db.commit()
     return {"ok": True}
+
+
+@router.post("/members/{user_id}/cancel-auto-renew")
+def admin_cancel_auto_renew(user_id: int, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_members'))):
+    """Admin equivalent of the member-facing POST /payments/cancel-auto-renew
+    — stops future renewal charges without touching membership_status, so
+    access continues until the already-paid period ends."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    if not user.binding_active:
+        raise HTTPException(status_code=400, detail="Auto-renew is not currently active for this member")
+    try:
+        ameriabank.deactivate_binding(user.card_holder_id)
+    except ameriabank.AmeriaBankError as exc:
+        raise HTTPException(status_code=502, detail=f"Could not reach Ameriabank: {exc}") from exc
+    user.binding_active = False
+    audit_log(db, f"cancel_auto_renew: {user.email}", admin_id=admin.id, entity_type="user", entity_id=user_id)
+    db.commit()
+    return {"auto_renew": False}
 
 
 # ── applications ──────────────────────────────────────────────────────────────
@@ -410,6 +432,79 @@ def guest_ticket_checkin(
         "event_title": event.title if event else None,
         "event_date": event.event_date.isoformat() if event else None,
     }
+
+
+# ── gift cards ────────────────────────────────────────────────────────────
+
+@router.get("/gift-cards", response_model=List[GiftCardOut])
+def list_gift_cards(
+    status_filter: str | None = None,
+    gift_type: str | None = None,
+    q: str | None = None,
+    db: Session = Depends(get_db),
+    _: User = Depends(require_permission('manage_events')),
+):
+    """Every gift card purchase, membership and event-ticket alike."""
+    query = db.query(GiftCard)
+    if status_filter:
+        query = query.filter(GiftCard.status == status_filter)
+    if gift_type:
+        query = query.filter(GiftCard.gift_type == gift_type)
+    if q:
+        like = f"%{q.strip()}%"
+        query = query.filter(
+            GiftCard.giver_name.ilike(like) | GiftCard.giver_email.ilike(like) |
+            GiftCard.recipient_name.ilike(like) | GiftCard.recipient_email.ilike(like)
+        )
+    return query.order_by(GiftCard.created_at.desc()).all()
+
+
+@router.post("/gift-cards/{gift_id}/resend")
+def resend_gift_card(
+    gift_id: int,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_permission('manage_events')),
+):
+    """Re-send the claim link (membership, unclaimed) or QR ticket bundle
+    (events) — for when a recipient says they never got the original email."""
+    gift = db.query(GiftCard).filter(GiftCard.id == gift_id).first()
+    if not gift:
+        raise HTTPException(status_code=404, detail="Gift not found")
+    if gift.status not in ameriabank.PAID_STATUSES:
+        raise HTTPException(status_code=400, detail="This gift was never paid for")
+
+    giver_name = None if gift.anonymous else gift.giver_name
+
+    if gift.gift_type == "membership":
+        if gift.redemption_token and not gift.redeemed:
+            claim_url = f"{settings.GIFT_CLAIM_BASE_URL}/{gift.redemption_token}"
+            mailer.send_gift_claim_link(gift.recipient_email, gift.recipient_name, giver_name, gift.duration_months, claim_url)
+        elif gift.applied_to_user_id:
+            recipient = db.query(User).filter(User.id == gift.applied_to_user_id).first()
+            if recipient:
+                expires = recipient.membership_expires_at.strftime("%B %d, %Y") if recipient.membership_expires_at else "—"
+                mailer.send_gift_applied_existing(recipient.email, recipient.full_name, giver_name, gift.duration_months, expires)
+        else:
+            raise HTTPException(status_code=400, detail="This gift hasn't been delivered yet")
+    else:
+        tickets = db.query(GuestTicket).filter(GuestTicket.gift_card_id == gift.id).all()
+        if not tickets:
+            raise HTTPException(status_code=400, detail="This gift hasn't been delivered yet")
+        tickets_for_email = []
+        for t in tickets:
+            event = db.query(Event).filter(Event.id == t.event_id).first()
+            if not event:
+                continue
+            tickets_for_email.append({
+                "event_title": event.title,
+                "event_date": event.event_date.strftime("%B %d, %Y at %H:%M"),
+                "location": event.location,
+                "qr_url": mailer.qr_image_url(f"HC-GT:{t.id}:{t.checkin_token}") if t.checkin_token else None,
+            })
+        mailer.send_gift_tickets(gift.recipient_email, gift.recipient_name, giver_name, tickets_for_email)
+
+    audit_log(db, f"gift_resend: gift #{gift.id} to {gift.recipient_email}", admin_id=admin.id, entity_type="gift_card", entity_id=gift.id)
+    return {"sent": True}
 
 
 @router.post("/events", response_model=EventOut, status_code=status.HTTP_201_CREATED)

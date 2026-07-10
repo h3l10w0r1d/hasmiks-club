@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
-from app.routers import auth, members, events, content, admin, analytics, notifications, gallery, forum, payments, push
+from app.routers import auth, members, events, content, admin, analytics, notifications, gallery, forum, payments, push, gift
 from app.routers import settings as settings_router
 from app.routers import app_settings as app_settings_router
 from app.core.config import settings
@@ -15,6 +15,7 @@ from app.database import SessionLocal
 from app.models.user import User
 from app.models.event import Event
 from app.core import email as mailer
+from app.core import billing
 
 # Error tracking — a no-op unless SENTRY_DSN is configured. Must run before the
 # FastAPI app is constructed so its ASGI middleware gets instrumented too.
@@ -87,11 +88,47 @@ async def _flag_no_shows() -> None:
         db.close()
 
 
+async def _expire_gifted_memberships() -> None:
+    """Lapse membership_status back to inactive once a gift-granted
+    membership's expiry passes. Only ever touches accounts with
+    membership_expires_at set — regular paying members never have it set,
+    and it's cleared the moment someone starts a real subscription (see
+    payments.py's payment_callback), so this can never deactivate a
+    genuinely paying member."""
+    now = datetime.now(timezone.utc)
+    db = SessionLocal()
+    try:
+        expired = db.query(User).filter(
+            User.membership_status == "active",
+            User.membership_expires_at.isnot(None),
+            User.membership_expires_at <= now,
+        ).all()
+        for user in expired:
+            user.membership_status = "inactive"
+        if expired:
+            db.commit()
+    finally:
+        db.close()
+
+
+async def _process_membership_renewals() -> None:
+    """Daily: charges due renewals via Ameriabank card binding, and runs the
+    same retry/lapse cycle for existing members whose card-migration deadline
+    has passed. See app/core/billing.py for the actual logic."""
+    db = SessionLocal()
+    try:
+        billing.process_due_members(db)
+    finally:
+        db.close()
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     _grant_admin_on_startup()
     scheduler.add_job(_send_event_reminders, IntervalTrigger(hours=1), id="event_reminders", replace_existing=True)
     scheduler.add_job(_flag_no_shows, IntervalTrigger(hours=1), id="no_show_flags", replace_existing=True)
+    scheduler.add_job(_expire_gifted_memberships, IntervalTrigger(hours=1), id="expire_gifted_memberships", replace_existing=True)
+    scheduler.add_job(_process_membership_renewals, IntervalTrigger(hours=24), id="membership_renewals", replace_existing=True)
     scheduler.start()
     yield
     scheduler.shutdown()
@@ -123,6 +160,7 @@ app.include_router(gallery.router)
 app.include_router(forum.router)
 app.include_router(payments.router)
 app.include_router(push.router)
+app.include_router(gift.router)
 
 
 @app.get("/health")

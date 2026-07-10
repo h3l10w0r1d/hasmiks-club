@@ -9,7 +9,7 @@ import {
   SendHorizonal, StickyNote, Filter, UserCheck,
   Inbox, GalleryHorizontal, Settings2, Trophy, Link2, Plus, Trash2, ExternalLink,
   Shield, MapPin, Pencil, Unlock, CreditCard, RotateCcw, Ban, ScrollText, Crop,
-  Ticket, QrCode, BadgeCheck, Menu, X,
+  Ticket, QrCode, BadgeCheck, Menu, X, Gift,
 } from 'lucide-react'
 
 import { Button }       from '../components/ui/button'
@@ -30,7 +30,7 @@ import GalleryManager from '../components/GalleryManager'
 import CropModal from '../components/CropModal'
 
 import {
-  adminGetMembers, adminUpdateMember, adminDeleteMember, adminSendTelegramInvite,
+  adminGetMembers, adminUpdateMember, adminDeleteMember, adminSendTelegramInvite, adminCancelAutoRenew,
   adminGetApplications, adminApproveApplication, adminDeclineApplication,
   adminGetReferrals,
   adminGetEvents, adminGetEventAttendees, adminCreateEvent, adminUpdateEvent, adminDeleteEvent,
@@ -45,6 +45,7 @@ import {
   adminGetRoles, adminUpdateRole,
   adminGetPayments, adminRefreshPayment, adminRefundPayment, adminCancelPayment, adminGetPaymentLogs,
   adminGetGuestTickets,
+  adminGetGiftCards, adminResendGiftCard,
 } from '../api/admin'
 
 // ── permissions ───────────────────────────────────────────────────────────────
@@ -97,6 +98,7 @@ const TABS = [
   { key: 'analytics',    icon: BarChart3,         label: 'Analytics'    },
   { key: 'payments',     icon: CreditCard,        label: 'Payments'     },
   { key: 'one_timers',   icon: Ticket,            label: 'One-Timers'   },
+  { key: 'gift_cards',   icon: Gift,              label: 'Gift Cards'   },
   { key: 'broadcast',    icon: Mail,              label: 'Broadcast'    },
   { key: 'audit',        icon: ClipboardList,     label: 'Audit Log'    },
   { key: 'settings',     icon: Settings2,         label: 'Settings'     },
@@ -106,7 +108,7 @@ const TAB_GROUPS = [
   { label: 'OVERVIEW', keys: ['today'] },
   { label: 'PEOPLE',   keys: ['members', 'applications', 'roles'] },
   { label: 'CONTENT',  keys: ['events', 'content', 'gallery'] },
-  { label: 'INSIGHTS', keys: ['analytics', 'payments', 'one_timers'] },
+  { label: 'INSIGHTS', keys: ['analytics', 'payments', 'one_timers', 'gift_cards'] },
   { label: 'OUTREACH', keys: ['broadcast'] },
   { label: 'CONFIG',   keys: ['audit', 'settings'] },
 ]
@@ -121,6 +123,7 @@ const TAB_PERMISSION_MAP = {
   analytics:    'view_analytics',
   payments:     'manage_payments',
   one_timers:   'manage_events',
+  gift_cards:   'manage_events',
   broadcast:    'broadcast',
   audit:        'view_audit',
   settings:     'manage_settings',
@@ -134,6 +137,7 @@ const DEFAULT_SETTINGS = {
   membership_price_display: '', club_description: '',
   club_instagram: '', club_location: '', club_email: '', club_phone: '',
   welcome_email_body: '', event_reminder_body: '', email_footer: '',
+  gift_price_1m: '', gift_price_3m: '', gift_price_6m: '', gift_price_12m: '',
 }
 
 const EMPTY_EVENT   = { title: '', title_hy: '', description: '', description_hy: '', location: '', event_date: '', max_seats: 20, cover_url: '', ticket_price: '', max_guest_tickets: '' }
@@ -339,6 +343,12 @@ export default function AdminPage() {
   const [guestTicketQuery, setGuestTicketQuery] = useState('')
   const [guestTicketStatusFilter, setGuestTicketStatusFilter] = useState('all')
 
+  const [giftCards,        setGiftCards]        = useState([])
+  const [giftCardQuery,    setGiftCardQuery]    = useState('')
+  const [giftCardStatusFilter, setGiftCardStatusFilter] = useState('all')
+  const [giftCardTypeFilter,   setGiftCardTypeFilter]   = useState('all')
+  const [resendingGiftId,  setResendingGiftId]  = useState(null)
+
   const flash = (msg, isErr = false) => {
     setToast({ msg, type: isErr ? 'error' : 'success' })
     setTimeout(() => setToast(null), 3200)
@@ -364,6 +374,7 @@ export default function AdminPage() {
   useEffect(() => { if (tab === 'roles')        load('roles')        }, [tab])
   useEffect(() => { if (tab === 'payments')     load('payments')     }, [tab])
   useEffect(() => { if (tab === 'one_timers')   load('one_timers')   }, [tab])
+  useEffect(() => { if (tab === 'gift_cards')   load('gift_cards')   }, [tab])
 
   const load = async (t) => {
     setLoad(t, true)
@@ -378,6 +389,7 @@ export default function AdminPage() {
       if (t === 'roles')        setRoles(await adminGetRoles())
       if (t === 'payments')     setPayments(await adminGetPayments())
       if (t === 'one_timers')   setGuestTickets(await adminGetGuestTickets())
+      if (t === 'gift_cards')  setGiftCards(await adminGetGiftCards())
       if (t === 'settings') {
         const s = await adminGetSettings()
         setAdminSettings(s)
@@ -397,6 +409,17 @@ export default function AdminPage() {
   const toggleAdmin = async (m) => {
     await adminUpdateMember(m.id, { is_admin: !m.is_admin })
     setMembers(ms => ms.map(x => x.id === m.id ? { ...x, is_admin: !m.is_admin } : x))
+  }
+  const handleCancelAutoRenew = (m) => {
+    setDeleteTarget({
+      label: `Turn off auto-renew for ${m.full_name}? Their membership stays active until the current period ends.`,
+      confirmLabel: 'Turn off',
+      onConfirm: async () => {
+        await adminCancelAutoRenew(m.id)
+        setMembers(ms => ms.map(x => x.id === m.id ? { ...x, binding_active: false } : x))
+        flash(`Auto-renew turned off for ${m.full_name}`)
+      },
+    })
   }
   const deleteMember = (m) => {
     setDeleteTarget({
@@ -752,6 +775,21 @@ export default function AdminPage() {
     const q = guestTicketQuery.toLowerCase()
     return t.full_name.toLowerCase().includes(q) || t.email.toLowerCase().includes(q) || (t.event_title || '').toLowerCase().includes(q) || (t.phone || '').toLowerCase().includes(q)
   })
+  const filteredGiftCards = giftCards.filter(g => {
+    if (giftCardStatusFilter !== 'all' && g.status !== giftCardStatusFilter) return false
+    if (giftCardTypeFilter !== 'all' && g.gift_type !== giftCardTypeFilter) return false
+    if (!giftCardQuery) return true
+    const q = giftCardQuery.toLowerCase()
+    return g.giver_name.toLowerCase().includes(q) || g.giver_email.toLowerCase().includes(q) ||
+      g.recipient_name.toLowerCase().includes(q) || g.recipient_email.toLowerCase().includes(q)
+  })
+
+  const handleResendGift = async (giftId) => {
+    setResendingGiftId(giftId)
+    try { await adminResendGiftCard(giftId); flash('Gift email resent') }
+    catch (err) { flash(err?.response?.data?.detail || 'Failed to resend', true) }
+    finally { setResendingGiftId(null) }
+  }
 
   const currentTab = TABS.find(t => t.key === tab)
 
@@ -1016,7 +1054,15 @@ export default function AdminPage() {
                               </TableCell>
                               <TableCell className="text-muted-foreground text-sm">{m.email}</TableCell>
                               <TableCell>
-                                <Badge variant={m.membership_status === 'active' ? 'success' : 'muted'}>{m.membership_status}</Badge>
+                                <Badge variant={m.membership_status === 'active' ? 'success' : m.membership_status === 'past_due' ? 'warning' : 'muted'}>{m.membership_status}</Badge>
+                                {m.binding_active && (
+                                  <div className="text-[11px] text-muted-foreground mt-1">
+                                    Auto-renew{m.next_billing_date ? ` · ${fmtDate(m.next_billing_date)}` : ''}
+                                  </div>
+                                )}
+                                {m.card_required_by && !m.binding_active && (
+                                  <div className="text-[11px] text-amber-600 mt-1">Card due {fmtDate(m.card_required_by)}</div>
+                                )}
                               </TableCell>
                               <TableCell className="text-muted-foreground text-sm">{fmtDate(m.joined_at)}</TableCell>
                               <TableCell>
@@ -1028,6 +1074,7 @@ export default function AdminPage() {
                                     { icon: SendHorizonal, label: 'Send Telegram invite', onClick: () => handleSendTelegram(m) },
                                     { icon: StickyNote, label: m.admin_notes ? 'Edit private notes' : 'Add private notes', onClick: () => toggleNotes(m) },
                                     { icon: Shield, label: m.is_admin ? 'Revoke admin access' : 'Make admin', onClick: () => toggleAdmin(m) },
+                                    ...(m.binding_active ? [{ icon: CreditCard, label: 'Cancel auto-renew', onClick: () => handleCancelAutoRenew(m) }] : []),
                                     { separator: true },
                                     { icon: Trash2, label: 'Delete member', danger: true, onClick: () => deleteMember(m) },
                                   ]} />
@@ -1618,6 +1665,29 @@ export default function AdminPage() {
 
                     <Card>
                       <CardHeader>
+                        <CardTitle className="text-sm">Gift Membership Pricing</CardTitle>
+                        <CardDescription>Leave a tier blank to default to the monthly rate × months, with no bundle discount.</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <Field label="1 month (֏)">
+                            <Input type="number" value={settingsForm.gift_price_1m} onChange={e => setSettingsForm(f => ({ ...f, gift_price_1m: e.target.value }))} placeholder="40000" />
+                          </Field>
+                          <Field label="3 months (֏)">
+                            <Input type="number" value={settingsForm.gift_price_3m} onChange={e => setSettingsForm(f => ({ ...f, gift_price_3m: e.target.value }))} placeholder="120000" />
+                          </Field>
+                          <Field label="6 months (֏)">
+                            <Input type="number" value={settingsForm.gift_price_6m} onChange={e => setSettingsForm(f => ({ ...f, gift_price_6m: e.target.value }))} placeholder="240000" />
+                          </Field>
+                          <Field label="12 months (֏)">
+                            <Input type="number" value={settingsForm.gift_price_12m} onChange={e => setSettingsForm(f => ({ ...f, gift_price_12m: e.target.value }))} placeholder="480000" />
+                          </Field>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
                         <CardTitle className="text-sm">Email Templates</CardTitle>
                         <CardDescription>
                           Use <code className="bg-muted px-1 rounded text-xs">{'{{name}}'}</code> for the member's first name.
@@ -1984,6 +2054,117 @@ export default function AdminPage() {
                               <TableCell>{t.email_verified ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <XCircle className="h-4 w-4 text-muted-foreground" />}</TableCell>
                               <TableCell>{t.checked_in ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <XCircle className="h-4 w-4 text-muted-foreground" />}</TableCell>
                               <TableCell className="text-muted-foreground text-xs whitespace-nowrap">{t.created_at ? fmtDateTime(t.created_at) : '—'}</TableCell>
+                            </TableRow>
+                          ))
+                      }
+                    </TableBody>
+                  </Table>
+                </Card>
+              </div>
+            )
+          })()}
+
+          {/* ══ GIFT CARDS ══ */}
+          {tab === 'gift_cards' && (() => {
+            const paidCount = giftCards.filter(g => ['deposited', 'autoauthorized'].includes(g.status)).length
+            const redeemedCount = giftCards.filter(g => g.redeemed).length
+            const totalValue = giftCards.filter(g => ['deposited', 'autoauthorized'].includes(g.status)).reduce((s, g) => s + Number(g.amount), 0)
+            const STATUS_BADGE = {
+              unverified: 'muted', started: 'muted', deposited: 'success', autoauthorized: 'success',
+              error: 'destructive', declined: 'destructive', refunded: 'secondary', void: 'muted',
+            }
+            return (
+              <div className="space-y-6">
+                <SectionHeader title="Gift Cards" sub="Membership and event-ticket gifts purchased for someone else">
+                  <Button variant="outline" size="sm" onClick={() => load('gift_cards')}>
+                    <RefreshCw className="h-3.5 w-3.5" /> Refresh List
+                  </Button>
+                </SectionHeader>
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <KpiCard icon={Gift}         label="Total"     value={giftCards.length} loading={isLoading('gift_cards')} />
+                  <KpiCard icon={CreditCard}   label="Paid"      value={paidCount}        loading={isLoading('gift_cards')} valueClass="text-emerald-600" />
+                  <KpiCard icon={CheckCircle2} label="Redeemed"  value={redeemedCount}    loading={isLoading('gift_cards')} valueClass="text-primary" />
+                  <KpiCard icon={Ticket}       label="Total Value" value={`֏${totalValue.toLocaleString()}`} loading={isLoading('gift_cards')} />
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      className="pl-9"
+                      placeholder="Search by giver or recipient name/email…"
+                      value={giftCardQuery}
+                      onChange={e => setGiftCardQuery(e.target.value)}
+                    />
+                  </div>
+                  <select
+                    className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                    value={giftCardTypeFilter}
+                    onChange={e => setGiftCardTypeFilter(e.target.value)}
+                  >
+                    <option value="all">All types</option>
+                    <option value="membership">Membership</option>
+                    <option value="events">Events</option>
+                  </select>
+                  <select
+                    className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+                    value={giftCardStatusFilter}
+                    onChange={e => setGiftCardStatusFilter(e.target.value)}
+                  >
+                    <option value="all">All statuses</option>
+                    <option value="unverified">Unverified</option>
+                    <option value="started">Started</option>
+                    <option value="deposited">Deposited</option>
+                    <option value="error">Error</option>
+                    <option value="declined">Declined</option>
+                    <option value="refunded">Refunded</option>
+                  </select>
+                </div>
+
+                <Card>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Giver</TableHead>
+                        <TableHead>Recipient</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Amount</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Redeemed</TableHead>
+                        <TableHead>Purchased</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {isLoading('gift_cards')
+                        ? <TableSkeleton cols={8} />
+                        : filteredGiftCards.length === 0
+                          ? <TableRow><TableCell colSpan={8} className="text-center text-muted-foreground py-12">No gift cards purchased yet</TableCell></TableRow>
+                          : filteredGiftCards.map(g => (
+                            <TableRow key={g.id}>
+                              <TableCell>
+                                <div className="text-sm font-medium">{g.giver_name}{g.anonymous && <span className="text-muted-foreground font-normal"> (anon.)</span>}</div>
+                                <div className="text-muted-foreground text-xs">{g.giver_email}</div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm font-medium">{g.recipient_name}</div>
+                                <div className="text-muted-foreground text-xs">{g.recipient_email}</div>
+                              </TableCell>
+                              <TableCell className="text-sm">{g.gift_type === 'membership' ? `${g.duration_months}mo membership` : 'Event ticket(s)'}</TableCell>
+                              <TableCell className="text-sm">֏{Number(g.amount).toLocaleString()}</TableCell>
+                              <TableCell><Badge variant={STATUS_BADGE[g.status] || 'muted'}>{g.status}</Badge></TableCell>
+                              <TableCell>{g.redeemed ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <XCircle className="h-4 w-4 text-muted-foreground" />}</TableCell>
+                              <TableCell className="text-muted-foreground text-xs whitespace-nowrap">{g.created_at ? fmtDateTime(g.created_at) : '—'}</TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="outline" size="sm"
+                                  disabled={resendingGiftId === g.id || !['deposited', 'autoauthorized'].includes(g.status)}
+                                  onClick={() => handleResendGift(g.id)}
+                                >
+                                  {resendingGiftId === g.id ? 'Sending…' : 'Resend'}
+                                </Button>
+                              </TableCell>
                             </TableRow>
                           ))
                       }

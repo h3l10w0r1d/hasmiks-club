@@ -6,7 +6,7 @@ import os, sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from app.database import Base
-from app.models import user, event, rsvp, content, password_reset, waitlist, audit_log, notification, app_setting, album, forum, ameria_payment, ameria_payment_log, push_subscription  # noqa
+from app.models import user, event, rsvp, content, password_reset, waitlist, audit_log, notification, app_setting, album, forum, ameria_payment, ameria_payment_log, push_subscription, guest_ticket, guest_ticket_log, gift_card, gift_card_log  # noqa
 
 config = context.config
 

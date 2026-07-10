@@ -66,6 +66,12 @@ class Settings(BaseSettings):
     AMERIABANK_GUEST_BACK_URL: str = "https://hasmiks-club.onrender.com/events/guest-checkout/callback"
     AMERIABANK_GUEST_SUCCESS_URL: str = "https://www.hasmiksclub.am/events"
     AMERIABANK_GUEST_CANCEL_URL: str = "https://www.hasmiksclub.am/events"
+    # Gift cards — giver has no dashboard either (same reasoning as guest
+    # tickets above), both routes go back to the public gift page.
+    AMERIABANK_GIFT_BACK_URL: str = "https://hasmiks-club.onrender.com/gift/callback"
+    AMERIABANK_GIFT_SUCCESS_URL: str = "https://www.hasmiksclub.am/gift"
+    AMERIABANK_GIFT_CANCEL_URL: str = "https://www.hasmiksclub.am/gift"
+    GIFT_CLAIM_BASE_URL: str = "https://www.hasmiksclub.am/gift/claim"
 
     class Config:
         env_file = ".env"
