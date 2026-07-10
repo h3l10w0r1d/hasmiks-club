@@ -257,19 +257,30 @@ def send_rsvp_confirmation(to: str, name: str, event_title: str, event_date: str
     send_async(to, name, f"RSVP Confirmed: {event_title}", html)
 
 
-def _qr_data_uri(payload: str) -> str:
-    """Render a QR code PNG in-memory and return it as a data: URI — no
-    separate image host needed, and it never depends on a third-party QR
-    rendering service being up when someone opens the email."""
-    import base64
+def _qr_image_url(payload: str) -> Optional[str]:
+    """Render a QR code PNG in-memory and host it on Cloudinary, returning a
+    normal https:// URL. A data: URI looks correct in a browser preview but
+    Gmail (and most other webmail clients) strip inline base64 images from
+    HTML mail entirely, so the QR code never actually reaches the guest —
+    it has to be a real hosted image."""
+    if not settings.CLOUDINARY_CLOUD_NAME:
+        logger.warning("Cannot upload check-in QR code — CLOUDINARY_CLOUD_NAME is not set")
+        return None
     import io
     import qrcode
+    import cloudinary
+    import cloudinary.uploader
 
     img = qrcode.make(payload, box_size=8, border=2)
     buf = io.BytesIO()
     img.save(buf, format="PNG")
-    b64 = base64.b64encode(buf.getvalue()).decode("ascii")
-    return f"data:image/png;base64,{b64}"
+    cloudinary.config(
+        cloud_name=settings.CLOUDINARY_CLOUD_NAME,
+        api_key=settings.CLOUDINARY_API_KEY,
+        api_secret=settings.CLOUDINARY_API_SECRET,
+    )
+    result = cloudinary.uploader.upload(buf.getvalue(), folder="hasmiks-club-checkin-qr", resource_type="image")
+    return result["secure_url"]
 
 
 def send_guest_verification_code(to: str, name: str, code: str, event_title: str) -> None:
@@ -287,13 +298,14 @@ def send_guest_verification_code(to: str, name: str, code: str, event_title: str
 def send_guest_ticket_confirmation(to: str, name: str, event_title: str, event_date: str, location: str, checkin_payload: Optional[str] = None) -> None:
     qr_html = ""
     if checkin_payload:
-        qr_uri = _qr_data_uri(checkin_payload)
-        qr_html = f"""
-        <div style="text-align:center;margin:24px 0;">
-          <img src="{qr_uri}" alt="Check-in QR code" style="width:200px;height:200px;border:8px solid #fff;box-shadow:0 2px 12px rgba(0,0,0,.1);" />
-          <p style="font-size:13px;color:#888;margin-top:8px;">Show this QR code at the door — no need to print it, your phone screen works fine.</p>
-        </div>
-        """
+        qr_url = _qr_image_url(checkin_payload)
+        if qr_url:
+            qr_html = f"""
+            <div style="text-align:center;margin:24px 0;">
+              <img src="{qr_url}" alt="Check-in QR code" width="200" height="200" style="width:200px;height:200px;border:8px solid #fff;box-shadow:0 2px 12px rgba(0,0,0,.1);" />
+              <p style="font-size:13px;color:#888;margin-top:8px;">Show this QR code at the door — no need to print it, your phone screen works fine.</p>
+            </div>
+            """
     html = _wrap(f"""
     <h2>You're in, {name}! 🎟️</h2>
     <p>Your one-time ticket for <strong>{event_title}</strong> is confirmed — no membership needed, just show up!</p>
