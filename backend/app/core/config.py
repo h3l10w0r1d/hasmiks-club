@@ -36,6 +36,13 @@ class Settings(BaseSettings):
     # Giphy (forum GIF picker) — free key from developers.giphy.com
     GIPHY_API_KEY: str = ""
 
+    # Web Push (browser push notifications) — VAPID keypair, generate with
+    # `vapid --gen` (py-vapid, a pywebpush dependency). PUBLIC_KEY is not
+    # secret (sent to the browser as the pushManager.subscribe applicationServerKey).
+    VAPID_PUBLIC_KEY: str = ""
+    VAPID_PRIVATE_KEY: str = ""
+    VAPID_SUBJECT: str = "mailto:hello@hasmiksclub.am"  # contact URI required by the Web Push spec
+
     # Sentry — error tracking, disabled unless a DSN is set
     SENTRY_DSN: str = ""
     ENVIRONMENT: str = "production"

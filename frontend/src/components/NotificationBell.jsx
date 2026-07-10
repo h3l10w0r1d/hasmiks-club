@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell } from 'lucide-react'
+import { Bell, BellRing } from 'lucide-react'
 import { getNotifications, markRead, markAllRead } from '../api/notifications'
+import { getPushSubscriptionState, enablePushNotifications } from '../utils/webPush'
 
 function timeAgo(iso) {
   const diff = (Date.now() - new Date(iso)) / 1000
@@ -16,6 +17,8 @@ const TYPE_COLOR = { rsvp: '#3498db', waitlist: '#f39c12', content: '#c0394b', s
 export default function NotificationBell() {
   const [data, setData] = useState({ unread_count: 0, notifications: [] })
   const [open, setOpen] = useState(false)
+  const [pushState, setPushState] = useState({ supported: false, permission: 'unsupported', subscribed: false })
+  const [pushBusy, setPushBusy] = useState(false)
   const ref = useRef(null)
   const navigate = useNavigate()
 
@@ -26,6 +29,22 @@ export default function NotificationBell() {
     const id = setInterval(load, 30000)
     return () => clearInterval(id)
   }, [])
+
+  useEffect(() => {
+    getPushSubscriptionState().then(setPushState).catch(() => {})
+  }, [])
+
+  const handleEnablePush = async () => {
+    setPushBusy(true)
+    try {
+      const result = await enablePushNotifications()
+      setPushState(s => ({ ...s, permission: result.permission, subscribed: result.subscribed }))
+    } catch {
+      // permission denied, unsupported, or server not configured yet — nothing actionable to show inline
+    } finally {
+      setPushBusy(false)
+    }
+  }
 
   // close on outside click
   useEffect(() => {
@@ -92,6 +111,29 @@ export default function NotificationBell() {
               </button>
             )}
           </div>
+
+          {pushState.supported && pushState.permission === 'default' && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
+              background: '#fdf5f5', borderBottom: '1px solid #f0e0e5',
+            }}>
+              <BellRing size={16} color="#c0394b" style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 12.5, color: '#2c1a1a', flex: 1, lineHeight: 1.4 }}>
+                Get notified the moment something happens
+              </span>
+              <button
+                onClick={handleEnablePush}
+                disabled={pushBusy}
+                style={{
+                  background: '#c0394b', color: '#fff', border: 'none', borderRadius: 8,
+                  padding: '6px 12px', fontSize: 12, fontWeight: 700, cursor: pushBusy ? 'default' : 'pointer',
+                  opacity: pushBusy ? 0.7 : 1, flexShrink: 0, whiteSpace: 'nowrap',
+                }}
+              >
+                {pushBusy ? '…' : 'Enable'}
+              </button>
+            </div>
+          )}
 
           <div style={{ maxHeight: 380, overflowY: 'auto' }}>
             {data.notifications.length === 0

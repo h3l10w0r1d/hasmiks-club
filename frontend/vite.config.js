@@ -6,6 +6,15 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      // injectManifest (a hand-written src/sw.js precompiled with the
+      // precache manifest injected) instead of the fully auto-generated
+      // strategy — needed so the service worker can also handle `push` and
+      // `notificationclick` events for Web Push notifications, which
+      // generateSW has no hook for. Runtime caching rules that used to live
+      // in `workbox` below now live directly in src/sw.js.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'icons/*.png'],
       manifest: {
@@ -23,28 +32,9 @@ export default defineConfig({
           { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
-        runtimeCaching: [
-          {
-            urlPattern: /^https:\/\/hasmiks-club.*\.onrender\.com\/api\/.*/,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'api-cache',
-              networkTimeoutSeconds: 10,
-              expiration: { maxEntries: 100, maxAgeSeconds: 300 },
-            },
-          },
-          {
-            urlPattern: /^https:\/\/res\.cloudinary\.com\/.*/,
-            handler: 'CacheFirst',
-            options: {
-              cacheName: 'cloudinary-images',
-              expiration: { maxEntries: 200, maxAgeSeconds: 86400 * 30 },
-            },
-          },
-        ],
       },
     }),
   ],

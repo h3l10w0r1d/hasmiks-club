@@ -1,5 +1,6 @@
 from sqlalchemy.orm import Session
 from app.models.notification import Notification
+from app.core.push import send_push_async
 
 
 def push(
@@ -11,3 +12,4 @@ def push(
 ) -> None:
     db.add(Notification(user_id=user_id, type=type, text=text, link=link))
     db.flush()
+    send_push_async(user_id, "Hasmik's Club", text, link)

@@ -17,3 +17,4 @@ google-auth==2.35.0
 requests==2.32.3
 sentry-sdk[fastapi]==2.19.0
 qrcode[pil]==8.0
+pywebpush==2.0.3
