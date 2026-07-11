@@ -167,6 +167,35 @@ def admin_cancel_auto_renew(user_id: int, db: Session = Depends(get_db), admin: 
     return {"auto_renew": False}
 
 
+class InviteToEventIn(BaseModel):
+    event_id: int
+
+
+@router.post("/members/{user_id}/invite-to-event")
+def invite_member_to_event(user_id: int, payload: InviteToEventIn, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_members'))):
+    """Comp-invite a member to an event: creates their RSVP directly (no
+    payment, no self-serve flow) and notifies them. Used from the admin
+    member detail page."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    event = db.query(Event).filter(Event.id == payload.event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    if event.event_date < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="That event is already in the past")
+    existing = db.query(RSVP).filter(RSVP.user_id == user_id, RSVP.event_id == event.id).first()
+    if existing:
+        raise HTTPException(status_code=400, detail=f"{user.full_name} is already on the list for {event.title}")
+    if len(event.rsvps) >= (event.max_seats or 0):
+        raise HTTPException(status_code=400, detail=f"{event.title} is full ({event.max_seats} seats)")
+    db.add(RSVP(user_id=user_id, event_id=event.id))
+    notify.push(db, user_id, "rsvp", f"You're invited to {event.title} — see you there!", link="/dashboard?tab=events")
+    audit_log(db, f"invite_to_event: {event.title}", admin_id=admin.id, entity_type="user", entity_id=user_id)
+    db.commit()
+    return {"ok": True, "event_title": event.title}
+
+
 @router.get("/members/{user_id}/detail", response_model=MemberDetailOut)
 def get_member_detail(user_id: int, db: Session = Depends(get_db), _: User = Depends(require_permission('manage_members'))):
     """Everything about one member in a single bundled response — identity,

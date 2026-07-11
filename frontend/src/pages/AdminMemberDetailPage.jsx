@@ -4,7 +4,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   ArrowLeft, Users, CalendarDays, BookOpen, CreditCard, Gift, Ticket,
   ClipboardList, StickyNote, Shield, Trash2, Link2, Mail,
-  CheckCircle2, Images, ScrollText,
+  CheckCircle2, Images, ScrollText, Crown, CalendarPlus, SendHorizonal,
 } from 'lucide-react'
 
 import { Button }   from '../components/ui/button'
@@ -18,7 +18,8 @@ import {
 import { KpiCard, MemberAvatar, fmtDate, fmtDateTime } from '../components/ui/AdminShared'
 import {
   adminGetMemberDetail, adminUpdateMember, adminDeleteMember,
-  adminCancelAutoRenew, adminGetPaymentLogs,
+  adminCancelAutoRenew, adminGetPaymentLogs, adminSendTelegramInvite,
+  adminInviteToEvent, adminGetEvents,
 } from '../api/admin'
 
 function statusVariant(s) {
@@ -32,9 +33,9 @@ function fmtAmount(amount) {
   return `${Number(amount).toLocaleString('en-US', { maximumFractionDigits: 0 })} AMD`
 }
 
-function Section({ icon: Icon, title, sub, count, children, actions }) {
+function Section({ icon: Icon, title, sub, count, children, actions, id }) {
   return (
-    <Card>
+    <Card id={id}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
@@ -66,6 +67,11 @@ function EmptyNote({ children }) {
   return <p className="text-sm text-muted-foreground text-center py-6">{children}</p>
 }
 
+// Inline styles — the scoped admin Tailwind build lacks bg-white/bg-black opacity utilities,
+// so modals use the same explicit overlay/panel styling as AdminPage's payment-logs modal.
+const OVERLAY_STYLE = { position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }
+const PANEL_STYLE = { background: '#fff', borderRadius: 16, padding: '24px 28px', width: '100%', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }
+
 export default function AdminMemberDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -81,6 +87,9 @@ export default function AdminMemberDetailPage() {
   const [logsPayment, setLogsPayment] = useState(null)
   const [logsData, setLogsData]       = useState([])
   const [logsLoading, setLogsLoading] = useState(false)
+  const [inviteOpen, setInviteOpen]   = useState(false)
+  const [inviteEvents, setInviteEvents] = useState(null) // null = loading
+  const [invitingId, setInvitingId]   = useState(null)
 
   const flash = (msg, isError = false) => {
     setToast({ msg, isError })
@@ -145,6 +154,43 @@ export default function AdminMemberDetailPage() {
     finally { setSavingNotes(false) }
   }
 
+  const handleTelegramInvite = async () => {
+    try {
+      await adminSendTelegramInvite(member.id)
+      flash(`Telegram invite sent to ${member.full_name}`)
+    } catch (e) {
+      flash(e?.response?.data?.detail || 'Failed to send invite', true)
+    }
+  }
+
+  const openInvite = async () => {
+    setInviteOpen(true)
+    setInviteEvents(null)
+    try {
+      const events = await adminGetEvents()
+      const upcoming = events.filter(ev => new Date(ev.event_date) > new Date())
+        .sort((a, b) => new Date(a.event_date) - new Date(b.event_date))
+      setInviteEvents(upcoming)
+    } catch {
+      flash('Failed to load events', true)
+      setInviteEvents([])
+    }
+  }
+
+  const inviteToEvent = async (ev) => {
+    setInvitingId(ev.id)
+    try {
+      await adminInviteToEvent(member.id, ev.id)
+      flash(`${member.full_name} invited to ${ev.title}`)
+      setInviteOpen(false)
+      load() // refresh the RSVP list
+    } catch (e) {
+      flash(e?.response?.data?.detail || 'Invite failed', true)
+    } finally {
+      setInvitingId(null)
+    }
+  }
+
   const handleViewLogs = async (p) => {
     setLogsPayment(p)
     setLogsLoading(true)
@@ -171,8 +217,10 @@ export default function AdminMemberDetailPage() {
         </Button>
       </header>
 
-      {/* minWidth 0 — as a flex child of .admin-shell, main otherwise refuses to shrink below its widest table */}
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6" style={{ minWidth: 0, width: '100%' }}>
+      {/* .admin-shell is height:100vh + overflow:hidden (admin.css), so main must be the scroll
+          container; minWidth 0 keeps it shrinkable below its widest table on mobile */}
+      <main style={{ flex: 1, overflowY: 'auto', minWidth: 0, width: '100%' }}>
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         {loading ? (
           <div className="space-y-4">
             <div className="flex items-center gap-4">
@@ -208,7 +256,14 @@ export default function AdminMemberDetailPage() {
               </div>
               <div className="flex gap-2 flex-wrap">
                 <Button variant={member.membership_status === 'active' ? 'outline' : 'success'} size="sm" onClick={toggleMembership}>
-                  {member.membership_status === 'active' ? 'Deactivate' : 'Activate'}
+                  <Crown className="h-3.5 w-3.5" />
+                  {member.membership_status === 'active' ? 'Remove premium' : 'Grant premium'}
+                </Button>
+                <Button variant="outline" size="sm" onClick={openInvite}>
+                  <CalendarPlus className="h-3.5 w-3.5" /> Invite to event
+                </Button>
+                <Button variant="outline" size="sm" onClick={handleTelegramInvite}>
+                  <SendHorizonal className="h-3.5 w-3.5" /> Telegram invite
                 </Button>
                 {member.binding_active && (
                   <Button variant="outline" size="sm" onClick={handleCancelAutoRenew}>
@@ -219,6 +274,22 @@ export default function AdminMemberDetailPage() {
                   <Trash2 className="h-3.5 w-3.5" /> Delete
                 </Button>
               </div>
+            </div>
+
+            {/* quick-jump section nav */}
+            <div className="flex gap-2 flex-wrap">
+              {[
+                ['payments', 'Transactions'], ['events', 'Events'], ['referrals', 'Referrals'],
+                ['gifts-given', 'Gifts'], ['guest-tickets', 'One-time tickets'], ['audit', 'Audit log'],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  onClick={() => document.getElementById(id)?.scrollIntoView(true)}
+                  className="text-xs px-3 py-1.5 rounded-full border bg-white text-muted-foreground hover:text-primary hover:border-primary/40 transition-colors"
+                >
+                  {label}
+                </button>
+              ))}
             </div>
 
             {/* KPIs */}
@@ -308,7 +379,7 @@ export default function AdminMemberDetailPage() {
             </Section>
 
             {/* RSVPs */}
-            <Section icon={CalendarDays} title="Events" count={member.rsvps.length}>
+            <Section id="events" icon={CalendarDays} title="Events" count={member.rsvps.length}>
               {member.rsvps.length === 0 ? <EmptyNote>No event RSVPs yet</EmptyNote> : (
                 <Table>
                   <TableHeader>
@@ -364,7 +435,7 @@ export default function AdminMemberDetailPage() {
             </Section>
 
             {/* payments */}
-            <Section icon={CreditCard} title="Payment History" count={member.payments.length}>
+            <Section id="payments" icon={CreditCard} title="Payment History" count={member.payments.length}>
               {member.payments.length === 0 ? <EmptyNote>No membership payments</EmptyNote> : (
                 <Table>
                   <TableHeader>
@@ -392,7 +463,7 @@ export default function AdminMemberDetailPage() {
             </Section>
 
             {/* gift cards */}
-            <Section icon={Gift} title="Gift Cards Given" count={member.gift_cards_given.length}
+            <Section id="gifts-given" icon={Gift} title="Gift Cards Given" count={member.gift_cards_given.length}
               sub="Matched by this member's email — gift purchases don't require an account">
               {member.gift_cards_given.length === 0 ? <EmptyNote>No gifts given</EmptyNote> : (
                 <Table>
@@ -441,7 +512,7 @@ export default function AdminMemberDetailPage() {
             </Section>
 
             {/* guest tickets */}
-            <Section icon={Ticket} title="One-Time Tickets" count={member.guest_tickets_by_email.length}
+            <Section id="guest-tickets" icon={Ticket} title="One-Time Tickets" count={member.guest_tickets_by_email.length}
               sub="Matched by email — guest tickets aren't linked to member accounts, so tickets bought under a different email won't appear here">
               {member.guest_tickets_by_email.length === 0 ? <EmptyNote>No guest tickets under this email</EmptyNote> : (
                 <Table>
@@ -464,7 +535,7 @@ export default function AdminMemberDetailPage() {
             </Section>
 
             {/* referrals */}
-            <Section icon={Link2} title="Referrals" count={member.referrals.length}>
+            <Section id="referrals" icon={Link2} title="Referrals" count={member.referrals.length}>
               <div className="grid grid-cols-2 gap-x-6 gap-y-4 mb-4">
                 <InfoRow label="Referral code"><span className="font-mono">{member.referral_code}</span></InfoRow>
                 <InfoRow label="Referred by">
@@ -499,7 +570,7 @@ export default function AdminMemberDetailPage() {
             </Section>
 
             {/* audit log */}
-            <Section icon={ClipboardList} title="Admin Audit Log" count={member.audit_log.length}
+            <Section id="audit" icon={ClipboardList} title="Admin Audit Log" count={member.audit_log.length}
               sub="Admin actions taken on this member's account">
               {member.audit_log.length === 0 ? <EmptyNote>No admin actions recorded</EmptyNote> : (
                 <Table>
@@ -520,12 +591,53 @@ export default function AdminMemberDetailPage() {
             </Section>
           </>
         )}
+      </div>
       </main>
+
+      {/* invite-to-event modal */}
+      {inviteOpen && (
+        <div style={OVERLAY_STYLE} onClick={() => setInviteOpen(false)}>
+          <div style={{ ...PANEL_STYLE, maxWidth: 448, maxHeight: '70vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-start mb-1">
+              <p className="font-bold text-base">Invite {member?.full_name} to an event</p>
+              <button onClick={() => setInviteOpen(false)} className="text-2xl leading-none text-muted-foreground">×</button>
+            </div>
+            <p className="text-xs text-muted-foreground mb-4">Adds them straight to the guest list (no payment) and sends a notification.</p>
+            {inviteEvents === null ? (
+              <p className="text-center text-muted-foreground py-6">Loading events…</p>
+            ) : inviteEvents.length === 0 ? (
+              <p className="text-center text-muted-foreground py-6">No upcoming events</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {inviteEvents.map(ev => {
+                  const already = member?.rsvps?.some(r => r.event_id === ev.id)
+                  return (
+                    <button
+                      key={ev.id}
+                      disabled={already || invitingId === ev.id}
+                      onClick={() => inviteToEvent(ev)}
+                      className="flex items-center justify-between gap-3 border rounded-lg px-4 py-3 text-left hover:border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <span>
+                        <span className="block text-sm font-medium">{ev.title}</span>
+                        <span className="block text-xs text-muted-foreground">{fmtDateTime(ev.event_date)} · {ev.location}</span>
+                      </span>
+                      <Badge variant={already ? 'muted' : 'success'}>
+                        {already ? 'Already going' : invitingId === ev.id ? 'Inviting…' : 'Invite'}
+                      </Badge>
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* confirm modal */}
       {confirm && (
-        <div className="fixed inset-0 z-[9999] bg-black/45 flex items-center justify-center p-5" onClick={() => setConfirm(null)}>
-          <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div style={OVERLAY_STYLE} onClick={() => setConfirm(null)}>
+          <div style={{ ...PANEL_STYLE, maxWidth: 448 }} onClick={e => e.stopPropagation()}>
             <p className="text-sm text-foreground mb-5">{confirm.label}</p>
             <div className="flex justify-end gap-2">
               <Button variant="ghost" size="sm" onClick={() => setConfirm(null)}>Cancel</Button>
@@ -540,8 +652,8 @@ export default function AdminMemberDetailPage() {
 
       {/* payment logs modal — same shape as the admin Payments tab modal */}
       {logsPayment && (
-        <div className="fixed inset-0 z-[9999] bg-black/45 flex items-center justify-center p-5" onClick={() => setLogsPayment(null)}>
-          <div className="bg-white rounded-2xl p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+        <div style={OVERLAY_STYLE} onClick={() => setLogsPayment(null)}>
+          <div style={{ ...PANEL_STYLE, maxWidth: 720, maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-start mb-1">
               <p className="font-bold text-base">Payment Logs — Order #{logsPayment.order_id ?? '—'}</p>
               <button onClick={() => setLogsPayment(null)} className="text-2xl leading-none text-muted-foreground">×</button>
@@ -577,7 +689,7 @@ export default function AdminMemberDetailPage() {
 
       {/* toast */}
       {toast && (
-        <div className={`fixed bottom-5 left-1/2 -translate-x-1/2 z-[10000] px-4 py-2.5 rounded-lg text-sm text-white shadow-lg ${toast.isError ? 'bg-destructive' : 'bg-foreground'}`}>
+        <div style={{ position: 'fixed', bottom: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 10000, padding: '10px 16px', borderRadius: 8, fontSize: 14, color: '#fff', boxShadow: '0 8px 24px rgba(0,0,0,.18)', background: toast.isError ? '#c0392b' : '#221C16' }}>
           {toast.msg}
         </div>
       )}
