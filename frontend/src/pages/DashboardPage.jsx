@@ -18,7 +18,7 @@ import { useAuth } from '../context/AuthContext'
 import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum, addProfilePhoto, deleteProfilePhoto, getMemberProfile, unlinkTelegram } from '../api/members'
 import { getEvents, rsvp, cancelRsvp, joinWaitlist, leaveWaitlist, getWaitlistPosition, memberGuestTicketCheckout } from '../api/events'
 import { getLibrary } from '../api/content'
-import { getPublicSettings, createCheckout, cancelAutoRenew } from '../api/payments'
+import { getMemberSettings, createCheckout, cancelAutoRenew } from '../api/payments'
 import { refreshToken as apiRefresh } from '../api/auth'
 import { sanitizeHtml, stripHtml } from '../utils/sanitizeHtml'
 import NotificationBell from '../components/NotificationBell'
@@ -242,7 +242,7 @@ export default function DashboardPage({ lang, setLang }) {
       setProfilePhotos(fresh.profile_photos || [])
       if (!fresh.onboarding_completed) setShowOnboarding(true)
     }).catch(() => {})
-    getPublicSettings().then(s => { if (alive) setTelegramUrl(s.telegram_invite_url || '') }).catch(() => {})
+    getMemberSettings().then(s => { if (alive) setTelegramUrl(s.telegram_invite_url || '') }).catch(() => {})
     return () => { alive = false }
   }, [])
 

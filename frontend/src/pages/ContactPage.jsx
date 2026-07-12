@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
 import GlobalHeader from '../components/GlobalHeader'
 import Footer from '../components/Footer'
-import { getPublicSettings } from '../api/payments'
+import { getPublicSettings, getMemberSettings } from '../api/payments'
+import { useAuth } from '../context/AuthContext'
 
 const copy = {
   en: {
@@ -37,14 +38,26 @@ const copy = {
 
 export default function ContactPage({ lang = 'en', setLang }) {
   const c = copy[lang] ?? copy.en
+  const { user } = useAuth()
   const [settings, setSettings] = useState(null)
+  const [telegram, setTelegram] = useState('')
   const [form, setForm] = useState({ name: '', email: '', message: '' })
 
   useEffect(() => {
     getPublicSettings().then(setSettings).catch(() => setSettings({}))
   }, [])
 
-  const telegram = settings?.telegram_invite_url || ''
+  // The private Telegram group invite is members-only — /settings/member
+  // itself refuses to return it for anyone without an active subscription,
+  // so this is a defense-in-depth check, not the actual access control.
+  useEffect(() => {
+    if (user?.membership_status === 'active') {
+      getMemberSettings().then(s => setTelegram(s.telegram_invite_url || '')).catch(() => {})
+    } else {
+      setTelegram('')
+    }
+  }, [user])
+
   const igRaw = settings?.club_instagram || ''
   const igHandle = igRaw.replace(/^@/, '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '').replace(/\/$/, '')
   const igUrl = igHandle ? `https://instagram.com/${igHandle}` : ''
