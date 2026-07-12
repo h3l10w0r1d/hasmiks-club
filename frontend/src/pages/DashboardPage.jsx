@@ -726,12 +726,16 @@ export default function DashboardPage({ lang, setLang }) {
                 {nextEvent ? (
                   <div className={`event-card${nextEvent.user_has_rsvp ? ' rsvpd' : ''}`}>
                     {nextEvent.cover_url && (
-                      <img className="event-card-cover" src={cldOptimize(nextEvent.cover_url, { width: 800 })}
-                        alt={lang === 'hy' && nextEvent.title_hy ? nextEvent.title_hy : nextEvent.title} />
+                      <Link to={`/events/${nextEvent.id}`}>
+                        <img className="event-card-cover" src={cldOptimize(nextEvent.cover_url, { width: 800 })}
+                          alt={lang === 'hy' && nextEvent.title_hy ? nextEvent.title_hy : nextEvent.title} />
+                      </Link>
                     )}
                     <div className="event-card-top">
                       <div>
-                        <div className="event-title">{lang === 'hy' && nextEvent.title_hy ? nextEvent.title_hy : nextEvent.title}</div>
+                        <Link to={`/events/${nextEvent.id}`} className="event-title" style={{ textDecoration: 'none', color: 'inherit' }}>
+                          {lang === 'hy' && nextEvent.title_hy ? nextEvent.title_hy : nextEvent.title}
+                        </Link>
                         <div className="event-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} /> {nextEvent.location}</span> ·
                           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CalendarDays size={13} /> {new Date(nextEvent.event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
@@ -750,8 +754,11 @@ export default function DashboardPage({ lang, setLang }) {
                     </div>
                     {(() => {
                       const d = lang === 'hy' && nextEvent.description_hy ? nextEvent.description_hy : nextEvent.description
-                      return d && <div className="event-desc rich-content" style={{ marginBottom: 16 }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(d) }} />
+                      return d && <p className="event-desc">{stripHtml(d)}</p>
                     })()}
+                    <Link to={`/events/${nextEvent.id}`} style={{ display: 'inline-block', marginBottom: 16, fontSize: 12, fontWeight: 600, color: 'var(--rose)', textDecoration: 'none' }}>
+                      {lang === 'hy' ? 'Մանրամասն →' : 'Details →'}
+                    </Link>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                       {rsvpDone[nextEvent.id] ? (
                         <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
