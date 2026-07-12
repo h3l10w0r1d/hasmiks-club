@@ -945,11 +945,14 @@ footer{
   border-bottom:1px solid var(--sand);
 }
 .dash-nav-brand{
+  display:flex;align-items:center;gap:8px;
   font-family:var(--font-serif);
   font-size:18px;font-weight:600;
   color:var(--deep);letter-spacing:0.03em;
+  text-decoration:none;
 }
 .dash-nav-brand span{color:var(--rose)}
+.dash-nav-logo{height:28px;width:auto;display:block;flex-shrink:0}
 .dash-nav-right{display:flex;align-items:center;gap:14px}
 .dash-user-name{
   font-size:13px;font-weight:500;

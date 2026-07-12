@@ -620,7 +620,10 @@ export default function DashboardPage({ lang, setLang }) {
   return (
     <div className="dash-page">
       <nav className="dash-nav">
-        <div className="dash-nav-brand">Hasmik's <span>Club</span></div>
+        <Link to="/" className="dash-nav-brand">
+          <img src="/logo-h.png" alt="" className="dash-nav-logo" aria-hidden="true" />
+          Hasmik's <span>Club</span>
+        </Link>
         <div className="dash-nav-right">
           <LangSwitch lang={lang} setLang={setLang} />
           <NotificationBell />
