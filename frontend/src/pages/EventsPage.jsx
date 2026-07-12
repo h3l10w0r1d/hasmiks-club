@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { Flower2, MapPin, CalendarDays } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getPublicEvents, getEvents, rsvp, cancelRsvp } from '../api/events'
 import { cldOptimize } from '../utils/cloudinary'
+import { stripHtml } from '../utils/sanitizeHtml'
 import { getMe } from '../api/members'
 import { createCheckout } from '../api/payments'
 import GlobalHeader from '../components/GlobalHeader'
@@ -42,6 +43,7 @@ const copy = {
     ticketSuccess:'Ticket confirmed! Check your email for details.',
     ticketFailed: 'Your ticket payment didn\'t go through — please try again.',
     guestSoldOut: 'One-time tickets are sold out for this event.',
+    readMore:     'Read more →',
   },
   hy: {
     pageTitle:    "Առաջիկա հանդիպումներ — Hasmik's Club",
@@ -68,7 +70,13 @@ const copy = {
     ticketSuccess:'Տոմսը հաստատված է: Ստուգե՛ք ձեր էլ. փոստը:',
     ticketFailed: 'Տոմսի վճարումը չհաջողվեց — խնդրում ենք կրկին փորձել:',
     guestSoldOut: 'Այս միջոցառման մեկանգամյա տոմսերը սպառված են:',
+    readMore:     'Ավելին →',
   },
+}
+
+function truncate(text, max = 160) {
+  if (text.length <= max) return text
+  return text.slice(0, max).replace(/\s+\S*$/, '') + '…'
 }
 
 /* ─── helpers ───────────────────────────────────────────────────────────── */
@@ -257,9 +265,10 @@ export default function EventsPage({ lang = 'en' }) {
         {events.map(ev => {
           const bp = buttonProps(ev)
           const title = lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title
-          const desc  = lang === 'hy' && ev.description_hy ? ev.description_hy : ev.description
+          const descRaw = lang === 'hy' && ev.description_hy ? ev.description_hy : ev.description
+          const desc = descRaw ? truncate(stripHtml(descRaw)) : ''
           return (
-            <div key={ev.id} style={styles.card}>
+            <div key={ev.id} style={{ ...styles.card, cursor: 'pointer' }} onClick={() => navigate(`/events/${ev.id}`)}>
               {/* cover image */}
               {ev.cover_url && (
                 <img
@@ -280,6 +289,7 @@ export default function EventsPage({ lang = 'en' }) {
                       <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><CalendarDays size={13} /> {formatDate(ev.event_date, lang)}</span>
                     </div>
                     {desc && <p style={styles.desc}>{desc}</p>}
+                    <Link to={`/events/${ev.id}`} style={styles.readMore} onClick={e => e.stopPropagation()}>{t.readMore}</Link>
                   </div>
                   <div style={{ flexShrink: 0, textAlign: 'right' }}>
                     <SeatsBadge ev={ev} t={t} />
@@ -287,7 +297,7 @@ export default function EventsPage({ lang = 'en' }) {
                 </div>
 
                 {/* card footer */}
-                <div style={styles.cardFooter}>
+                <div style={styles.cardFooter} onClick={e => e.stopPropagation()}>
                   <button
                     style={{ ...bp.style, opacity: busy[ev.id] || bp.disabled ? 0.65 : 1, cursor: busy[ev.id] || bp.disabled ? 'default' : 'pointer' }}
                     onClick={() => !bp.disabled && handleAttend(ev)}
@@ -438,6 +448,14 @@ const styles = {
     lineHeight: 1.6,
     fontSize: 16,
     margin: 0,
+  },
+  readMore: {
+    display: 'inline-block',
+    marginTop: 8,
+    color: '#7E3434',
+    fontSize: 13,
+    fontWeight: 600,
+    textDecoration: 'none',
   },
   cardFooter: {
     display: 'flex',

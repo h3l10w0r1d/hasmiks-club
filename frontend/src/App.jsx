@@ -21,6 +21,7 @@ import AdminMemberDetailPage from './pages/AdminMemberDetailPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import EventsPage from './pages/EventsPage'
+import EventDetailPage from './pages/EventDetailPage'
 import WelcomePage from './pages/WelcomePage'
 import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
@@ -138,6 +139,7 @@ function AppRoutes() {
       <Route path="/forgot-password" element={<ForgotPasswordPage lang={lang} />} />
       <Route path="/reset-password" element={<ResetPasswordPage lang={lang} />} />
       <Route path="/events" element={<EventsPage lang={lang} />} />
+      <Route path="/events/:id" element={<EventDetailPage lang={lang} />} />
       <Route path="/about" element={<AboutPage lang={lang} setLang={setLang} />} />
       <Route path="/contact" element={<ContactPage lang={lang} setLang={setLang} />} />
       <Route path="/terms" element={<TermsPage lang={lang} setLang={setLang} />} />

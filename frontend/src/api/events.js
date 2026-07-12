@@ -2,6 +2,8 @@ import client from './client'
 
 export const getEvents = () => client.get('/events/').then((r) => r.data)
 export const getPublicEvents = () => client.get('/events/public').then((r) => r.data)
+export const getEvent = (eventId) => client.get(`/events/${eventId}`).then((r) => r.data)
+export const getPublicEvent = (eventId) => client.get(`/events/public/${eventId}`).then((r) => r.data)
 
 export const rsvp = (eventId) => client.post(`/events/${eventId}/rsvp`).then((r) => r.data)
 export const cancelRsvp = (eventId) => client.delete(`/events/${eventId}/rsvp`)

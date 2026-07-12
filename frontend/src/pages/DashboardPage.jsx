@@ -20,6 +20,7 @@ import { getEvents, rsvp, cancelRsvp, joinWaitlist, leaveWaitlist, getWaitlistPo
 import { getLibrary } from '../api/content'
 import { getPublicSettings, createCheckout, cancelAutoRenew } from '../api/payments'
 import { refreshToken as apiRefresh } from '../api/auth'
+import { sanitizeHtml, stripHtml } from '../utils/sanitizeHtml'
 import NotificationBell from '../components/NotificationBell'
 import OnboardingModal from '../components/OnboardingModal'
 import ConfirmDialog from '../components/ConfirmDialog'
@@ -747,9 +748,10 @@ export default function DashboardPage({ lang, setLang }) {
                           : <span className="fully-booked">{t.booked}</span>}
                       </div>
                     </div>
-                    {(lang === 'hy' && nextEvent.description_hy
-                      ? <p className="event-desc" style={{ marginBottom: 16 }}>{nextEvent.description_hy}</p>
-                      : nextEvent.description && <p className="event-desc" style={{ marginBottom: 16 }}>{nextEvent.description}</p>)}
+                    {(() => {
+                      const d = lang === 'hy' && nextEvent.description_hy ? nextEvent.description_hy : nextEvent.description
+                      return d && <div className="event-desc rich-content" style={{ marginBottom: 16 }} dangerouslySetInnerHTML={{ __html: sanitizeHtml(d) }} />
+                    })()}
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                       {rsvpDone[nextEvent.id] ? (
                         <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
@@ -1150,7 +1152,7 @@ export default function DashboardPage({ lang, setLang }) {
                           )}
                           <div className="event-card-top">
                             <div>
-                              <div className="event-title">{lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title}</div>
+                              <Link to={`/events/${ev.id}`} className="event-title" style={{ textDecoration: 'none', color: 'inherit' }}>{lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title}</Link>
                               <div className="event-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} /> {ev.location}</span> ·
                                 <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CalendarDays size={13} /> {new Date(ev.event_date).toLocaleTimeString(lang === 'hy' ? 'hy-AM' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -1160,9 +1162,13 @@ export default function DashboardPage({ lang, setLang }) {
                                   </span>
                                 )}
                               </div>
-                              {lang === 'hy' && ev.description_hy
-                                ? <p className="event-desc">{ev.description_hy}</p>
-                                : ev.description && <p className="event-desc">{ev.description}</p>}
+                              {(() => {
+                                const d = lang === 'hy' && ev.description_hy ? ev.description_hy : ev.description
+                                return d && <p className="event-desc">{stripHtml(d)}</p>
+                              })()}
+                              <Link to={`/events/${ev.id}`} style={{ display: 'inline-block', marginTop: 4, fontSize: 12, fontWeight: 600, color: 'var(--rose)', textDecoration: 'none' }}>
+                                {lang === 'hy' ? 'Մանրամասն →' : 'Details →'}
+                              </Link>
                             </div>
                             <div className="event-seats">
                               {ev.seats_available > 0
@@ -1285,7 +1291,7 @@ export default function DashboardPage({ lang, setLang }) {
                             <div className="library-type">{item.type === 'recipe' ? t.recipe : t.ebook}</div>
                             <div className="library-title">{lang === 'hy' && item.title_hy ? item.title_hy : item.title}</div>
                             {(lang === 'hy' && item.description_hy ? item.description_hy : item.description) && (
-                              <p className="library-desc">{lang === 'hy' && item.description_hy ? item.description_hy : item.description}</p>
+                              <p className="library-desc">{stripHtml(lang === 'hy' && item.description_hy ? item.description_hy : item.description)}</p>
                             )}
                             {item.file_url
                               ? <span className="plan-btn plan-btn-fill library-dl">{t.download}</span>
@@ -1506,9 +1512,11 @@ export default function DashboardPage({ lang, setLang }) {
                 {lang === 'hy' && selectedContent.title_hy ? selectedContent.title_hy : selectedContent.title}
               </h2>
               {(lang === 'hy' && selectedContent.description_hy ? selectedContent.description_hy : selectedContent.description) && (
-                <p style={{ color: 'var(--taupe)', fontSize: 14, lineHeight: 1.75, marginBottom: 24 }}>
-                  {lang === 'hy' && selectedContent.description_hy ? selectedContent.description_hy : selectedContent.description}
-                </p>
+                <div
+                  className="rich-content"
+                  style={{ color: 'var(--taupe)', fontSize: 14, lineHeight: 1.75, marginBottom: 24 }}
+                  dangerouslySetInnerHTML={{ __html: sanitizeHtml(lang === 'hy' && selectedContent.description_hy ? selectedContent.description_hy : selectedContent.description) }}
+                />
               )}
 
               {selectedContent.is_unlocked && selectedContent.file_url ? (

@@ -28,6 +28,8 @@ import { DateTimePicker } from '../components/ui/datetimepicker'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
 import GalleryManager from '../components/GalleryManager'
 import CropModal from '../components/CropModal'
+import RichTextEditor from '../components/ui/RichTextEditor'
+import { stripHtml } from '../utils/sanitizeHtml'
 import {
   initials, fmtDate, fmtDateTime, KpiCard, SectionHeader, Field, TableSkeleton, MemberAvatar,
 } from '../components/ui/AdminShared'
@@ -1095,8 +1097,22 @@ export default function AdminPage() {
                         <Input type="number" min="0" value={eventForm.max_guest_tickets} onChange={setEF('max_guest_tickets')} placeholder="e.g. 10" />
                       </Field>
                     </div>
-                    <Field label="Description (EN)"><Textarea value={eventForm.description} onChange={setEF('description')} /></Field>
-                    <Field label="Description (ՀԱՅ)"><Textarea value={eventForm.description_hy} onChange={setEF('description_hy')} /></Field>
+                    <Field label="Description (EN)">
+                      <RichTextEditor
+                        key={`ev-desc-en-${editingEvent?.id ?? 'new'}`}
+                        initialContent={eventForm.description}
+                        onChange={html => setEventForm(f => ({ ...f, description: html }))}
+                        onUploadImage={adminUploadImage}
+                      />
+                    </Field>
+                    <Field label="Description (ՀԱՅ)">
+                      <RichTextEditor
+                        key={`ev-desc-hy-${editingEvent?.id ?? 'new'}`}
+                        initialContent={eventForm.description_hy}
+                        onChange={html => setEventForm(f => ({ ...f, description_hy: html }))}
+                        onUploadImage={adminUploadImage}
+                      />
+                    </Field>
                     <ImageUploadField
                       label="Cover Image (shown on the events page)"
                       value={eventForm.cover_url}
@@ -1260,8 +1276,22 @@ export default function AdminPage() {
                         onUpload={adminUploadImage}
                       />
                     </div>
-                    <Field label="Description (EN)"><Textarea value={contentForm.description} onChange={setCF('description')} /></Field>
-                    <Field label="Description (ՀԱՅ)"><Textarea value={contentForm.description_hy} onChange={setCF('description_hy')} /></Field>
+                    <Field label="Description (EN)">
+                      <RichTextEditor
+                        key={`ct-desc-en-${editingContent?.id ?? 'new'}`}
+                        initialContent={contentForm.description}
+                        onChange={html => setContentForm(f => ({ ...f, description: html }))}
+                        onUploadImage={adminUploadImage}
+                      />
+                    </Field>
+                    <Field label="Description (ՀԱՅ)">
+                      <RichTextEditor
+                        key={`ct-desc-hy-${editingContent?.id ?? 'new'}`}
+                        initialContent={contentForm.description_hy}
+                        onChange={html => setContentForm(f => ({ ...f, description_hy: html }))}
+                        onUploadImage={adminUploadImage}
+                      />
+                    </Field>
                     <div className="flex gap-2">
                       <Button type="submit">{editingContent ? 'Update' : 'Add Content'}</Button>
                       <Button type="button" variant="outline" onClick={() => { setEditingContent(null); setContentForm(EMPTY_CONTENT); setShowContentForm(false) }}>Cancel</Button>
@@ -1315,7 +1345,7 @@ export default function AdminPage() {
                               <span className="text-xs text-muted-foreground">#{item.id}</span>
                             </div>
                             <p className="font-serif font-semibold text-base leading-tight">{item.title}</p>
-                            {item.description && <p className="text-xs text-muted-foreground line-clamp-2">{item.description}</p>}
+                            {item.description && <p className="text-xs text-muted-foreground line-clamp-2">{stripHtml(item.description)}</p>}
                             <div className="flex gap-2 mt-auto pt-2 flex-wrap">
                               <Button variant="secondary"   size="sm" onClick={() => startEditContent(item)}>Edit</Button>
                               <Button variant="outline"     size="sm" onClick={() => handleUnlockAll(item)}>Unlock All</Button>

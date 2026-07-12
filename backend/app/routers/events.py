@@ -95,6 +95,18 @@ def list_public_events(db: Session = Depends(get_db)):
     return [_serialize_public(e) for e in events]
 
 
+@router.get("/public/{event_id}", response_model=PublicEventOut)
+def get_public_event(event_id: int, db: Session = Depends(get_db)):
+    """Unlike the list above, not restricted to future events — a direct
+    link to an event's detail page (e.g. shared before the event happens)
+    should keep resolving after it's passed, just without RSVP/ticket
+    actions available (those already self-guard on event_date)."""
+    event = db.query(Event).filter(Event.id == event_id).first()
+    if not event:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return _serialize_public(event)
+
+
 # ── authenticated ─────────────────────────────────────────────────────────────
 
 @router.get("/", response_model=List[EventOut])

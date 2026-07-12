@@ -1713,3 +1713,16 @@ footer{
   to   { transform: translateX(0); opacity: 1; }
 }
 .toast-slide-in { animation: toast-slide-in 0.3s ease-out; }
+
+/* rich-content: rendered/sanitized Tiptap HTML on public pages (event detail,
+   library content modal) — headings/lists get no special treatment from the
+   browser by default beyond basic list markers, so add matching spacing */
+.rich-content p { margin: 0 0 0.85em; }
+.rich-content p:last-child { margin-bottom: 0; }
+.rich-content h2 { font-family: 'Cormorant Garamond', 'Noto Sans Armenian', Georgia, serif; font-size: 1.4em; font-weight: 600; margin: 1em 0 0.5em; }
+.rich-content h3 { font-family: 'Cormorant Garamond', 'Noto Sans Armenian', Georgia, serif; font-size: 1.2em; font-weight: 600; margin: 0.9em 0 0.45em; }
+.rich-content ul, .rich-content ol { margin: 0 0 0.85em; padding-left: 1.4em; }
+.rich-content li { margin: 0.2em 0; }
+.rich-content blockquote { border-left: 3px solid #e5d5d5; padding-left: 1em; margin: 0 0 0.85em; color: #786050; font-style: italic; }
+.rich-content a { color: #7E3434; text-decoration: underline; }
+.rich-content img { max-width: 100%; border-radius: 10px; margin: 0.5em 0; display: block; }
