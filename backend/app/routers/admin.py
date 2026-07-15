@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models.ameria_payment import AmeriaPayment
 from app.models.ameria_payment_log import AmeriaPaymentLog
+from app.models.guest_ticket_log import GuestTicketLog
 from app.models.audit_log import AuditLog
 from app.models.content import ContentItem, MemberContent
 from app.models.event import Event
@@ -507,6 +508,33 @@ def list_all_guest_tickets(
     tickets = query.order_by(GuestTicket.created_at.desc()).all()
     events_by_id = {e.id: e for e in db.query(Event).filter(Event.id.in_({t.event_id for t in tickets})).all()}
     return [_guest_ticket_out(t, events_by_id.get(t.event_id)) for t in tickets]
+
+
+@router.get("/guest-tickets/{ticket_row_id}/logs")
+def get_guest_ticket_logs(ticket_row_id: int, db: Session = Depends(get_db), _: User = Depends(require_permission('manage_events'))):
+    """Ameriabank API interactions for one guest ticket — the same debugging
+    view the membership Payments tab has, so an admin can see exactly why a
+    one-time ticket was declined (init_payment + verify_callback payloads)."""
+    row = db.query(GuestTicket).filter(GuestTicket.id == ticket_row_id).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    logs = (
+        db.query(GuestTicketLog)
+        .filter(GuestTicketLog.ticket_row_id == ticket_row_id)
+        .order_by(GuestTicketLog.created_at.asc(), GuestTicketLog.id.asc())
+        .all()
+    )
+    return [
+        {
+            "id": lg.id,
+            "event": lg.event,
+            "success": lg.success,
+            "request_payload": json.loads(lg.request_payload) if lg.request_payload else None,
+            "response_payload": json.loads(lg.response_payload) if lg.response_payload else None,
+            "created_at": lg.created_at.isoformat() if lg.created_at else None,
+        }
+        for lg in logs
+    ]
 
 
 class GuestCheckinIn(BaseModel):

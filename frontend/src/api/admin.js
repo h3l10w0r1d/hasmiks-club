@@ -93,6 +93,7 @@ export const adminGetPaymentLogs      = (id)         => client.get(`/admin/payme
 
 // one-time guest tickets
 export const adminGetGuestTickets     = (params)     => client.get('/admin/guest-tickets', { params }).then(r => r.data)
+export const adminGetGuestTicketLogs  = (id)         => client.get(`/admin/guest-tickets/${id}/logs`).then(r => r.data)
 export const adminGuestTicketCheckin  = (payload)    => client.post('/admin/guest-tickets/checkin', { payload }).then(r => r.data)
 
 // gift cards

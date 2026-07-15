@@ -49,7 +49,7 @@ import {
   adminGetSettings, adminSaveSettings,
   adminGetRoles, adminUpdateRole,
   adminGetPayments, adminRefreshPayment, adminRefundPayment, adminCancelPayment, adminGetPaymentLogs,
-  adminGetGuestTickets,
+  adminGetGuestTickets, adminGetGuestTicketLogs,
   adminGetGiftCards, adminResendGiftCard,
 } from '../api/admin'
 
@@ -579,6 +579,19 @@ export default function AdminPage() {
       setLogsData(await adminGetPaymentLogs(p.id))
     } catch {
       flash('Failed to load payment logs', true)
+      setLogsData([])
+    } finally {
+      setLogsLoading(false)
+    }
+  }
+  // Same logs modal, but for a one-time guest ticket (own log table).
+  const handleViewGuestLogs = async (t) => {
+    setLogsPayment(t)
+    setLogsLoading(true)
+    try {
+      setLogsData(await adminGetGuestTicketLogs(t.id))
+    } catch {
+      flash('Failed to load ticket logs', true)
       setLogsData([])
     } finally {
       setLogsLoading(false)
@@ -2009,13 +2022,14 @@ export default function AdminPage() {
                         <TableHead>Verified</TableHead>
                         <TableHead>Checked in</TableHead>
                         <TableHead>Purchased</TableHead>
+                        <TableHead className="text-right">Logs</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {isLoading('one_timers')
-                        ? <TableSkeleton cols={9} />
+                        ? <TableSkeleton cols={10} />
                         : filteredGuestTickets.length === 0
-                          ? <TableRow><TableCell colSpan={9} className="text-center text-muted-foreground py-12">No one-time ticket purchases yet</TableCell></TableRow>
+                          ? <TableRow><TableCell colSpan={10} className="text-center text-muted-foreground py-12">No one-time ticket purchases yet</TableCell></TableRow>
                           : filteredGuestTickets.map(t => (
                             <TableRow key={t.id}>
                               <TableCell className="font-medium text-sm">{t.full_name}</TableCell>
@@ -2027,6 +2041,9 @@ export default function AdminPage() {
                               <TableCell>{t.email_verified ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <XCircle className="h-4 w-4 text-muted-foreground" />}</TableCell>
                               <TableCell>{t.checked_in ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <XCircle className="h-4 w-4 text-muted-foreground" />}</TableCell>
                               <TableCell className="text-muted-foreground text-xs whitespace-nowrap">{t.created_at ? fmtDateTime(t.created_at) : '—'}</TableCell>
+                              <TableCell className="text-right">
+                                <Button variant="ghost" size="sm" onClick={() => handleViewGuestLogs(t)} title="View payment logs"><ScrollText className="h-3.5 w-3.5" /></Button>
+                              </TableCell>
                             </TableRow>
                           ))
                       }
