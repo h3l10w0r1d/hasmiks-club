@@ -34,10 +34,10 @@ const SITE_URL = 'https://www.hasmiksclub.am'
 const OG_IMAGE = `${SITE_URL}/og-image.jpg`
 
 function LandingPage({ lang, setLang }) {
-  const title = lang === 'hy' ? "Hasmik's Club — Կանանց համայնք Երևանում" : "Hasmik's Club — A Women's Circle in Yerevan"
+  const title = lang === 'hy' ? "Hasmik's Club — Կանանց ակումբ Երևանում" : "Hasmik's Club — A Women's Club in Yerevan"
   const description = lang === 'hy'
     ? 'Hasmik\'s Club-ը Երևանի կանանց մշակութային ակումբ է: Դասընթացներ, հանդիպումներ, և ընտանեկան մթնոլորտ:'
-    : "Hasmik's Club is a curated women's community in Yerevan — intimate gatherings, cultural events, and a circle of like-minded women."
+    : "Hasmik's Club is a curated women's club in Yerevan — intimate gatherings, cultural events, and a circle of like-minded women."
   return (
     <>
       <Helmet>

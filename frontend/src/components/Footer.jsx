@@ -9,8 +9,8 @@ export default function Footer({ lang = 'en' }) {
     contact: hy ? 'Կապ'           : 'Contact',
     terms:   hy ? 'Պայմաններ'     : 'Terms',
     copy:    hy
-      ? '© 2026 Hasmik\'s Club — 50+ հայ կանանց համայնք'
-      : '© 2026 Hasmik\'s Club — #1 · 50+ Armenian Women\'s Community',
+      ? '© 2026 Hasmik\'s Club — 50+ հայ կանանց ակումբ'
+      : '© 2026 Hasmik\'s Club — #1 · 50+ Armenian Women\'s Club',
   }
   return (
     <footer>

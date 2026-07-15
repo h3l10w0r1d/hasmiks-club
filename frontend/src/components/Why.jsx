@@ -14,15 +14,12 @@ export default function Why({ lang }) {
         <div className="sec-tag">{hy ? c.tagHy : c.tagEn}</div>
         <h2 className="sec-h">
           {hy
-            ? <>50+ հայ կանանց <em>համայնք</em>՝ ջերմության, շփման և պատկանելու շուրջ։</>
-            : <>The <em>#1</em> Armenian Women&apos;s Community for women 50+.</>
+            ? <>Ինչ կստանաք <em>ակումբում</em>։</>
+            : <>What you get in <em>the club</em>.</>
           }
         </h2>
         <p className="sec-p">
-          {hy
-            ? c.p1Hy
-            : <>Armenian women have always been the heart of the family — the keepers of tradition, the quiet strength behind everything. But we never had a space built just for <strong>us</strong>.</>
-          }
+          {hy ? c.p1Hy : c.p1En}
         </p>
         <p className="sec-p">
           {hy ? c.p2Hy : c.p2En}

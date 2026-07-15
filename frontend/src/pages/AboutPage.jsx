@@ -6,71 +6,93 @@ import Footer from '../components/Footer'
 const copy = {
   en: {
     metaTitle: "About Us — Hasmik's Club",
-    metaDesc: "Hasmik's Club is the #1 community for Armenian women 50+ — a place to meet, share, and belong.",
+    metaDesc: "Hasmik's Club is the #1 club for Armenian women 50+ — a place to meet, share, and belong.",
     eyebrow: 'About Us',
-    title: 'A circle built for Armenian women.',
-    sub: "Hasmik's Club is the first community created just for Armenian women 50+ — a place to meet face to face, share life openly, and feel that you are never alone.",
+    title: 'Life at 72 does not end. It can begin again.',
+    sub: "I am Hasmik — 72 years old, a former teacher, mother and grandmother.",
     sections: [
       {
         h: 'Our Story',
         p: [
-          "For generations, the Armenian woman has been the heart of the family — the keeper of tradition, the quiet strength behind everything. Yet she rarely had a space built just for her.",
-          "Hasmik's Club was born to change that: a warm, real community where women gather every two weeks in Yerevan and stay close on Telegram every single day.",
+          "I devoted most of my life to my family, my work, and people. Over the years I learned that every age has its own beauty, and that a person should never stop being curious, connecting, learning, and trying new things.",
+          "One day I decided to share my thoughts, little stories, and life experience on Instagram. In just three months, more than 40,000 people gathered around our page. It showed me that many women need the same thing — honest words, warm connection, and a place where they are understood.",
+          "That is how the idea of Hasmik's Club was born.",
         ],
       },
       {
-        h: 'Our Mission',
+        h: 'Why the club was created',
         p: [
-          "We believe you do not have to disappear after a certain age. You deserve to be seen, heard, and surrounded by women who choose to live fully — curious, alive, and proud of who they are.",
+          "Over the years, a woman takes on many roles. She cares for her family, children, grandchildren and loved ones — but sometimes leaves her own wishes and interests in the background.",
+          "Hasmik's Club was created so that every woman also has time devoted to herself.",
+          "It is a place to meet new people, talk openly, share life stories, laugh, join interesting gatherings, and simply spend a pleasant time.",
         ],
       },
       {
-        h: 'What We Believe',
-        list: [
-          'Life at any age is a beginning, not an ending.',
-          'Women are stronger, warmer, and braver together.',
-          'Real friendship grows face to face — over coffee, recipes, and honest conversation.',
-          'Our roots and traditions are something to celebrate, not to outgrow.',
+        h: 'More than a club',
+        p: [
+          "We meet in Yerevan at beautiful, calm places, visit cultural events, organize warm gatherings, and discover new pastimes together.",
+          "And between meetings, the connection continues in our private Telegram club, where we share thoughts, stories, recipes, advice, and the small joys of everyday life.",
+          "Hasmik's Club is not just a series of events. It is a circle of women where every member can be heard, accepted, and feel that she is awaited.",
+        ],
+      },
+      {
+        h: 'Our Purpose',
+        p: [
+          "We want to remind you that after 50, 60, or 70, life does not stop being interesting.",
+          "You can always find new friends, learn something new, travel, discover a beloved pastime, and give more time to your own joy.",
+          "For us, what matters most is warmth, honesty, mutual respect, and the feeling of belonging.",
+          "Beautiful days are still ahead. Let us live them together.",
         ],
       },
     ],
     sig: '— With love, Hasmik',
-    ctaText: 'Want to be part of the circle?',
-    cta: 'Join the Circle',
+    ctaText: 'Want to be part of the club?',
+    cta: 'Join the Club',
   },
   hy: {
     metaTitle: "Մեր մասին — Hasmik's Club",
-    metaDesc: "Hasmik's Club-ը 50+ հայ կանանց #1 համայնքն է՝ վայր, որտեղ կարելի է հանդիպել, կիսվել և պատկանել:",
+    metaDesc: "Hasmik's Club-ը 50+ հայ կանանց #1 ակումբն է՝ վայր, որտեղ կարելի է հանդիպել, կիսվել և պատկանել:",
     eyebrow: 'Մեր մասին',
-    title: 'Շրջապատ՝ ստեղծված հայ կանանց համար։',
-    sub: "Hasmik's Club-ը առաջին համայնքն է, որը ստեղծված է հենց 50+ հայ կանանց համար՝ վայր, որտեղ կարող ես հանդիպել դեմ առ դեմ, անկեղծ կիսվել կյանքով և զգալ, որ երբեք միայնակ չես։",
+    title: '72-ում կյանքը չի ավարտվում։ Այն կարող է նորից սկսվել։',
+    sub: "Ես Հասմիկն եմ՝ 72 տարեկան, նախկին մանկավարժ, մայր և տատիկ։",
     sections: [
       {
         h: 'Մեր պատմությունը',
         p: [
-          "Սերունդներ շարունակ հայ կինը եղել է ընտանիքի սիրտը՝ ավանդույթների պահապանը, լուռ ուժը, որի վրա հենվել է ամեն ինչ։ Բայց նա հազվադեպ է ունեցել մի վայր, որը ստեղծված է հենց իր համար։",
-          "Hasmik's Club-ը ծնվեց հենց դա փոխելու համար՝ ջերմ, իրական համայնք, որտեղ կանայք ամեն երկու շաբաթը մեկ հանդիպում են Երևանում և ամեն օր մոտ են մնում Telegram-ում։",
+          "Կյանքիս մեծ մասը նվիրել եմ ընտանիքիս, աշխատանքիս և մարդկանց։ Տարիների ընթացքում սովորել եմ, որ յուրաքանչյուր տարիք իր գեղեցկությունն ունի, իսկ մարդը երբեք չպետք է դադարի հետաքրքրվել, շփվել, սովորել և նոր բաներ փորձել։",
+          "Մի օր որոշեցի Instagram-ում կիսվել իմ մտքերով, փոքրիկ պատմություններով և կյանքի փորձով։ Ընդամենը երեք ամսում մեր էջի շուրջ հավաքվեց ավելի քան 40,000 մարդ։ Դա ինձ ցույց տվեց, որ շատ կանայք նույն բանի կարիքն ունեն՝ անկեղծ խոսքի, ջերմ շփման և մի միջավայրի, որտեղ իրենց կհասկանան։",
+          "Այդպես ծնվեց Հասմիկի ակումբի գաղափարը։",
         ],
       },
       {
-        h: 'Մեր առաքելությունը',
+        h: 'Ինչու ստեղծվեց ակումբը',
         p: [
-          "Մենք հավատում ենք, որ որոշ տարիքից հետո պետք չէ անհետանալ։ Դու արժանի ես տեսնված, լսված և շրջապատված լինելու կանանցով, ովքեր ընտրում են ապրել լիարժեք՝ հետաքրքրասեր, կենդանի և հպարտ իրենցով։",
+          "Տարիների ընթացքում կինը բազմաթիվ դերեր է ստանձնում։ Նա հոգ է տանում ընտանիքի, երեխաների, թոռների և հարազատների մասին, բայց երբեմն իր ցանկություններն ու հետաքրքրությունները թողնում է երկրորդ պլանում։",
+          "Հասմիկի ակումբը ստեղծվել է, որպեսզի յուրաքանչյուր կին ունենա նաև իրեն նվիրված ժամանակ։",
+          "Սա մի վայր է, որտեղ կարելի է նոր մարդկանց ճանաչել, անկեղծ զրուցել, կիսվել կյանքի պատմություններով, ծիծաղել, մասնակցել հետաքրքիր հանդիպումների և պարզապես հաճելի ժամանակ անցկացնել։",
         ],
       },
       {
-        h: 'Ինչին ենք հավատում',
-        list: [
-          'Կյանքը ցանկացած տարիքում սկիզբ է, ոչ թե ավարտ։',
-          'Կանայք միասին ավելի ուժեղ են, ավելի ջերմ և ավելի համարձակ։',
-          'Իրական ընկերությունը աճում է դեմ առ դեմ՝ սուրճի, բաղադրատոմսերի և անկեղծ զրույցների շուրջ։',
-          'Մեր արմատներն ու ավանդույթները տոնելու բան են, ոչ թե թողնելու։',
+        h: 'Ակումբից ավելին',
+        p: [
+          "Մենք հանդիպում ենք Երևանում՝ գեղեցիկ ու հանգիստ վայրերում, այցելում մշակութային միջոցառումների, կազմակերպում ջերմ հավաքներ և միասին բացահայտում նոր զբաղմունքներ։",
+          "Իսկ հանդիպումների միջև շփումը շարունակվում է մեր փակ Telegram ակումբում, որտեղ կիսվում ենք մտքերով, պատմություններով, բաղադրատոմսերով, խորհուրդներով և առօրյա փոքրիկ ուրախություններով։",
+          "Հասմիկի ակումբը պարզապես միջոցառումների շարք չէ։ Այն կանանց շրջապատ է, որտեղ յուրաքանչյուր անդամ կարող է լսվել, ընդունվել և զգալ, որ իրեն սպասում են։",
+        ],
+      },
+      {
+        h: 'Մեր նպատակը',
+        p: [
+          "Մենք ուզում ենք հիշեցնել, որ 50-ից, 60-ից կամ 70-ից հետո կյանքը չի դադարում հետաքրքիր լինել։",
+          "Միշտ կարելի է նոր ընկերներ գտնել, նոր բան սովորել, ճանապարհորդել, սիրելի զբաղմունք բացահայտել և ավելի շատ ժամանակ հատկացնել սեփական ուրախությանը։",
+          "Մեզ համար ամենակարևորն են ջերմությունը, անկեղծությունը, փոխադարձ հարգանքը և պատկանելու զգացողությունը։",
+          "Գեղեցիկ օրերը դեռ շատ են։ Եկեք դրանք միասին ապրենք։",
         ],
       },
     ],
     sig: '— Սիրով, Հասմիկ',
-    ctaText: 'Ուզու՞մ ես մաս կազմել շրջապատին։',
-    cta: 'Միանալ համայնքին',
+    ctaText: 'Ուզու՞մ ես մաս կազմել ակումբին։',
+    cta: 'Միանալ ակումբին',
   },
 }
 

@@ -25,8 +25,8 @@ export default function Hero({ lang }) {
 
         <h1 className="hero-h1">
           {hy
-            ? <>Միացիր մի շրջապատի, որտեղ քեզ <em>հասկանում են, ընդունում են և սպասում են։</em></>
-            : <>A circle of <em>Armenian women</em> — meeting, sharing, belonging.</>
+            ? <>Միացիր մի ջերմ ակումբի, որտեղ քեզ <em>հասկանում են, ընդունում են և սպասում։</em></>
+            : <>A club of <em>Armenian women</em> — meeting, sharing, belonging.</>
           }
         </h1>
 
@@ -37,7 +37,7 @@ export default function Hero({ lang }) {
         <p className="hero-p">
           {hy
             ? c.pHy
-            : <>For the first time, Armenian women have a place built just for them — for women who are <strong>curious, alive, and refuse to disappear.</strong> A real community gathering face to face every two weeks and staying close on Telegram every day.</>
+            : <>For the first time, Armenian women have a place built just for them — for women who are <strong>curious, alive, and refuse to disappear.</strong> A real club gathering face to face every two weeks and staying close on Telegram every day.</>
           }
         </p>
 
@@ -47,11 +47,11 @@ export default function Hero({ lang }) {
 
         <div className="hero-stats">
           <div className="hstat">
-            <div className="hstat-n">30K</div>
+            <div className="hstat-n">40K</div>
             <div className="hstat-l">{hy ? c.stat1LabelHy : c.stat1LabelEn}</div>
           </div>
           <div className="hstat">
-            <div className="hstat-n">2×</div>
+            <div className="hstat-n">2</div>
             <div className="hstat-l">{hy ? c.stat2LabelHy : c.stat2LabelEn}</div>
           </div>
           <div className="hstat">

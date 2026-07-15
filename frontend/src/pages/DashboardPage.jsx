@@ -165,7 +165,7 @@ export default function DashboardPage({ lang, setLang }) {
     profile:     lang === 'hy' ? 'Պրոֆիլ' : 'Profile',
     events:      lang === 'hy' ? 'Հանդիպումներ' : 'Events',
     library:     lang === 'hy' ? 'Գրադարան' : 'Library',
-    community:   lang === 'hy' ? 'Համայնք' : 'Community',
+    community:   lang === 'hy' ? 'Ակումբ' : 'Club',
     signOut:     lang === 'hy' ? 'Ելք' : 'Sign Out',
     welcome:     lang === 'hy' ? 'Բարի գալուստ' : 'Welcome back',
     memberSince: lang === 'hy' ? 'Անդամ է' : 'Member since',
@@ -178,7 +178,7 @@ export default function DashboardPage({ lang, setLang }) {
     saved:       lang === 'hy' ? 'Պահպանված է' : 'Saved!',
     savingNow:   lang === 'hy' ? 'Պահպանվում է...' : 'Saving…',
     savedNow:    lang === 'hy' ? 'Պահպանված է ✓' : 'Saved ✓',
-    showInDir:   lang === 'hy' ? 'Ցուցադրել համայնքի ցուցակում' : 'Show in community directory',
+    showInDir:   lang === 'hy' ? 'Ցուցադրել ակումբի ցուցակում' : 'Show in club directory',
     seats:       lang === 'hy' ? 'տեղ մնացել' : 'seats left',
     rsvpBtn:     lang === 'hy' ? 'Գրանցվել' : 'RSVP',
     cancelRsvp:  lang === 'hy' ? 'Չեղարկել' : 'Cancel RSVP',
@@ -576,8 +576,8 @@ export default function DashboardPage({ lang, setLang }) {
               : paymentFailed
                 ? (lang === 'hy' ? 'Կրկին փորձեք, կամ կապվեք մեզ հետ, եթե խնդիրը կրկնվում է:' : 'Try again, or contact us if this keeps happening.')
                 : (lang === 'hy'
-                    ? 'Բաժանորդագրվեք՝ ֆորումում գրելու, հանդիպումներին գրանցվելու և համայնքին տեսանելի լինելու համար:'
-                    : 'Subscribe to post in the forum, RSVP to gatherings, and be visible to the community.')}
+                    ? 'Բաժանորդագրվեք՝ ֆորումում գրելու, հանդիպումներին գրանցվելու և ակումբին տեսանելի լինելու համար:'
+                    : 'Subscribe to post in the forum, RSVP to gatherings, and be visible to the club.')}
           </p>
           {msg && <p style={{ fontSize: 12.5, color: '#c0392b', margin: '4px 0 0' }}>{msg}</p>}
         </div>
@@ -683,7 +683,7 @@ export default function DashboardPage({ lang, setLang }) {
             })}
           </div>
           <div className="dash-sidebar-section">
-            <span className="dash-sidebar-section-label">{lang === 'hy' ? 'Համ.' : 'Community'}</span>
+            <span className="dash-sidebar-section-label">{lang === 'hy' ? 'Ակումբ' : 'Club'}</span>
             {/* FORUM (disabled): 'forum' removed from this list — was ['gallery', 'community', 'forum'] */}
             {['gallery', 'community'].map(k => {
               const Icon = TAB_ICONS[k]
@@ -718,7 +718,7 @@ export default function DashboardPage({ lang, setLang }) {
                 <StatCard icon={CalendarDays} label={lang === 'hy' ? 'Հաջորդը' : 'Next Event'}
                   value={nextEvent ? (getCountdown(nextEvent.event_date, lang) || new Date(nextEvent.event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'short' })) : '—'} />
                 <StatCard icon={BookOpen} label={t.library} value={unlockedLibrary.length} />
-                <StatCard icon={Users} label={lang === 'hy' ? 'Համայնք' : 'Community'} value={directory.length} />
+                <StatCard icon={Users} label={lang === 'hy' ? 'Ակումբ' : 'Club'} value={directory.length} />
               </div>
 
               <div className="home-grid">
@@ -888,7 +888,7 @@ export default function DashboardPage({ lang, setLang }) {
                 <div className="home-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
                   <div>
                     <div style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 22, fontWeight: 700, color: '#2c1a1a' }}>
-                      {directory.length} {lang === 'hy' ? 'անդամ համայնքում' : 'members in the community'}
+                      {directory.length} {lang === 'hy' ? 'անդամ ակումբում' : 'members in the club'}
                     </div>
                     <div style={{ fontSize: 13, color: '#9b6e6e', marginTop: 4 }}>
                       {lang === 'hy' ? 'Ծանոթացե՛ք Hasmik\'s Club-ի անդամների հետ' : "Connect with fellow Hasmik's Club members"}

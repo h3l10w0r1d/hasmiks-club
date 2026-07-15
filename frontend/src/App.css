@@ -486,9 +486,11 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
 }
 
 .plans{
-  display:grid;grid-template-columns:1fr;
-  max-width:480px;
+  display:grid;grid-template-columns:1fr 1fr;
+  gap:24px;
+  max-width:840px;
   margin:0 auto;
+  align-items:start;
 }
 .plan{
   background:#fff;
@@ -633,6 +635,14 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   color:rgba(250,247,242,0.55);
   letter-spacing:0.08em;
 }
+
+/* Cream/beige variant — no photo, dark text on linen (per client brief) */
+.final--cream{background:var(--linen);}
+.final--cream .final-eyebrow{color:var(--stone);}
+.final--cream .final-h{color:var(--deep);}
+.final--cream .final-h em{color:var(--rose);}
+.final--cream .final-p{color:var(--taupe);}
+.final--cream .final-tiny{color:var(--stone);}
 
 /* ═══════════════════════════════════════
    FOOTER

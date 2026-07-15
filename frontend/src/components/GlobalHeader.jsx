@@ -35,7 +35,7 @@ export default function GlobalHeader({ lang = 'hy', setLang }) {
   const t = {
     en: {
       home: 'Home', events: 'Events', about: 'About', contact: 'Contact',
-      signIn: 'Sign In', join: 'Join the Circle', dashboard: 'My Account', admin: 'Admin',
+      signIn: 'Sign In', join: 'Join the Club', dashboard: 'My Account', admin: 'Admin',
     },
     hy: {
       home: 'Գլխավոր', events: 'Հանդիպումներ', about: 'Մեր մասին', contact: 'Կապ',
@@ -43,7 +43,7 @@ export default function GlobalHeader({ lang = 'hy', setLang }) {
     },
   }[lang] ?? {
     home: 'Home', events: 'Events', about: 'About', contact: 'Contact', signIn: 'Sign In',
-    join: 'Join the Circle', dashboard: 'My Account', admin: 'Admin',
+    join: 'Join the Club', dashboard: 'My Account', admin: 'Admin',
   }
 
   const navLinks = (

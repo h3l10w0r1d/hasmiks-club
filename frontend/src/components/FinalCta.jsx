@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { heroImg } from '../data/images'
 import t from '../data/content'
 import Reveal from './Reveal'
 
@@ -7,24 +6,21 @@ export default function FinalCta({ lang }) {
   const c = t.finalCta
   const hy = lang === 'hy'
   return (
-    <section className="final">
-      <div className="final-bg">
-        <img src={heroImg} alt="Hasmik" />
-      </div>
+    <section className="final final--cream">
       <Reveal as="div" className="final-content">
         <p className="final-eyebrow">
           {hy ? c.eyebrowHy : c.eyebrowEn}
         </p>
         <h2 className="final-h">
           {hy
-            ? <>Այն կանայք, ում <em>փնտրում էիր</em>, արդեն այստեղ են։</>
-            : <>The women you have been <em>looking for</em> are already here.</>
+            ? <>Գեղեցիկ օրերը <em>դեռ շատ են</em>։<br />Եկեք դրանք միասին ապրենք։</>
+            : <>Beautiful days are <em>still ahead</em>.<br />Let us live them together.</>
           }
         </h2>
         <p className="final-p">
           {hy ? c.pHy : c.pEn}
         </p>
-        <Link to="/register" className="btn-cream">
+        <Link to="/register" className="btn-rose">
           {hy ? c.btnHy : c.btnEn}
         </Link>
         <p className="final-tiny">

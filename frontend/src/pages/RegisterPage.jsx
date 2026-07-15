@@ -54,12 +54,12 @@ export default function RegisterPage({ lang }) {
   }, [])
 
   const t = {
-    title:       lang === 'hy' ? 'Միանալ համայնքին' : 'Join the Circle',
+    title:       lang === 'hy' ? 'Միանալ ակումբին' : 'Join the Club',
     name:        lang === 'hy' ? 'Անուն Ազգանուն' : 'Full Name',
     email:       lang === 'hy' ? 'Էլ. հասցե' : 'Email',
     password:    lang === 'hy' ? 'Գաղտնաբառ' : 'Password',
     bio:         lang === 'hy' ? 'Ձեր մասին (կամընտիր)' : 'About you (optional)',
-    bioHint:     lang === 'hy' ? 'Ներկայացրե՛ք ձեզ մյուս անդամներին' : 'Introduce yourself to the community',
+    bioHint:     lang === 'hy' ? 'Ներկայացրե՛ք ձեզ մյուս անդամներին' : 'Introduce yourself to the club',
     appMsg:      lang === 'hy' ? 'Ինչու՞ եք ուզում անդամ դառնալ' : 'Why do you want to join?',
     appMsgHint:  lang === 'hy' ? 'Ձեր դիմումը կուղարկվի ադմինիստրատորի հաստատման համար' : 'Your application will be reviewed before your account is activated',
     refLabel:    lang === 'hy' ? 'Հրավիրողի կոդ' : 'Referral code',

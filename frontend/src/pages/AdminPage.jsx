@@ -1606,8 +1606,8 @@ export default function AdminPage() {
                         <Field label="Contact Phone (shown on the Contact page)">
                           <Input type="tel" value={settingsForm.club_phone} onChange={e => setSettingsForm(f => ({ ...f, club_phone: e.target.value }))} placeholder="+374 …" />
                         </Field>
-                        <Field label="Club Description (shown in community tab)">
-                          <Textarea rows={3} value={settingsForm.club_description} onChange={e => setSettingsForm(f => ({ ...f, club_description: e.target.value }))} placeholder="A warm, intimate community for women in Yerevan..." />
+                        <Field label="Club Description (shown in club tab)">
+                          <Textarea rows={3} value={settingsForm.club_description} onChange={e => setSettingsForm(f => ({ ...f, club_description: e.target.value }))} placeholder="A warm, intimate club for women in Yerevan..." />
                         </Field>
                       </CardContent>
                     </Card>

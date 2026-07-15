@@ -8,8 +8,8 @@ const STEPS = [
     icon: Flower2,
     title: (lang) => lang === 'hy' ? 'Բարի գալուստ Hasmik\'s Club!' : 'Welcome to Hasmik\'s Club!',
     body:  (lang) => lang === 'hy'
-      ? 'Դուք միացել եք Երևանի ամենաջերմ կանացի համայնքին: Ահա թե ինչ է սպասվում ձեզ:'
-      : 'You\'ve joined the warmest women\'s circle in Yerevan. Here\'s what awaits you:',
+      ? 'Դուք միացել եք Երևանի ամենաջերմ կանացի ակումբին: Ահա թե ինչ է սպասվում ձեզ:'
+      : 'You\'ve joined the warmest women\'s club in Yerevan. Here\'s what awaits you:',
   },
   {
     icon: CalendarDays,
@@ -23,14 +23,14 @@ const STEPS = [
     title: (lang) => lang === 'hy' ? 'Բացառիկ բովանդակություն' : 'Exclusive Library',
     body:  (lang) => lang === 'hy'
       ? 'Ձեր անդամությունը բացում է բաղադրատոմսեր, eBook-ներ, և ռեսուրսներ, որոնք ստեղծվել են հատուկ ձեզ համար:'
-      : 'Your membership unlocks recipes, ebooks, and curated resources created just for this circle.',
+      : 'Your membership unlocks recipes, ebooks, and curated resources created just for this club.',
   },
   {
     icon: MessageCircle,
     title: (lang) => lang === 'hy' ? 'Կապ Telegram-ի միջոցով' : 'Connect on Telegram',
     body:  (lang, telegramUrl) => lang === 'hy'
       ? 'Միացե՛ք մեր Telegram խմբին՝ ամենաթարմ նորություններն ու կապն ունենալու համար:'
-      : 'Join our Telegram group to stay connected with the community and get the latest news.',
+      : 'Join our Telegram group to stay connected with the club and get the latest news.',
     isTelegram: true,
   },
 ]
