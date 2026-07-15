@@ -195,11 +195,12 @@ def gift_checkout(gift_id: int, payload: GiftCheckoutIn, db: Session = Depends(g
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     db.commit()
 
-    init_request = {"OrderID": gift.order_id, "Amount": float(gift.amount), "Currency": gift.currency, "BackURL": settings.AMERIABANK_GIFT_BACK_URL}
+    charge = ameriabank.charge_amount(gift.amount)
+    init_request = {"OrderID": gift.order_id, "Amount": float(charge), "Currency": gift.currency, "BackURL": settings.AMERIABANK_GIFT_BACK_URL}
     try:
         resp = ameriabank.init_payment(
             order_id=gift.order_id,
-            amount=gift.amount,
+            amount=charge,
             description=f"Hasmik's Club gift — {gift.recipient_name} ({gift.giver_name})",
             back_url=settings.AMERIABANK_GIFT_BACK_URL,
         )

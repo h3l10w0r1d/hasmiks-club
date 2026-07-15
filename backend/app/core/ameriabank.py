@@ -7,6 +7,7 @@ Two different "success" conventions are used by the bank's API:
 Callers must check the right one — this module does not normalize it away,
 since callers need the raw ResponseMessage for error display either way.
 """
+from decimal import Decimal
 from typing import Optional
 
 import httpx
@@ -16,6 +17,20 @@ from app.core.config import settings
 
 class AmeriaBankError(Exception):
     """Raised on network failure or a non-JSON/non-200 response."""
+
+
+def charge_amount(real_amount) -> Decimal:
+    """The amount to actually send to Ameriabank's InitPayment.
+
+    While AMERIABANK_TEST_MODE is on, the bank's test environment rejects any
+    amount other than its designated test amount (AMERIABANK_TEST_AMOUNT), so
+    every payment flow must send that — not the real price — or InitPayment
+    fails with ResponseCode != 1 (a 502 to the buyer). Live mode charges the
+    real amount. The membership checkout already did this inline; guest tickets
+    and gift cards must behave identically, hence this shared helper."""
+    if settings.AMERIABANK_TEST_MODE:
+        return Decimal(str(settings.AMERIABANK_TEST_AMOUNT))
+    return Decimal(str(real_amount))
 
 
 def _post(path: str, payload: dict) -> dict:

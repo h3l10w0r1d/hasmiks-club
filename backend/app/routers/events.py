@@ -436,11 +436,12 @@ def guest_ticket_checkout(event_id: int, ticket_id: int, payload: GuestCheckoutI
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     db.commit()
 
-    init_request = {"OrderID": ticket.order_id, "Amount": float(event.ticket_price), "Currency": ticket.currency, "BackURL": settings.AMERIABANK_GUEST_BACK_URL}
+    charge = ameriabank.charge_amount(event.ticket_price)
+    init_request = {"OrderID": ticket.order_id, "Amount": float(charge), "Currency": ticket.currency, "BackURL": settings.AMERIABANK_GUEST_BACK_URL}
     try:
         resp = ameriabank.init_payment(
             order_id=ticket.order_id,
-            amount=event.ticket_price,
+            amount=charge,
             description=f"{event.title} — one-time ticket ({ticket.full_name})",
             back_url=settings.AMERIABANK_GUEST_BACK_URL,
         )
@@ -504,11 +505,12 @@ def member_guest_ticket_checkout(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     db.commit()
 
-    init_request = {"OrderID": ticket.order_id, "Amount": float(event.ticket_price), "Currency": ticket.currency, "BackURL": settings.AMERIABANK_GUEST_BACK_URL}
+    charge = ameriabank.charge_amount(event.ticket_price)
+    init_request = {"OrderID": ticket.order_id, "Amount": float(charge), "Currency": ticket.currency, "BackURL": settings.AMERIABANK_GUEST_BACK_URL}
     try:
         resp = ameriabank.init_payment(
             order_id=ticket.order_id,
-            amount=event.ticket_price,
+            amount=charge,
             description=f"{event.title} — one-time ticket ({ticket.full_name})",
             back_url=settings.AMERIABANK_GUEST_BACK_URL,
         )
