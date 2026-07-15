@@ -28,8 +28,8 @@ const t = {
   },
 
   band: {
-    en: `You do not have to disappear after a certain age. You deserve to be seen, heard, and surrounded by women who choose to live fully.`,
-    hy: `Որոշ տարիքից հետո պետք չէ անտեսանելի դառնալ։ Դուք արժանի եք տեսվելու, լսվելու և շրջապատված լինելու կանանցով, ովքեր ընտրում են ապրել լիարժեք։`,
+    en: `40,000 followers · 2 meetings a month · #1 50+ Armenian women's club`,
+    hy: `40,000 հետևորդ · 2 ամսական հանդիպում · #1 50+ հայ կանանց ակումբ`,
   },
 
   why: {
