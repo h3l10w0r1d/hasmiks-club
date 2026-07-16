@@ -409,7 +409,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
 .community-hd{max-width:640px;margin:0 auto 44px;text-align:center}
 .community-sub{font-size:16px;color:var(--taupe);line-height:1.85;margin-top:12px}
 .community-photo{
-  max-width:1080px;margin:0 auto;
+  max-width:1080px;margin:0 auto 56px;
   border-radius:16px;overflow:hidden;
   box-shadow:0 24px 64px rgba(24,12,4,0.12);
 }
@@ -418,7 +418,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   object-fit:cover;object-position:center;
 }
 .community .cards{
-  max-width:1080px;margin:0 auto 56px;
+  max-width:1080px;margin:0 auto;
   grid-template-columns:repeat(3,1fr);
 }
 .card-ico{
@@ -594,11 +594,6 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   background:var(--rose);color:var(--cream);border:1px solid var(--rose);
 }
 .plan-btn-fill:hover{background:var(--rose-lt);border-color:var(--rose-lt)}
-
-.plan-note{
-  margin-top:28px;font-size:14px;
-  color:var(--stone);letter-spacing:0.04em;
-}
 
 /* ═══════════════════════════════════════
    FINAL CTA — large photo background

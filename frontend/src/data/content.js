@@ -144,8 +144,6 @@ const t = {
     ],
     btnEn: `Join the Club`,
     btnHy: `Միանալ ակումբին`,
-    noteEn: `Cancel anytime · No commitment · First gathering free`,
-    noteHy: `Ցանկացած պահի հրաժարվել · Պարտավորություն չկա · Առաջին հանդիպումն անվճար է նոր անդամների համար`,
   },
 
   finalCta: {

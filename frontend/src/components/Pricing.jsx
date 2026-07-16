@@ -45,10 +45,6 @@ export default function Pricing({ lang }) {
           </Reveal>
         ))}
       </div>
-
-      <p className="plan-note">
-        {hy ? c.noteHy : c.noteEn}
-      </p>
     </section>
   )
 }

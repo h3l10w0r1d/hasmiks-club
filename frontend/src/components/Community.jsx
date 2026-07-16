@@ -24,6 +24,11 @@ export default function Community({ lang }) {
         <p className="community-sub">{hy ? c.p2Hy : c.p2En}</p>
       </Reveal>
 
+      <Reveal as="div" className="community-photo" delay={80}>
+        <img src={communityImg}
+          alt={hy ? "Hasmik's Club-ի անդամները միասին" : "Members of Hasmik's Club together"} />
+      </Reveal>
+
       <div className="cards community-cards">
         {c.pts.map((pt, i) => {
           const Icon = PT_ICONS[pt.ico]
@@ -36,11 +41,6 @@ export default function Community({ lang }) {
           )
         })}
       </div>
-
-      <Reveal as="div" className="community-photo" delay={80}>
-        <img src={communityImg}
-          alt={hy ? "Hasmik's Club-ի անդամները միասին" : "Members of Hasmik's Club together"} />
-      </Reveal>
     </section>
   )
 }
