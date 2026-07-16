@@ -369,19 +369,6 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   color:var(--gold);
 }
 
-/* ═══════════════════════════════════════
-   WHAT YOU GET
-═══════════════════════════════════════ */
-.what{
-  background:#fafafa;
-  padding:100px 80px;
-  text-align:center;
-  border-top:1px solid #f0ece8;
-  border-bottom:1px solid #f0ece8;
-}
-.what-hd{max-width:540px;margin:0 auto 60px}
-.what-sub{font-size:16px;color:var(--taupe);line-height:1.8;margin-top:12px}
-
 .cards{
   display:grid;
   grid-template-columns:repeat(4,1fr);
@@ -404,12 +391,6 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
 }
 .card:hover{box-shadow:0 8px 32px rgba(126,52,52,0.08);transform:translateY(-2px)}
 .card:hover::before{background:var(--rose)}
-.card-num{
-  font-family:'Cormorant Garamond', 'Noto Sans Armenian',serif;
-  font-size:48px;font-weight:300;
-  color:rgba(126,52,52,0.18);line-height:1;
-  margin-bottom:12px;
-}
 .card-title{
   font-family:'Cormorant Garamond', 'Noto Sans Armenian',serif;
   font-size:18px;font-weight:600;
@@ -739,7 +720,7 @@ footer{
 .page-section li{font-size:16px;line-height:1.8;color:var(--mocha);margin-bottom:7px}
 
 .ig-embed-section{display:flex;justify-content:center}
-.ig-embed-wrap{width:100%;max-width:540px;display:flex;justify-content:center}
+.ig-embed-wrap{width:100%;max-width:400px;display:flex;justify-content:center}
 .ig-embed-wrap iframe{max-width:100%!important}
 .page-closing{font-size:17px;line-height:1.7;color:var(--deep);font-weight:600;margin:8px 0 0}
 .page-sig{
@@ -833,7 +814,6 @@ a.ci-row:hover .ci-value{color:var(--rose)}
   .why{grid-template-columns:1fr}
   .why-img-col{height:70vw}
   .why-text-col{padding:64px 28px}
-  .what{padding:64px 28px}
   .cards{grid-template-columns:1fr 1fr}
   .story{grid-template-columns:1fr}
   .story-img{height:70vw}

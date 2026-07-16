@@ -7,7 +7,6 @@ import { useLandingAnimations } from './hooks/useLandingAnimations'
 import GlobalHeader from './components/GlobalHeader'
 import Hero from './components/Hero'
 import Community from './components/Community'
-import What from './components/What'
 import Story from './components/Story'
 import Pricing from './components/Pricing'
 import FinalCta from './components/FinalCta'
@@ -63,7 +62,6 @@ function LandingPage({ lang, setLang }) {
       <Hero lang={lang} />
       <Band lang={lang} />
       <Community lang={lang} />
-      <What lang={lang} />
       <Story lang={lang} />
       <Pricing lang={lang} />
       <FinalCta lang={lang} />

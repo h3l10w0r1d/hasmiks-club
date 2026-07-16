@@ -34,7 +34,7 @@ const copy = {
     infoTitle: 'Կոնտակտային տվյալներ',
     formTitle: 'Ուղարկիր մեզ հաղորդագրություն',
     name: 'Անուն', emailLabel: 'Էլ. փոստ', message: 'Հաղորդագրություն',
-    namePh: 'Ձեր անուն ազգանունը', emailPh: 'your@email.com', messagePh: 'Գրիր քո հարցը կամ հաղորդագրությունը…',
+    namePh: 'Ձեր անուն ազգանունը', emailPh: 'your@email.com', messagePh: 'Նկարագրեք Ձեր Հարցը կամ կապ Հաստատելու պատճառը...',
     send: 'Ուղարկել',
     noEmail: 'Մեզ հետ կապվելու ամենաարագ ձևը Telegram-ն է․ սեղմիր աջ կողմի քարտը և ողջունիր մեզ։',
     mailSubject: "Հաղորդագրություն Hasmik's Club կայքից",
@@ -88,7 +88,7 @@ export default function ContactPage({ lang = 'en', setLang }) {
 
       <main className="page-main">
         <header className="page-hero">
-          <div className="page-eyebrow">{c.eyebrow}</div>
+          {c.eyebrow && <div className="page-eyebrow">{c.eyebrow}</div>}
           <h1 className="page-title">{c.title}</h1>
           <p className="page-sub">{c.sub}</p>
         </header>

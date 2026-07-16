@@ -68,45 +68,6 @@ const t = {
     quoteHy: `«Ես 72 տարեկան եմ, և հիմա ես ավելի «ես» եմ, քան երբևէ»`,
   },
 
-  what: {
-    tagEn: `Inside the Club`,
-    tagHy: `ԱԿՈՒՄԲԻ ՆԵՐՍՈՒՄ`,
-    hEn: `What every member receives`,
-    hHy: `Ինչ է ստանում յուրաքանչյուր անդամ`,
-    subEn: `Simple, warm, and real. Genuine connection with Armenian women who understand you.`,
-    subHy: `Պարզ, ջերմ ու իրական շփում։ Անկեղծ կապ հայ կանանց հետ, ովքեր քեզ հասկանում են։`,
-    cards: [
-      {
-        num: '01',
-        titleEn: `Private Telegram Club`,
-        titleHy: `Փակ Telegram ակումբ`,
-        textEn: `The members-only group where Hasmik posts daily — recipes, morning reflections, life thoughts, and real conversations with all members.`,
-        textHy: `Միայն անդամների համար ստեղծված ջերմ տարածք, որտեղ Հասմիկն ամեն օր կիսվում է բաղադրատոմսերով, առավոտյան մտքերով, կյանքի փորձով և իրական զրույցներով ակումբի անդամների հետ։`,
-      },
-      {
-        num: '02',
-        titleEn: `In-Person Gatherings`,
-        titleHy: `Կենդանի հանդիպումներ`,
-        textEn: `Twice a month at a new location in Yerevan. A café, a kitchen, a garden — always intimate, always memorable, always Armenian.`,
-        textHy: `Ամիսը երկու անգամ՝ Երևանի տարբեր ընտրված վայրերում․ սրճարան, խոհանոց, այգի կամ այլ ջերմ միջավայր։ Միշտ մտերմիկ, միշտ հիշվող, միշտ հայկական։`,
-      },
-      {
-        num: '03',
-        titleEn: `Monthly Recipe Card`,
-        titleHy: `Ամսական բաղադրատոմսի քարտ`,
-        textEn: `A beautiful printable recipe from the family archive — with the story behind the dish written by Hasmik herself. A keepsake to pass down.`,
-        textHy: `Ամեն ամիս՝ գեղեցիկ ձևավորված բաղադրատոմս ընտանեկան արխիվից՝ իր պատմությամբ, հիշողությամբ և Հասմիկի անձնական հուշերով։ Մի բան, որը կարելի է պահել և փոխանցել։`,
-      },
-      {
-        num: '04',
-        titleEn: `Bi-Weekly E-Book`,
-        titleHy: `Երկշաբաթյա էլեկտրոնային գիրք`,
-        textEn: `Every two weeks, a handpicked book delivered to you — from beloved classics to exciting new releases. Something worth reading, always waiting for you.`,
-        textHy: `Ամեն երկու շաբաթ՝ խնամքով ընտրված գիրք քեզ համար՝ սիրելի դասականներից մինչև հետաքրքիր նոր գրքեր։ Մի բան, որը արժե կարդալ, զգալ և քննարկել միասին։`,
-      },
-    ],
-  },
-
   story: {
     labelEn: `From Hasmik`,
     labelHy: `Հասմիկից`,
