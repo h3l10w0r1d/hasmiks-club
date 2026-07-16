@@ -194,7 +194,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   background:#fff;
   display:flex;flex-direction:column;
   justify-content:flex-start;
-  padding:96px 72px 60px 64px;
+  padding:64px 72px 48px 64px;
   position:relative;overflow:hidden;
 }
 .hero-text-side::after{
@@ -207,7 +207,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
 
 .eyebrow{
   display:flex;align-items:center;gap:10px;
-  margin-bottom:40px;
+  margin-bottom:24px;
 }
 .eyebrow-line{width:28px;height:1px;background:var(--gold)}
 .eyebrow-text{
@@ -220,7 +220,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   font-family:'Cormorant Garamond', 'Noto Sans Armenian',serif;
   font-size:clamp(38px,4.2vw,60px);
   font-weight:300;line-height:1.1;
-  color:var(--deep);margin-bottom:28px;
+  color:var(--deep);margin-bottom:18px;
   position:relative;z-index:1;
 }
 .hero-h1 em{font-style:italic;color:var(--rose)}
@@ -233,8 +233,8 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
 }
 
 .hero-p{
-  font-size:16px;line-height:1.9;
-  color:var(--taupe);margin-bottom:44px;
+  font-size:16px;line-height:1.85;
+  color:var(--taupe);margin-bottom:32px;
   position:relative;z-index:1;
 }
 .hero-p strong{color:var(--mocha);font-weight:500}
@@ -253,7 +253,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
 .btn-rose:hover{background:var(--rose-lt);transform:translateY(-2px)}
 
 .hero-stats{
-  display:flex;gap:0;margin-top:56px;
+  display:flex;gap:0;margin-top:40px;
   position:relative;z-index:1;
   border:1px solid var(--sand);
   align-self:flex-start;
