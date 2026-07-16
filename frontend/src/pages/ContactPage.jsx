@@ -34,7 +34,7 @@ const copy = {
     infoTitle: 'Կոնտակտային տվյալներ',
     formTitle: 'Ուղարկիր մեզ հաղորդագրություն',
     name: 'Անուն', emailLabel: 'Էլ. փոստ', message: 'Հաղորդագրություն',
-    namePh: 'Ձեր անուն ազգանունը', emailPh: 'your@email.com', messagePh: 'Նկարագրեք Ձեր Հարցը կամ կապ Հաստատելու պատճառը...',
+    namePh: 'Ձեր անուն ազգանունը', emailPh: 'your@email.com', messagePh: 'Գրիր քո հարցը կամ հաղորդագրությունը…',
     send: 'Ուղարկել',
     noEmail: 'Մեզ հետ կապվելու ամենաարագ ձևը Telegram-ն է․ սեղմիր աջ կողմի քարտը և ողջունիր մեզ։',
     mailSubject: "Հաղորդագրություն Hasmik's Club կայքից",
