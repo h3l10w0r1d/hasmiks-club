@@ -718,6 +718,7 @@ footer{
 .page-section p{font-size:16px;line-height:1.85;color:var(--mocha);margin-bottom:12px}
 .page-section ul{margin:6px 0 12px;padding-left:20px}
 .page-section li{font-size:16px;line-height:1.8;color:var(--mocha);margin-bottom:7px}
+.page-section--center{text-align:center}
 
 .ig-embed-section{display:flex;justify-content:center}
 .ig-embed-wrap{width:100%;max-width:400px;display:flex;justify-content:center}

@@ -97,7 +97,7 @@ const copy = {
     ],
     closing: 'Գեղեցիկ օրերը դեռ շատ են։ Եկեք դրանք միասին ապրենք։',
     sig: '— Սիրով, Հասմիկ',
-    ctaText: 'Ուզու՞մ ես մաս կազմել ակումբին։',
+    ctaText: 'Ուզու՞մ եք մաս կազմել ակումբին։',
     cta: 'Միանալ ակումբին',
   },
 }
@@ -138,11 +138,7 @@ export default function AboutPage({ lang = 'en', setLang }) {
             </Fragment>
           ))}
 
-          {c.closing && <p className="page-closing"><strong>{c.closing}</strong></p>}
-
-          <div className="page-sig">{c.sig}</div>
-
-          <section className="page-section">
+          <section className="page-section page-section--center">
             <h2>{c.ctaText}</h2>
             <Link to="/register" className="page-cta">{c.cta}</Link>
           </section>
