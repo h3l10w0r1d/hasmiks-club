@@ -5,7 +5,6 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { useLang } from './hooks/useLang'
 import GlobalHeader from './components/GlobalHeader'
 import Hero from './components/Hero'
-import Band from './components/Band'
 import Why from './components/Why'
 import What from './components/What'
 import Story from './components/Story'
@@ -59,7 +58,6 @@ function LandingPage({ lang, setLang }) {
       </Helmet>
       <GlobalHeader lang={lang} setLang={setLang} />
       <Hero lang={lang} />
-      <Band lang={lang} />
       <Why lang={lang} />
       <What lang={lang} />
       <Story lang={lang} />
