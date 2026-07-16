@@ -420,7 +420,7 @@ const styles = {
     margin: 0,
   },
   container: {
-    maxWidth: 760,
+    maxWidth: 980,
     margin: '0 auto',
     padding: '24px 24px 64px',
   },
@@ -437,7 +437,7 @@ const styles = {
   },
   coverImg: {
     width: '100%',
-    height: 320,
+    height: 420,
     objectFit: 'cover',
     display: 'block',
   },
