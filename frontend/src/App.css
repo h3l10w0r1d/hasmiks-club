@@ -24,7 +24,7 @@
 html{scroll-behavior:smooth}
 /* Cormorant Garamond's old-style figures render "10" looking like "IO" —
    force lining (uniform-height) numerals everywhere; inherited site-wide. */
-body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:var(--mocha);overflow-x:hidden;font-variant-numeric:lining-nums}
+body{font-family:var(--font-serif);background:#fff;color:var(--mocha);overflow-x:hidden;font-variant-numeric:lining-nums}
 
 /* ═══════════════════════════════════════
    GLOBAL HEADER  (.gh-*)
@@ -712,9 +712,27 @@ footer{
 
 .about-body{max-width:760px}
 .page-section--card{
-  background:#fff;border:1px solid #ece6dd;border-radius:16px;
-  padding:38px 42px;box-shadow:0 4px 24px rgba(24,12,4,0.05);
+  background:var(--rose-bg);border:1px solid rgba(126,52,52,0.14);border-radius:16px;
+  padding:38px 42px;box-shadow:0 4px 24px rgba(126,52,52,0.07);
 }
+.card-icon{
+  width:44px;height:44px;border-radius:50%;
+  background:#fff;color:var(--rose);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:16px;box-shadow:0 2px 8px rgba(126,52,52,0.12);
+}
+
+/* Story section paired with the Instagram reel, reel on the right */
+.story-feature{
+  margin-top:34px;display:grid;
+  grid-template-columns:1.15fr 1fr;gap:24px;align-items:stretch;
+}
+.story-feature-media{display:flex;align-items:center;justify-content:center}
+
+/* Remaining sections: two-column grid, staggered for visual interest,
+   with the last ("Our Purpose") spanning the full width. */
+.about-grid{display:grid;grid-template-columns:1fr;gap:24px;margin-top:24px}
+.about-grid>*:last-child{grid-column:1/-1}
 
 .ig-embed-section{display:flex;justify-content:center}
 .ig-embed-wrap{width:100%;max-width:400px;display:flex;justify-content:center}
