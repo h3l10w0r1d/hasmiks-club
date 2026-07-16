@@ -8,12 +8,13 @@ const copy = {
     metaTitle: "About Us — Hasmik's Club",
     metaDesc: "Hasmik's Club is the #1 club for Armenian women 50+ — a place to meet, share, and belong.",
     eyebrow: 'About Us',
-    title: 'Life at 72 does not end. It can begin again.',
-    sub: "I am Hasmik — 72 years old, a former teacher, mother and grandmother.",
+    title: 'Life at 72 does not end.',
+    sub: 'It can begin again.',
     sections: [
       {
         h: 'Our Story',
         p: [
+          "I am Hasmik — 72 years old, a former teacher, mother and grandmother.",
           "I devoted most of my life to my family, my work, and people. Over the years I learned that every age has its own beauty, and that a person should never stop being curious, connecting, learning, and trying new things.",
           "One day I decided to share my thoughts, little stories, and life experience on Instagram. In just three months, more than 40,000 people gathered around our page. It showed me that many women need the same thing — honest words, warm connection, and a place where they are understood.",
           "That is how the idea of Hasmik's Club was born.",
@@ -53,12 +54,13 @@ const copy = {
     metaTitle: "Մեր մասին — Hasmik's Club",
     metaDesc: "Hasmik's Club-ը 50+ հայ կանանց #1 ակումբն է՝ վայր, որտեղ կարելի է հանդիպել, կիսվել և պատկանել:",
     eyebrow: 'Մեր մասին',
-    title: '72-ում կյանքը չի ավարտվում։ Այն կարող է նորից սկսվել։',
-    sub: "Ես Հասմիկն եմ՝ 72 տարեկան, նախկին մանկավարժ, մայր և տատիկ։",
+    title: '72-ում կյանքը չի ավարտվում։',
+    sub: 'Այն կարող է նորից սկսվել։',
     sections: [
       {
         h: 'Մեր պատմությունը',
         p: [
+          "Ես Հասմիկն եմ՝ 72 տարեկան, նախկին մանկավարժ, մայր և տատիկ։",
           "Կյանքիս մեծ մասը նվիրել եմ ընտանիքիս, աշխատանքիս և մարդկանց։ Տարիների ընթացքում սովորել եմ, որ յուրաքանչյուր տարիք իր գեղեցկությունն ունի, իսկ մարդը երբեք չպետք է դադարի հետաքրքրվել, շփվել, սովորել և նոր բաներ փորձել։",
           "Մի օր որոշեցի Instagram-ում կիսվել իմ մտքերով, փոքրիկ պատմություններով և կյանքի փորձով։ Ընդամենը երեք ամսում մեր էջի շուրջ հավաքվեց ավելի քան 40,000 մարդ։ Դա ինձ ցույց տվեց, որ շատ կանայք նույն բանի կարիքն ունեն՝ անկեղծ խոսքի, ջերմ շփման և մի միջավայրի, որտեղ իրենց կհասկանան։",
           "Այդպես ծնվեց Հասմիկի ակումբի գաղափարը։",

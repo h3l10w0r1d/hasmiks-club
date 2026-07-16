@@ -18,10 +18,13 @@ export default function Story({ lang }) {
         <div className="sec-tag">{hy ? c.tagHy : c.tagEn}</div>
         <h2 className="story-h">
           {hy
-            ? <>72-ում կյանքը <em>չի ավարտվում</em>։<br />Այն կարող է նորից սկսվել։</>
-            : <>Life at 72 does not <em>end</em>.<br />It can begin again.</>
+            ? <>72-ում կյանքը <em>չի ավարտվում</em>։</>
+            : <>Life at 72 does not <em>end</em>.</>
           }
         </h2>
+        <p className="story-lead">
+          {hy ? 'Այն կարող է նորից սկսվել։' : 'It can begin again.'}
+        </p>
         <p className="story-body">
           {hy ? c.p1Hy : c.p1En}
         </p>

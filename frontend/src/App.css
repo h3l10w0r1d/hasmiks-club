@@ -459,9 +459,16 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   font-family:'Cormorant Garamond', 'Noto Sans Armenian',serif;
   font-size:clamp(26px,2.8vw,40px);
   font-weight:300;line-height:1.2;
-  color:var(--deep);margin-bottom:24px;
+  color:var(--deep);margin-bottom:10px;
 }
 .story-h em{font-style:italic;color:var(--rose)}
+.story-lead{
+  font-family:'Cormorant Garamond', 'Noto Sans Armenian',serif;
+  font-style:italic;
+  font-size:clamp(19px,1.8vw,24px);
+  line-height:1.4;color:var(--rose);
+  margin:0 0 26px;
+}
 .story-body{font-size:16px;line-height:1.88;color:var(--taupe);margin-bottom:16px}
 .story-body strong{color:var(--mocha);font-weight:500}
 .story-sig{
