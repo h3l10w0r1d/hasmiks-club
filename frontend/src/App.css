@@ -498,7 +498,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   gap:24px;
   max-width:840px;
   margin:0 auto;
-  align-items:start;
+  align-items:stretch;
 }
 .plan{
   background:#fff;
@@ -506,6 +506,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   border-radius:4px;
   padding:52px 44px;text-align:left;
   position:relative;
+  display:flex;flex-direction:column;
 }
 .plan.hero-plan{
   background:#fff;
@@ -562,6 +563,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
 
 .plan-btn{
   display:block;text-align:center;box-sizing:border-box;
+  margin-top:auto;
   min-height:44px;padding:15px 13px;
   font-size:15px;font-weight:500;
   letter-spacing:0.13em;text-transform:uppercase;
