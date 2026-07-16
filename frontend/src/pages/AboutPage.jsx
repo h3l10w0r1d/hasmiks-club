@@ -111,7 +111,7 @@ export default function AboutPage({ lang = 'en', setLang }) {
 
       <main className="page-main">
         <header className="page-hero">
-          <div className="page-eyebrow page-eyebrow--lg">{c.eyebrow}</div>
+          <h1 className="page-title">{c.eyebrow}</h1>
         </header>
 
         <div className="page-body about-body">
