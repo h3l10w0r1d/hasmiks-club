@@ -186,8 +186,8 @@ const t = {
   },
 
   finalCta: {
-    eyebrowEn: `The Door Is Open`,
-    eyebrowHy: `ԴՈՒՌԸ ԲԱՑ Է`,
+    eyebrowEn: `We're waiting for you`,
+    eyebrowHy: `Սպասում ենք ձեզ`,
     hEn: `Beautiful days are still ahead. Let us live them together.`,
     hHy: `Գեղեցիկ օրերը դեռ շատ են։ Եկեք դրանք միասին ապրենք։`,
     pEn: `Join Hasmik's Club and become part of a warm circle where you are understood, heard, and awaited.`,

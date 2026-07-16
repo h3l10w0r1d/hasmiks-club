@@ -609,8 +609,9 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
 }
 .final-h{
   font-family:'Cormorant Garamond', 'Noto Sans Armenian',serif;
-  font-size:clamp(30px,4vw,52px);
-  font-weight:300;line-height:1.15;
+  font-size:clamp(28px,3.4vw,44px);
+  font-weight:300;line-height:1.35;
+  letter-spacing:0.01em;
   color:var(--cream);margin-bottom:18px;
 }
 .final-h em{font-style:italic;color:var(--rose-bg)}
