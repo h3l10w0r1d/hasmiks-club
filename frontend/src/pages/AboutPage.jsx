@@ -12,8 +12,6 @@ const copy = {
     metaTitle: "About Us — Hasmik's Club",
     metaDesc: "Hasmik's Club is the #1 club for Armenian women 50+ — a place to meet, share, and belong.",
     eyebrow: 'About Us',
-    title: 'Life at 72 does not end.',
-    sub: 'It can begin again.',
     sections: [
       {
         h: 'Our Story',
@@ -58,8 +56,6 @@ const copy = {
     metaTitle: "Մեր մասին — Hasmik's Club",
     metaDesc: "Hasmik's Club-ը 50+ հայ կանանց #1 ակումբն է՝ վայր, որտեղ կարելի է հանդիպել, կիսվել և պատկանել:",
     eyebrow: 'Մեր մասին',
-    title: '72-ում կյանքը չի ավարտվում։',
-    sub: 'Այն կարող է նորից սկսվել։',
     sections: [
       {
         h: 'Մեր պատմությունը',
@@ -115,14 +111,13 @@ export default function AboutPage({ lang = 'en', setLang }) {
 
       <main className="page-main">
         <header className="page-hero">
-          <div className="page-eyebrow">{c.eyebrow}</div>
-          <h1 className="page-title">{c.title}</h1>
+          <div className="page-eyebrow page-eyebrow--lg">{c.eyebrow}</div>
         </header>
 
-        <div className="page-body">
+        <div className="page-body about-body">
           {c.sections.map((s, i) => (
             <Fragment key={i}>
-              <section className="page-section">
+              <section className="page-section page-section--card">
                 <h2>{s.h}</h2>
                 {s.p?.map((para, j) => <p key={j}>{para}</p>)}
                 {s.list && (
@@ -130,14 +125,14 @@ export default function AboutPage({ lang = 'en', setLang }) {
                 )}
               </section>
               {i === 0 && (
-                <section className="page-section ig-embed-section">
+                <section className="page-section page-section--card ig-embed-section">
                   <InstagramEmbed url={IG_REEL_URL} />
                 </section>
               )}
             </Fragment>
           ))}
 
-          <section className="page-section page-section--center">
+          <section className="page-section page-section--card page-section--center">
             <h2>{c.ctaText}</h2>
             <Link to="/register" className="page-cta">{c.cta}</Link>
           </section>
