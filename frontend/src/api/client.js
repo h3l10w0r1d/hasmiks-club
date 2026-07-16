@@ -10,22 +10,6 @@ client.interceptors.request.use((config) => {
   return config
 })
 
-// TEMP DEV MOCK — remove before commit
-client.interceptors.request.use((config) => {
-  if (config.url === '/settings/public') {
-    config.adapter = async () => ({
-      data: {
-        club_email: 'info@hasmiksclub.am',
-        club_phone: '+374 10 28 55 98',
-        club_location: 'Հյուսիսային պողոտա 1, Երևան 0001, Հայաստան',
-        club_instagram: 'hasmiks.club',
-      },
-      status: 200, statusText: 'OK', headers: {}, config,
-    })
-  }
-  return config
-})
-
 client.interceptors.response.use(
   (res) => res,
   (err) => {
