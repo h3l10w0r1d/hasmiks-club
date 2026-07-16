@@ -235,7 +235,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
 .hero-p{
   font-size:16px;line-height:1.85;
   color:var(--taupe);margin-bottom:36px;
-  max-width:380px;position:relative;z-index:1;
+  position:relative;z-index:1;
 }
 .hero-p strong{color:var(--mocha);font-weight:500}
 
@@ -739,6 +739,43 @@ footer{
   border-radius:999px;transition:background .15s;
 }
 .contact-form button:hover{background:var(--rose-lt)}
+
+/* Contact — two-column layout (form card + details card) */
+.contact-layout{
+  max-width:1040px;margin:0 auto;padding:8px 24px 84px;
+  display:grid;grid-template-columns:1.25fr 0.9fr;gap:28px;align-items:start;
+}
+.contact-form-card,.contact-info-card{
+  background:#fff;border:1px solid #ece6dd;border-radius:14px;padding:30px 30px 34px;
+}
+.cf-card-title,.ci-title{
+  font-size:13px;letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--rose);font-weight:700;margin-bottom:22px;
+}
+.contact-form-card .contact-form{margin-top:0}
+.contact-form-card .contact-form button{
+  align-self:stretch;display:inline-flex;align-items:center;justify-content:center;gap:9px;padding:15px 32px;
+}
+.cf-noemail{font-size:15px;line-height:1.8;color:var(--mocha)}
+
+.ci-row{
+  display:flex;gap:14px;align-items:flex-start;padding:15px 0;text-decoration:none;
+  border-top:1px solid #f0ebe3;
+}
+.ci-row:first-of-type{border-top:none;padding-top:2px}
+.ci-icon{
+  flex-shrink:0;width:40px;height:40px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--rose-bg);color:var(--rose);
+}
+.ci-text{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ci-label{font-size:12px;letter-spacing:0.12em;text-transform:uppercase;color:var(--gold);font-weight:600}
+.ci-value{font-size:15px;color:var(--deep);font-weight:500;word-break:break-word;line-height:1.5}
+a.ci-row:hover .ci-value{color:var(--rose)}
+@media(max-width:820px){
+  .contact-layout{grid-template-columns:1fr;gap:20px;padding-bottom:64px}
+}
+
 @media(max-width:640px){
   footer{flex-direction:column;gap:14px;text-align:center;padding:24px}
   .ft-nav{justify-content:center}

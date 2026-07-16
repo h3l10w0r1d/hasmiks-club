@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Helmet } from 'react-helmet-async'
+import { Mail, Phone, MapPin, Send, AtSign, MessageCircle } from 'lucide-react'
 import GlobalHeader from '../components/GlobalHeader'
 import Footer from '../components/Footer'
 import { getPublicSettings, getMemberSettings } from '../api/payments'
@@ -14,10 +15,12 @@ const copy = {
     sub: "Questions about joining, our gatherings, or anything else? Reach us through any of the channels below — Telegram is the fastest way.",
     telegram: 'Telegram', instagram: 'Instagram', email: 'Email', location: 'Location', phone: 'Phone',
     telegramValue: 'Message us on Telegram',
+    infoTitle: 'Contact details',
     formTitle: 'Send us a message',
     name: 'Name', emailLabel: 'Email', message: 'Message',
+    namePh: 'Your full name', emailPh: 'your@email.com', messagePh: 'Write your question or message…',
     send: 'Send message',
-    noEmail: "The fastest way to reach us is on Telegram — tap the card above and say hello.",
+    noEmail: "The fastest way to reach us is on Telegram — tap the card on the right and say hello.",
     mailSubject: "Message from the Hasmik's Club website",
   },
   hy: {
@@ -28,10 +31,12 @@ const copy = {
     sub: "Հարցե՞ր ունես անդամակցության, հանդիպումների կամ այլ բանի մասին։ Կապվիր մեզ հետ ստորև նշված ցանկացած եղանակով․ ամենաարագը Telegram-ն է։",
     telegram: 'Telegram', instagram: 'Instagram', email: 'Էլ. փոստ', location: 'Հասցե', phone: 'Հեռախոս',
     telegramValue: 'Գրիր մեզ Telegram-ում',
+    infoTitle: 'Կոնտակտային տվյալներ',
     formTitle: 'Ուղարկիր մեզ հաղորդագրություն',
     name: 'Անուն', emailLabel: 'Էլ. փոստ', message: 'Հաղորդագրություն',
+    namePh: 'Ձեր անուն ազգանունը', emailPh: 'your@email.com', messagePh: 'Գրիր քո հարցը կամ հաղորդագրությունը…',
     send: 'Ուղարկել',
-    noEmail: 'Մեզ հետ կապվելու ամենաարագ ձևը Telegram-ն է․ սեղմիր վերևի քարտը և ողջունիր մեզ։',
+    noEmail: 'Մեզ հետ կապվելու ամենաարագ ձևը Telegram-ն է․ սեղմիր աջ կողմի քարտը և ողջունիր մեզ։',
     mailSubject: "Հաղորդագրություն Hasmik's Club կայքից",
   },
 }
@@ -88,62 +93,84 @@ export default function ContactPage({ lang = 'en', setLang }) {
           <p className="page-sub">{c.sub}</p>
         </header>
 
-        <div className="page-body">
-          <div className="contact-grid">
-            {telegram && (
-              <a className="contact-card" href={telegram} target="_blank" rel="noopener noreferrer">
-                <span className="cc-label">{c.telegram}</span>
-                <span className="cc-value">{c.telegramValue} →</span>
-              </a>
-            )}
-            {igUrl && (
-              <a className="contact-card" href={igUrl} target="_blank" rel="noopener noreferrer">
-                <span className="cc-label">{c.instagram}</span>
-                <span className="cc-value">@{igHandle}</span>
-              </a>
-            )}
-            {email && (
-              <a className="contact-card" href={`mailto:${email}`}>
-                <span className="cc-label">{c.email}</span>
-                <span className="cc-value">{email}</span>
-              </a>
-            )}
-            {phone && (
-              <a className="contact-card" href={`tel:${phone.replace(/[^\d+]/g, '')}`}>
-                <span className="cc-label">{c.phone}</span>
-                <span className="cc-value">{phone}</span>
-              </a>
-            )}
-            {location && (
-              <a className="contact-card" href={`https://maps.google.com/?q=${encodeURIComponent(location)}`} target="_blank" rel="noopener noreferrer">
-                <span className="cc-label">{c.location}</span>
-                <span className="cc-value">{location}</span>
-              </a>
-            )}
-          </div>
-
-          <section className="page-section">
-            <h2>{c.formTitle}</h2>
+        <div className="contact-layout">
+          {/* LEFT — message form */}
+          <div className="contact-form-card">
+            <div className="cf-card-title">{c.formTitle}</div>
             {email ? (
               <form className="contact-form" onSubmit={handleSubmit}>
                 <div>
                   <label htmlFor="cf-name">{c.name}</label>
-                  <input id="cf-name" required value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                  <input id="cf-name" required placeholder={c.namePh} value={form.name}
+                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
                 </div>
                 <div>
                   <label htmlFor="cf-email">{c.emailLabel}</label>
-                  <input id="cf-email" type="email" required value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+                  <input id="cf-email" type="email" required placeholder={c.emailPh} value={form.email}
+                    onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
                 </div>
                 <div>
                   <label htmlFor="cf-message">{c.message}</label>
-                  <textarea id="cf-message" rows={5} required value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))} />
+                  <textarea id="cf-message" rows={6} required placeholder={c.messagePh} value={form.message}
+                    onChange={e => setForm(f => ({ ...f, message: e.target.value }))} />
                 </div>
-                <button type="submit">{c.send}</button>
+                <button type="submit"><Send size={17} /> {c.send}</button>
               </form>
             ) : (
-              <p style={{ fontSize: 15, lineHeight: 1.8, color: 'var(--mocha)' }}>{c.noEmail}</p>
+              <p className="cf-noemail">{c.noEmail}</p>
             )}
-          </section>
+          </div>
+
+          {/* RIGHT — contact details */}
+          <aside className="contact-info-card">
+            <div className="ci-title">{c.infoTitle}</div>
+
+            {telegram && (
+              <a className="ci-row" href={telegram} target="_blank" rel="noopener noreferrer">
+                <span className="ci-icon"><MessageCircle size={18} /></span>
+                <span className="ci-text">
+                  <span className="ci-label">{c.telegram}</span>
+                  <span className="ci-value">{c.telegramValue}</span>
+                </span>
+              </a>
+            )}
+            {igUrl && (
+              <a className="ci-row" href={igUrl} target="_blank" rel="noopener noreferrer">
+                <span className="ci-icon"><AtSign size={18} /></span>
+                <span className="ci-text">
+                  <span className="ci-label">{c.instagram}</span>
+                  <span className="ci-value">@{igHandle}</span>
+                </span>
+              </a>
+            )}
+            {email && (
+              <a className="ci-row" href={`mailto:${email}`}>
+                <span className="ci-icon"><Mail size={18} /></span>
+                <span className="ci-text">
+                  <span className="ci-label">{c.email}</span>
+                  <span className="ci-value">{email}</span>
+                </span>
+              </a>
+            )}
+            {phone && (
+              <a className="ci-row" href={`tel:${phone.replace(/[^\d+]/g, '')}`}>
+                <span className="ci-icon"><Phone size={18} /></span>
+                <span className="ci-text">
+                  <span className="ci-label">{c.phone}</span>
+                  <span className="ci-value">{phone}</span>
+                </span>
+              </a>
+            )}
+            {location && (
+              <a className="ci-row" href={`https://maps.google.com/?q=${encodeURIComponent(location)}`} target="_blank" rel="noopener noreferrer">
+                <span className="ci-icon"><MapPin size={18} /></span>
+                <span className="ci-text">
+                  <span className="ci-label">{c.location}</span>
+                  <span className="ci-value">{location}</span>
+                </span>
+              </a>
+            )}
+          </aside>
         </div>
       </main>
 
