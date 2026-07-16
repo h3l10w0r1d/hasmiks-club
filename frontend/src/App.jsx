@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { useLang } from './hooks/useLang'
+import { useLandingAnimations } from './hooks/useLandingAnimations'
 import GlobalHeader from './components/GlobalHeader'
 import Hero from './components/Hero'
 import Why from './components/Why'
@@ -34,6 +35,7 @@ const SITE_URL = 'https://www.hasmiksclub.am'
 const OG_IMAGE = `${SITE_URL}/og-image.jpg`
 
 function LandingPage({ lang, setLang }) {
+  useLandingAnimations()
   const title = lang === 'hy' ? "Hasmik's Club — Կանանց ակումբ Երևանում" : "Hasmik's Club — A Women's Club in Yerevan"
   const description = lang === 'hy'
     ? 'Hasmik\'s Club-ը Երևանի կանանց մշակութային ակումբ է: Դասընթացներ, հանդիպումներ, և ընտանեկան մթնոլորտ:'

@@ -22,9 +22,6 @@ export default function Story({ lang }) {
             : <>Life at 72 does not <em>end</em>.</>
           }
         </h2>
-        <p className="story-lead">
-          {hy ? 'Այն կարող է նորից սկսվել։' : 'It can begin again.'}
-        </p>
         <p className="story-body">
           {hy ? c.p1Hy : c.p1En}
         </p>

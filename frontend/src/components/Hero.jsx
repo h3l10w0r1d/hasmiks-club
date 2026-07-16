@@ -30,10 +30,6 @@ export default function Hero({ lang }) {
           }
         </h1>
 
-        <p className="hero-loc">
-          {hy ? c.locHy : c.locEn}
-        </p>
-
         <p className="hero-p">
           {hy
             ? c.pHy
