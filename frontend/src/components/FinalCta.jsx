@@ -23,9 +23,6 @@ export default function FinalCta({ lang }) {
         <Link to="/register" className="btn-rose">
           {hy ? c.btnHy : c.btnEn}
         </Link>
-        <p className="final-tiny">
-          {hy ? c.tinyHy : c.tinyEn}
-        </p>
       </Reveal>
     </section>
   )
