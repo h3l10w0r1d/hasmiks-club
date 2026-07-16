@@ -32,9 +32,9 @@ const t = {
     hy: `40,000 հետևորդ · 2 ամսական հանդիպում · #1 50+ հայ կանանց ակումբ`,
   },
 
-  why: {
-    tagEn: `#1 · Women 50+`,
-    tagHy: `#1 · Կանայք 50+`,
+  community: {
+    tagEn: `Our Community`,
+    tagHy: `Մեր համայնքը`,
     hEn: `What you get in the club.`,
     hHy: `Ինչ կստանաք ակումբում։`,
     p1En: `Hasmik's Club was created for women who want to add warm connection, new friendships, and beautiful days to their everyday life. Here you can meet, talk openly, share life stories, laugh, be heard, and feel that you are not alone.`,

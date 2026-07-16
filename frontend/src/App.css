@@ -193,8 +193,8 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
 .hero-text-side{
   background:#fff;
   display:flex;flex-direction:column;
-  justify-content:center;
-  padding:76px 72px 60px 64px;
+  justify-content:flex-start;
+  padding:96px 72px 60px 64px;
   position:relative;overflow:hidden;
 }
 .hero-text-side::after{
@@ -416,6 +416,40 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
   color:var(--deep);margin-bottom:10px;
 }
 .card-text{font-size:15px;line-height:1.8;color:var(--taupe)}
+
+/* ═══════════════════════════════════════
+   OUR COMMUNITY — group photo + feature boxes
+═══════════════════════════════════════ */
+.community{
+  background:#fff;
+  padding:100px 80px;
+  border-top:1px solid #f0ece8;
+}
+.community-hd{max-width:640px;margin:0 auto 44px;text-align:center}
+.community-sub{font-size:16px;color:var(--taupe);line-height:1.85;margin-top:12px}
+.community-photo{
+  max-width:1080px;margin:0 auto 56px;
+  border-radius:16px;overflow:hidden;
+  box-shadow:0 24px 64px rgba(24,12,4,0.12);
+}
+.community-photo img{
+  width:100%;display:block;aspect-ratio:16/9;
+  object-fit:cover;object-position:center;
+}
+.community .cards{
+  max-width:1080px;margin:0 auto;
+  grid-template-columns:repeat(3,1fr);
+}
+.card-ico{
+  width:44px;height:44px;
+  background:var(--linen);border:1px solid var(--sand);border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--rose);margin-bottom:18px;
+}
+@media(max-width:900px){
+  .community{padding:64px 28px}
+  .community .cards{grid-template-columns:1fr}
+}
 
 /* ═══════════════════════════════════════
    STORY — full-width image with text overlay
@@ -703,6 +737,10 @@ footer{
 .page-section p{font-size:16px;line-height:1.85;color:var(--mocha);margin-bottom:12px}
 .page-section ul{margin:6px 0 12px;padding-left:20px}
 .page-section li{font-size:16px;line-height:1.8;color:var(--mocha);margin-bottom:7px}
+
+.ig-embed-section{display:flex;justify-content:center}
+.ig-embed-wrap{width:100%;max-width:540px;display:flex;justify-content:center}
+.ig-embed-wrap iframe{max-width:100%!important}
 .page-closing{font-size:17px;line-height:1.7;color:var(--deep);font-weight:600;margin:8px 0 0}
 .page-sig{
   font-family:'Cormorant Garamond','Noto Sans Armenian',serif;

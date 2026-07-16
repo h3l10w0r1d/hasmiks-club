@@ -6,7 +6,7 @@ import { useLang } from './hooks/useLang'
 import { useLandingAnimations } from './hooks/useLandingAnimations'
 import GlobalHeader from './components/GlobalHeader'
 import Hero from './components/Hero'
-import Why from './components/Why'
+import Community from './components/Community'
 import What from './components/What'
 import Story from './components/Story'
 import Pricing from './components/Pricing'
@@ -62,7 +62,7 @@ function LandingPage({ lang, setLang }) {
       <GlobalHeader lang={lang} setLang={setLang} />
       <Hero lang={lang} />
       <Band lang={lang} />
-      <Why lang={lang} />
+      <Community lang={lang} />
       <What lang={lang} />
       <Story lang={lang} />
       <Pricing lang={lang} />

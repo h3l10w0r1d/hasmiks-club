@@ -1,7 +1,11 @@
+import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import GlobalHeader from '../components/GlobalHeader'
 import Footer from '../components/Footer'
+import InstagramEmbed from '../components/InstagramEmbed'
+
+const IG_REEL_URL = 'https://www.instagram.com/reel/DWgkXLSsm4C/'
 
 const copy = {
   en: {
@@ -118,13 +122,20 @@ export default function AboutPage({ lang = 'en', setLang }) {
 
         <div className="page-body">
           {c.sections.map((s, i) => (
-            <section className="page-section" key={i}>
-              <h2>{s.h}</h2>
-              {s.p?.map((para, j) => <p key={j}>{para}</p>)}
-              {s.list && (
-                <ul>{s.list.map((li, j) => <li key={j}>{li}</li>)}</ul>
+            <Fragment key={i}>
+              <section className="page-section">
+                <h2>{s.h}</h2>
+                {s.p?.map((para, j) => <p key={j}>{para}</p>)}
+                {s.list && (
+                  <ul>{s.list.map((li, j) => <li key={j}>{li}</li>)}</ul>
+                )}
+              </section>
+              {i === 0 && (
+                <section className="page-section ig-embed-section">
+                  <InstagramEmbed url={IG_REEL_URL} />
+                </section>
               )}
-            </section>
+            </Fragment>
           ))}
 
           {c.closing && <p className="page-closing"><strong>{c.closing}</strong></p>}
