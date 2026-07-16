@@ -701,13 +701,13 @@ footer{
 .page-sub{margin-top:16px;font-size:16px;line-height:1.75;color:var(--taupe)}
 .page-body{max-width:720px;margin:0 auto;padding:8px 24px 84px}
 .page-section{margin-top:34px}
-.page-section h2{
+.page-section h2,.page-section--card h2{
   font-family:'Cormorant Garamond','Noto Sans Armenian',serif;
   font-size:25px;font-weight:500;color:var(--deep);margin-bottom:10px;
 }
-.page-section p{font-size:16px;line-height:1.85;color:var(--mocha);margin-bottom:12px}
-.page-section ul{margin:6px 0 12px;padding-left:20px}
-.page-section li{font-size:16px;line-height:1.8;color:var(--mocha);margin-bottom:7px}
+.page-section p,.page-section--card p{font-size:16px;line-height:1.85;color:var(--mocha);margin-bottom:12px}
+.page-section ul,.page-section--card ul{margin:6px 0 12px;padding-left:20px}
+.page-section li,.page-section--card li{font-size:16px;line-height:1.8;color:var(--mocha);margin-bottom:7px}
 .page-section--center{text-align:center}
 
 .about-body{max-width:760px}
@@ -815,6 +815,15 @@ a.ci-row:hover .ci-value{color:var(--rose)}
   .ft-nav{justify-content:center}
   .page-hero{padding-top:48px}
   .page-section--card{padding:28px 24px;border-radius:14px}
+}
+
+@media(max-width:780px){
+  .story-feature{grid-template-columns:1fr}
+}
+
+@media(min-width:720px){
+  .about-grid{grid-template-columns:1fr 1fr}
+  .about-grid>*:nth-child(2){margin-top:36px}
 }
 
 /* ═══════════════════════════════════════
