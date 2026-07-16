@@ -94,6 +94,24 @@ function SeatsBadge({ ev, t }) {
   return <span style={styles.badgeOpen}>{t.seatsLeft(ev.seats_available)}</span>
 }
 
+// Intl has no short-month data for hy-AM in most JS engines (silently falls
+// back to English), so Armenian abbreviations are spelled out by hand here.
+const MONTHS_HY = ['ՀՆՎ', 'ՓԵՏ', 'ՄԱՐ', 'ԱՊՐ', 'ՄԱՅ', 'ՀՈՒՆ', 'ՀՈՒԼ', 'ՕԳՍ', 'ՍԵՊ', 'ՀՈԿ', 'ՆՈՅ', 'ԴԵԿ']
+
+// Torn-calendar-page date tile: weekday+month on the rose header strip, the
+// day number large underneath — pinned over the cover image corner.
+function DateTile({ iso, lang }) {
+  const d = new Date(iso)
+  const top = lang === 'hy' ? MONTHS_HY[d.getMonth()] : d.toLocaleDateString('en-GB', { month: 'short' })
+  const day = d.toLocaleDateString('en-GB', { day: 'numeric' })
+  return (
+    <div style={styles.dateTile}>
+      <div style={styles.dateTileTop}>{top}</div>
+      <div style={styles.dateTileDay}>{day}</div>
+    </div>
+  )
+}
+
 /* ─── main component ─────────────────────────────────────────────────────── */
 export default function EventsPage({ lang = 'en' }) {
   const { user, setUser, loading: authLoading } = useAuth()
@@ -269,13 +287,16 @@ export default function EventsPage({ lang = 'en' }) {
           const desc = descRaw ? truncate(stripHtml(descRaw)) : ''
           return (
             <div key={ev.id} style={{ ...styles.card, cursor: 'pointer' }} onClick={() => navigate(`/events/${ev.id}`)}>
-              {/* cover image */}
+              {/* cover image + calendar date tile */}
               {ev.cover_url && (
-                <img
-                  src={cldOptimize(ev.cover_url, { width: 800 })}
-                  alt={title}
-                  style={styles.coverImg}
-                />
+                <div style={styles.coverWrap}>
+                  <img
+                    src={cldOptimize(ev.cover_url, { width: 800 })}
+                    alt={title}
+                    style={styles.coverImg}
+                  />
+                  <DateTile iso={ev.event_date} lang={lang} />
+                </div>
               )}
 
               <div style={styles.cardBody}>
@@ -411,14 +432,46 @@ const styles = {
     border: '1px solid #f5ecee',
     overflow: 'hidden',
   },
+  coverWrap: {
+    position: 'relative',
+  },
   coverImg: {
     width: '100%',
-    height: 220,
+    height: 320,
     objectFit: 'cover',
     display: 'block',
   },
+  dateTile: {
+    position: 'absolute',
+    top: 20,
+    left: 20,
+    width: 62,
+    borderRadius: 12,
+    overflow: 'hidden',
+    background: '#fff',
+    boxShadow: '0 8px 24px rgba(24,12,4,.22)',
+    textAlign: 'center',
+    fontFamily: "'Jost', 'Noto Sans Armenian', 'Inter', sans-serif",
+  },
+  dateTileTop: {
+    background: '#7E3434',
+    color: '#fff',
+    fontSize: 11,
+    fontWeight: 700,
+    letterSpacing: '0.06em',
+    textTransform: 'uppercase',
+    padding: '4px 0',
+  },
+  dateTileDay: {
+    color: '#2c1a1a',
+    fontFamily: "'Cormorant Garamond', 'Noto Sans Armenian', Georgia, serif",
+    fontSize: 26,
+    fontWeight: 700,
+    padding: '4px 0 6px',
+    lineHeight: 1,
+  },
   cardBody: {
-    padding: '28px 32px',
+    padding: '32px 36px 36px',
   },
   cardTop: {
     display: 'flex',
