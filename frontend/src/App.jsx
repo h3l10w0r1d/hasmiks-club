@@ -19,6 +19,7 @@ import GuestScanPage from './pages/GuestScanPage'
 import AdminMemberDetailPage from './pages/AdminMemberDetailPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import Band from './components/Band'
 import EventsPage from './pages/EventsPage'
 import EventDetailPage from './pages/EventDetailPage'
 import WelcomePage from './pages/WelcomePage'
@@ -58,6 +59,7 @@ function LandingPage({ lang, setLang }) {
       </Helmet>
       <GlobalHeader lang={lang} setLang={setLang} />
       <Hero lang={lang} />
+      <Band lang={lang} />
       <Why lang={lang} />
       <What lang={lang} />
       <Story lang={lang} />
