@@ -34,7 +34,7 @@ export default function InstagramEmbed({ url, caption }) {
         className="instagram-media"
         data-instgrm-permalink={`${url}?utm_source=ig_embed&utm_campaign=loading`}
         data-instgrm-version="14"
-        style={{ margin: '0 auto', maxWidth: 400, minWidth: 326, width: '99.375%' }}
+        style={{ margin: '0 auto', maxWidth: 540, minWidth: 326, width: '99.375%' }}
       >
         <a href={url} target="_blank" rel="noopener noreferrer">{caption || url}</a>
       </blockquote>

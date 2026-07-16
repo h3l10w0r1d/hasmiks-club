@@ -5,7 +5,13 @@ import GlobalHeader from '../components/GlobalHeader'
 import Footer from '../components/Footer'
 import InstagramEmbed from '../components/InstagramEmbed'
 
-const IG_REEL_URL = 'https://www.instagram.com/reel/DWgkXLSsm4C/'
+// One reel per section, same order/meaning in both languages.
+const SECTION_REELS = [
+  'https://www.instagram.com/reel/DX6qs5HMCO6/',
+  'https://www.instagram.com/reel/DW6Eb-GMYKR/',
+  'https://www.instagram.com/reel/DavDfKXAYaV/',
+  'https://www.instagram.com/reel/DavDfKXAYaV/',
+]
 
 // One icon per section, same order/meaning in both languages.
 const SECTION_ICONS = [Heart, HeartHandshake, Coffee, Compass]
@@ -118,22 +124,11 @@ export default function AboutPage({ lang = 'en', setLang }) {
         </header>
 
         <div className="page-body about-body">
-          <div className="story-feature">
-            <section className="page-section--card">
-              <div className="card-icon"><Heart size={22} /></div>
-              <h2>{c.sections[0].h}</h2>
-              {c.sections[0].p?.map((para, j) => <p key={j}>{para}</p>)}
-            </section>
-            <div className="story-feature-media">
-              <InstagramEmbed url={IG_REEL_URL} />
-            </div>
-          </div>
-
-          <div className="about-grid">
-            {c.sections.slice(1).map((s, i) => {
-              const Icon = SECTION_ICONS[i + 1]
-              return (
-                <section className="page-section--card" key={i}>
+          {c.sections.map((s, i) => {
+            const Icon = SECTION_ICONS[i]
+            return (
+              <div className={`story-feature${i % 2 === 1 ? ' story-feature--reverse' : ''}`} key={i}>
+                <section className="page-section--card">
                   <div className="card-icon"><Icon size={22} /></div>
                   <h2>{s.h}</h2>
                   {s.p?.map((para, j) => <p key={j}>{para}</p>)}
@@ -141,9 +136,12 @@ export default function AboutPage({ lang = 'en', setLang }) {
                     <ul>{s.list.map((li, j) => <li key={j}>{li}</li>)}</ul>
                   )}
                 </section>
-              )
-            })}
-          </div>
+                <div className="story-feature-media">
+                  <InstagramEmbed url={SECTION_REELS[i]} />
+                </div>
+              </div>
+            )
+          })}
 
           <section className="page-section page-section--card page-section--center">
             <h2>{c.ctaText}</h2>

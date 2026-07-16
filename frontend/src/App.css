@@ -710,7 +710,7 @@ footer{
 .page-section li,.page-section--card li{font-size:16px;line-height:1.8;color:var(--mocha);margin-bottom:7px}
 .page-section--center{text-align:center}
 
-.about-body{max-width:760px}
+.about-body{max-width:1080px}
 .page-section--card{
   background:var(--rose-bg);border:1px solid rgba(126,52,52,0.14);border-radius:16px;
   padding:38px 42px;box-shadow:0 4px 24px rgba(126,52,52,0.07);
@@ -722,20 +722,18 @@ footer{
   margin-bottom:16px;box-shadow:0 2px 8px rgba(126,52,52,0.12);
 }
 
-/* Story section paired with the Instagram reel, reel on the right */
+/* Each section paired with its own Instagram reel; alternates sides. */
 .story-feature{
   margin-top:34px;display:grid;
   grid-template-columns:1.15fr 1fr;gap:24px;align-items:stretch;
 }
+.story-feature--reverse{grid-template-columns:1fr 1.15fr}
+.story-feature--reverse .page-section--card{order:2}
+.story-feature--reverse .story-feature-media{order:1}
 .story-feature-media{display:flex;align-items:center;justify-content:center}
 
-/* Remaining sections: two-column grid, staggered for visual interest,
-   with the last ("Our Purpose") spanning the full width. */
-.about-grid{display:grid;grid-template-columns:1fr;gap:24px;margin-top:24px}
-.about-grid>*:last-child{grid-column:1/-1}
-
 .ig-embed-section{display:flex;justify-content:center}
-.ig-embed-wrap{width:100%;max-width:400px;display:flex;justify-content:center}
+.ig-embed-wrap{width:100%;max-width:540px;display:flex;justify-content:center}
 .ig-embed-wrap iframe{max-width:100%!important}
 .page-closing{font-size:17px;line-height:1.7;color:var(--deep);font-weight:600;margin:8px 0 0}
 .page-sig{
@@ -818,12 +816,8 @@ a.ci-row:hover .ci-value{color:var(--rose)}
 }
 
 @media(max-width:780px){
-  .story-feature{grid-template-columns:1fr}
-}
-
-@media(min-width:720px){
-  .about-grid{grid-template-columns:1fr 1fr}
-  .about-grid>*:nth-child(2){margin-top:36px}
+  .story-feature,.story-feature--reverse{grid-template-columns:1fr}
+  .story-feature--reverse .page-section--card,.story-feature--reverse .story-feature-media{order:initial}
 }
 
 /* ═══════════════════════════════════════
