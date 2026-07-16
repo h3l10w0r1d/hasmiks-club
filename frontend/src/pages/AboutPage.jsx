@@ -1,11 +1,14 @@
-import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
+import { Heart, HeartHandshake, Coffee, Compass } from 'lucide-react'
 import GlobalHeader from '../components/GlobalHeader'
 import Footer from '../components/Footer'
 import InstagramEmbed from '../components/InstagramEmbed'
 
 const IG_REEL_URL = 'https://www.instagram.com/reel/DWgkXLSsm4C/'
+
+// One icon per section, same order/meaning in both languages.
+const SECTION_ICONS = [Heart, HeartHandshake, Coffee, Compass]
 
 const copy = {
   en: {
@@ -115,22 +118,32 @@ export default function AboutPage({ lang = 'en', setLang }) {
         </header>
 
         <div className="page-body about-body">
-          {c.sections.map((s, i) => (
-            <Fragment key={i}>
-              <section className="page-section page-section--card">
-                <h2>{s.h}</h2>
-                {s.p?.map((para, j) => <p key={j}>{para}</p>)}
-                {s.list && (
-                  <ul>{s.list.map((li, j) => <li key={j}>{li}</li>)}</ul>
-                )}
-              </section>
-              {i === 0 && (
-                <section className="page-section page-section--card ig-embed-section">
-                  <InstagramEmbed url={IG_REEL_URL} />
+          <div className="story-feature">
+            <section className="page-section--card">
+              <div className="card-icon"><Heart size={22} /></div>
+              <h2>{c.sections[0].h}</h2>
+              {c.sections[0].p?.map((para, j) => <p key={j}>{para}</p>)}
+            </section>
+            <div className="story-feature-media">
+              <InstagramEmbed url={IG_REEL_URL} />
+            </div>
+          </div>
+
+          <div className="about-grid">
+            {c.sections.slice(1).map((s, i) => {
+              const Icon = SECTION_ICONS[i + 1]
+              return (
+                <section className="page-section--card" key={i}>
+                  <div className="card-icon"><Icon size={22} /></div>
+                  <h2>{s.h}</h2>
+                  {s.p?.map((para, j) => <p key={j}>{para}</p>)}
+                  {s.list && (
+                    <ul>{s.list.map((li, j) => <li key={j}>{li}</li>)}</ul>
+                  )}
                 </section>
-              )}
-            </Fragment>
-          ))}
+              )
+            })}
+          </div>
 
           <section className="page-section page-section--card page-section--center">
             <h2>{c.ctaText}</h2>
