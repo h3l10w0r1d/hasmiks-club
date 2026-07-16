@@ -37,6 +37,9 @@ export default function Story({ lang }) {
         <p className="story-body">
           {hy ? c.p4Hy : c.p4En}
         </p>
+        <p className="story-closing">
+          {hy ? c.closingHy : c.closingEn}
+        </p>
         <div className="story-sig">
           {hy ? c.sigHy : c.sigEn}
         </div>

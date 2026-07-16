@@ -471,6 +471,7 @@ body{font-family:'Jost', 'Noto Sans Armenian',sans-serif;background:#fff;color:v
 }
 .story-body{font-size:16px;line-height:1.88;color:var(--taupe);margin-bottom:16px}
 .story-body strong{color:var(--mocha);font-weight:500}
+.story-closing{font-size:17px;line-height:1.7;color:var(--deep);font-weight:600;margin:8px 0 24px}
 .story-sig{
   font-family:'Cormorant Garamond', 'Noto Sans Armenian',serif;
   font-style:italic;font-size:22px;
@@ -700,6 +701,7 @@ footer{
 .page-section p{font-size:16px;line-height:1.85;color:var(--mocha);margin-bottom:12px}
 .page-section ul{margin:6px 0 12px;padding-left:20px}
 .page-section li{font-size:16px;line-height:1.8;color:var(--mocha);margin-bottom:7px}
+.page-closing{font-size:17px;line-height:1.7;color:var(--deep);font-weight:600;margin:8px 0 0}
 .page-sig{
   font-family:'Cormorant Garamond','Noto Sans Armenian',serif;
   font-style:italic;font-size:19px;color:var(--rose);margin-top:22px;

@@ -42,10 +42,10 @@ const copy = {
           "We want to remind you that after 50, 60, or 70, life does not stop being interesting.",
           "You can always find new friends, learn something new, travel, discover a beloved pastime, and give more time to your own joy.",
           "For us, what matters most is warmth, honesty, mutual respect, and the feeling of belonging.",
-          "Beautiful days are still ahead. Let us live them together.",
         ],
       },
     ],
+    closing: 'Beautiful days are still ahead. Let us live them together.',
     sig: '— With love, Hasmik',
     ctaText: 'Want to be part of the club?',
     cta: 'Join the Club',
@@ -88,10 +88,10 @@ const copy = {
           "Մենք ուզում ենք հիշեցնել, որ 50-ից, 60-ից կամ 70-ից հետո կյանքը չի դադարում հետաքրքիր լինել։",
           "Միշտ կարելի է նոր ընկերներ գտնել, նոր բան սովորել, ճանապարհորդել, սիրելի զբաղմունք բացահայտել և ավելի շատ ժամանակ հատկացնել սեփական ուրախությանը։",
           "Մեզ համար ամենակարևորն են ջերմությունը, անկեղծությունը, փոխադարձ հարգանքը և պատկանելու զգացողությունը։",
-          "Գեղեցիկ օրերը դեռ շատ են։ Եկեք դրանք միասին ապրենք։",
         ],
       },
     ],
+    closing: 'Գեղեցիկ օրերը դեռ շատ են։ Եկեք դրանք միասին ապրենք։',
     sig: '— Սիրով, Հասմիկ',
     ctaText: 'Ուզու՞մ ես մաս կազմել ակումբին։',
     cta: 'Միանալ ակումբին',
@@ -126,6 +126,8 @@ export default function AboutPage({ lang = 'en', setLang }) {
               )}
             </section>
           ))}
+
+          {c.closing && <p className="page-closing"><strong>{c.closing}</strong></p>}
 
           <div className="page-sig">{c.sig}</div>
 
