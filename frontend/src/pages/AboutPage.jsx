@@ -58,7 +58,9 @@ export default function AboutPage({ lang = 'en', setLang }) {
                 </section>
                 <div className="story-feature-media">
                   <EditableReel path={`about.s${i + 1}reel`} value={s.reel}>
-                    <InstagramEmbed url={s.reel} />
+                    {/* key by URL so a changed reel fully re-mounts and re-embeds
+                        (Instagram's embed.js won't reprocess an existing embed) */}
+                    <InstagramEmbed key={s.reel} url={s.reel} />
                   </EditableReel>
                 </div>
               </div>
