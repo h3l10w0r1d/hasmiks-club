@@ -1,8 +1,10 @@
 import { storyImg } from '../data/images'
-import t from '../data/content'
+import { useContent } from '../context/SiteContentContext'
+import RichText from './RichText'
 import Reveal from './Reveal'
 
 export default function Story({ lang }) {
+  const t = useContent()
   const c = t.story
   const hy = lang === 'hy'
   return (
@@ -17,10 +19,7 @@ export default function Story({ lang }) {
       <Reveal as="div" className="story-text-col" delay={120}>
         <div className="sec-tag">{hy ? c.tagHy : c.tagEn}</div>
         <h2 className="story-h">
-          {hy
-            ? <>72-ում կյանքը <em>չի ավարտվում</em>։</>
-            : <>Life at 72 does not <em>end</em>.</>
-          }
+          <RichText text={hy ? c.hHy : c.hEn} />
         </h2>
         <p className="story-body">
           {hy ? c.p1Hy : c.p1En}

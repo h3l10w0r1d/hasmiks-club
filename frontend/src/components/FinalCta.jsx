@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
-import t from '../data/content'
+import { useContent } from '../context/SiteContentContext'
+import RichText from './RichText'
 import Reveal from './Reveal'
 
 export default function FinalCta({ lang }) {
+  const t = useContent()
   const c = t.finalCta
   const hy = lang === 'hy'
   return (
@@ -12,10 +14,7 @@ export default function FinalCta({ lang }) {
           {hy ? c.eyebrowHy : c.eyebrowEn}
         </p>
         <h2 className="final-h">
-          {hy
-            ? <>Գեղեցիկ օրերը <em>դեռ շատ են</em>։<br />Եկեք դրանք միասին ապրենք։</>
-            : <>Beautiful days are <em>still ahead</em>.<br />Let us live them together.</>
-          }
+          <RichText text={hy ? c.hHy : c.hEn} />
         </h2>
         <p className="final-p">
           {hy ? c.pHy : c.pEn}

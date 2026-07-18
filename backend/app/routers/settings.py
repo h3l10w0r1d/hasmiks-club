@@ -1,3 +1,5 @@
+import json
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -8,6 +10,10 @@ from app.models.app_setting import AppSetting
 from app.models.user import User
 
 router = APIRouter(prefix="/settings", tags=["settings"])
+
+# Landing-page copy the admin has overridden via the Site Editor. Stored as a
+# single JSON blob (a flat map of dotted content paths -> value) under this key.
+SITE_CONTENT_KEY = "site_content"
 
 
 def _db_setting(db: Session, key: str, fallback: str = "") -> str:
@@ -50,3 +56,18 @@ def member_settings(db: Session = Depends(get_db), current_user: User = Depends(
     if current_user.membership_status == "active":
         telegram_invite_url = _db_setting(db, "telegram_invite_url", settings.TELEGRAM_INVITE_URL)
     return {"telegram_invite_url": telegram_invite_url}
+
+
+@router.get("/site-content")
+def site_content(db: Session = Depends(get_db)) -> dict:
+    """Public landing-page copy overrides (a flat {dotted.path: value} map) the
+    admin set via the Site Editor. The frontend deep-merges these onto the
+    bundled default content, so an empty/absent value just means "use defaults"."""
+    raw = _db_setting(db, SITE_CONTENT_KEY, "")
+    if not raw:
+        return {}
+    try:
+        data = json.loads(raw)
+        return data if isinstance(data, dict) else {}
+    except (ValueError, TypeError):
+        return {}

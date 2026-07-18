@@ -79,6 +79,10 @@ export const adminGetAuditLog         = ()     => client.get('/admin/audit-log')
 export const adminGetSettings         = ()           => client.get('/admin/settings').then(r => r.data)
 export const adminSaveSettings        = (data)       => client.put('/admin/settings', data).then(r => r.data)
 
+// site editor — landing-page copy overrides ({ "dotted.path": value } map)
+export const adminGetSiteContent      = ()           => client.get('/admin/settings/site-content').then(r => r.data)
+export const adminSaveSiteContent     = (overrides)  => client.put('/admin/settings/site-content', overrides).then(r => r.data)
+
 // roles & permissions
 export const adminGetRoles            = ()           => client.get('/admin/roles').then(r => r.data)
 export const adminUpdateRole          = (userId, payload) => client.put(`/admin/roles/${userId}`, payload).then(r => r.data)

@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
 import { heroImg } from '../data/images'
-import t from '../data/content'
+import { useContent } from '../context/SiteContentContext'
+import RichText from './RichText'
 
 export default function Hero({ lang }) {
+  const t = useContent()
   const c = t.hero
   const hy = lang === 'hy'
   return (
@@ -24,17 +26,11 @@ export default function Hero({ lang }) {
         </div>
 
         <h1 className="hero-h1">
-          {hy
-            ? <>Միացիր մի ջերմ ակումբի, որտեղ քեզ <em>հասկանում են, ընդունում են և սպասում։</em></>
-            : <>A club of <em>Armenian women</em> — meeting, sharing, belonging.</>
-          }
+          <RichText text={hy ? c.h1Hy : c.h1En} />
         </h1>
 
         <p className="hero-p">
-          {hy
-            ? c.pHy
-            : <>For the first time, Armenian women have a place built just for them — for women who are <strong>curious, alive, and refuse to disappear.</strong> A real club gathering face to face every two weeks and staying close on Telegram every day.</>
-          }
+          <RichText text={hy ? c.pHy : c.pEn} />
         </p>
 
         <Link to="/register" className="btn-rose">

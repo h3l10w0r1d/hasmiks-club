@@ -9,7 +9,7 @@ import {
   SendHorizonal, StickyNote, Filter, UserCheck,
   Inbox, GalleryHorizontal, Settings2, Trophy, Link2, Plus, Trash2, ExternalLink,
   Shield, MapPin, Pencil, Unlock, CreditCard, RotateCcw, Ban, ScrollText, Crop,
-  Ticket, QrCode, BadgeCheck, Menu, X, Gift, Eye,
+  Ticket, QrCode, BadgeCheck, Menu, X, Gift, Eye, PanelsTopLeft,
 } from 'lucide-react'
 
 import { Button }       from '../components/ui/button'
@@ -26,6 +26,7 @@ import {
 import { Combobox } from '../components/ui/combobox'
 import { DateTimePicker } from '../components/ui/datetimepicker'
 import AnalyticsDashboard from '../components/AnalyticsDashboard'
+import SiteEditor from '../components/SiteEditor'
 import GalleryManager from '../components/GalleryManager'
 import CropModal from '../components/CropModal'
 import RichTextEditor from '../components/ui/RichTextEditor'
@@ -98,6 +99,7 @@ const TABS = [
   { key: 'applications', icon: Inbox,             label: 'Applications' },
   { key: 'roles',        icon: Shield,            label: 'Roles'        },
   { key: 'events',       icon: CalendarDays,      label: 'Events'       },
+  { key: 'site_editor',  icon: PanelsTopLeft,     label: 'Site Editor'  },
   { key: 'content',      icon: BookOpen,          label: 'Content'      },
   { key: 'gallery',      icon: GalleryHorizontal, label: 'Gallery'      },
   { key: 'analytics',    icon: BarChart3,         label: 'Analytics'    },
@@ -112,7 +114,7 @@ const TABS = [
 const TAB_GROUPS = [
   { label: 'OVERVIEW', keys: ['today'] },
   { label: 'PEOPLE',   keys: ['members', 'applications', 'roles'] },
-  { label: 'CONTENT',  keys: ['events', 'content', 'gallery'] },
+  { label: 'CONTENT',  keys: ['events', 'site_editor', 'content', 'gallery'] },
   { label: 'INSIGHTS', keys: ['analytics', 'payments', 'one_timers', 'gift_cards'] },
   { label: 'OUTREACH', keys: ['broadcast'] },
   { label: 'CONFIG',   keys: ['audit', 'settings'] },
@@ -123,6 +125,7 @@ const TAB_PERMISSION_MAP = {
   members:      'manage_members',
   applications: 'manage_applications',
   events:       'manage_events',
+  site_editor:  'manage_settings',
   content:      'manage_content',
   gallery:      'manage_gallery',
   analytics:    'view_analytics',
@@ -1587,6 +1590,9 @@ export default function AdminPage() {
               </Card>
             </div>
           )}
+
+          {/* ══ SITE EDITOR ══ */}
+          {tab === 'site_editor' && <SiteEditor flash={flash} />}
 
           {/* ══ SETTINGS ══ */}
           {tab === 'settings' && (

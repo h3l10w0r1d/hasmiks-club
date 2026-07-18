@@ -1,8 +1,10 @@
 import { Link } from 'react-router-dom'
-import t from '../data/content'
+import { useContent } from '../context/SiteContentContext'
+import RichText from './RichText'
 import Reveal from './Reveal'
 
 export default function Pricing({ lang }) {
+  const t = useContent()
   const c = t.pricing
   const hy = lang === 'hy'
   return (
@@ -12,10 +14,7 @@ export default function Pricing({ lang }) {
           {hy ? c.tagHy : c.tagEn}
         </div>
         <h2 className="sec-h" style={{ textAlign: 'center', maxWidth: '560px', margin: '0 auto 12px' }}>
-          {hy
-            ? <>Ակումբի ամսական <em>անդամակցություն</em></>
-            : <>Club monthly <em>membership</em></>
-          }
+          <RichText text={hy ? c.hHy : c.hEn} />
         </h2>
         <p className="pricing-sub">{hy ? c.subHy : c.subEn}</p>
       </Reveal>

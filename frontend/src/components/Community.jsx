@@ -1,11 +1,13 @@
 import { Handshake, MessageCircle, Flower2 } from 'lucide-react'
 import communityImg from '../assets/community.jpg'
-import t from '../data/content'
+import { useContent } from '../context/SiteContentContext'
+import RichText from './RichText'
 import Reveal from './Reveal'
 
 const PT_ICONS = { handshake: Handshake, chat: MessageCircle, flower: Flower2 }
 
 export default function Community({ lang }) {
+  const t = useContent()
   const c = t.community
   const hy = lang === 'hy'
   return (
@@ -15,10 +17,7 @@ export default function Community({ lang }) {
           {hy ? c.tagHy : c.tagEn}
         </div>
         <h2 className="sec-h" style={{ textAlign: 'center' }}>
-          {hy
-            ? <>Ինչ կստանաք <em>ակումբում</em>։</>
-            : <>What you get in <em>the club</em>.</>
-          }
+          <RichText text={hy ? c.hHy : c.hEn} />
         </h2>
         <p className="community-sub">{hy ? c.p1Hy : c.p1En}</p>
         <p className="community-sub">{hy ? c.p2Hy : c.p2En}</p>

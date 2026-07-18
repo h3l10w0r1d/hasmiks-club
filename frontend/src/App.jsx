@@ -2,6 +2,7 @@ import './App.css'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { SiteContentProvider } from './context/SiteContentContext'
 import { useLang } from './hooks/useLang'
 import { useLandingAnimations } from './hooks/useLandingAnimations'
 import GlobalHeader from './components/GlobalHeader'
@@ -154,7 +155,9 @@ export default function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <AppRoutes />
+        <SiteContentProvider>
+          <AppRoutes />
+        </SiteContentProvider>
       </AuthProvider>
     </BrowserRouter>
   )
