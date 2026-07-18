@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
-import { UploadCloud, Trash2 } from 'lucide-react'
+import { UploadCloud, Trash2, Link2 } from 'lucide-react'
 import RichText from './RichText'
 import { adminUploadImage } from '../api/admin'
 import { EDIT_TEXT_MSG, EDIT_IMAGE_MSG, EDIT_FOCUS_MSG } from '../context/SiteContentContext'
@@ -81,13 +81,43 @@ export function EditableImage({ src, alt, className, style, path }) {
   )
 }
 
+// Wraps an embed (Instagram reel) with an editable URL bar in edit mode. The
+// embed itself stays as `children`; applying a new URL posts it as an override.
+export function EditableReel({ path, value, children }) {
+  const [url, setUrl] = useState(value || '')
+  useEffect(() => { setUrl(value || '') }, [value])
+
+  if (!IS_EDIT) return children
+
+  const apply = () => {
+    post({ type: EDIT_FOCUS_MSG })
+    post({ type: EDIT_TEXT_MSG, path, value: url.trim() })
+  }
+  return (
+    <div className="hc-embed-wrap" onClick={(e) => e.stopPropagation()}>
+      <div className="hc-embed-edit">
+        <Link2 size={14} />
+        <input
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          onBlur={apply}
+          onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); apply(); e.currentTarget.blur() } }}
+          placeholder="Instagram reel URL"
+        />
+        <button type="button" onClick={apply}>Apply</button>
+      </div>
+      {children}
+    </div>
+  )
+}
+
 // In edit mode, keep links/buttons inert so clicking to edit never navigates.
 export function installEditGuards() {
   if (!IS_EDIT) return
   const handler = (e) => {
     const a = e.target.closest?.('a, button')
     if (!a) return
-    if (a.closest('.hc-block-toolbar, .hc-img-controls')) return   // editor chrome stays live
+    if (a.closest('.hc-block-toolbar, .hc-img-controls, .hc-embed-edit')) return   // editor chrome stays live
     e.preventDefault()
   }
   document.addEventListener('click', handler, true)

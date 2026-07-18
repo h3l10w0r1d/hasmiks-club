@@ -1895,3 +1895,22 @@ a.ci-row:hover .ci-value{color:var(--rose)}
   font-family: 'Jost','Noto Sans Armenian',sans-serif;
 }
 .hc-img-controls button:hover { background: #333; }
+
+/* editable Instagram-reel URL bar */
+.hc-embed-wrap { display: block; }
+.hc-embed-edit {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+  background: #1c1c1e; color: #fff; border-radius: 8px; padding: 6px 10px;
+  font-family: 'Jost','Noto Sans Armenian',sans-serif;
+}
+.hc-embed-edit input {
+  flex: 1; min-width: 0; background: rgba(255,255,255,.1); color: #fff;
+  border: 1px solid rgba(255,255,255,.2); border-radius: 6px;
+  padding: 5px 8px; font-size: 12px;
+}
+.hc-embed-edit input::placeholder { color: rgba(255,255,255,.5); }
+.hc-embed-edit button {
+  background: #7E3434; color: #fff; border: 0; border-radius: 6px;
+  padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.hc-embed-edit button:hover { background: #964040; }

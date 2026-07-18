@@ -6,7 +6,7 @@ import GlobalHeader from '../components/GlobalHeader'
 import Footer from '../components/Footer'
 import InstagramEmbed from '../components/InstagramEmbed'
 import { useContent } from '../context/SiteContentContext'
-import { E, installEditGuards } from '../components/Editable'
+import { E, EditableReel, installEditGuards } from '../components/Editable'
 
 // One icon per section, same order/meaning in both languages.
 const SECTION_ICONS = [Heart, HeartHandshake, Coffee, Compass]
@@ -57,7 +57,9 @@ export default function AboutPage({ lang = 'en', setLang }) {
                   ))}
                 </section>
                 <div className="story-feature-media">
-                  <InstagramEmbed url={s.reel} />
+                  <EditableReel path={`about.s${i + 1}reel`} value={s.reel}>
+                    <InstagramEmbed url={s.reel} />
+                  </EditableReel>
                 </div>
               </div>
             )
