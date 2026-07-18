@@ -1,9 +1,14 @@
 import './App.css'
+import { useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import { SiteContentProvider, useContent } from './context/SiteContentContext'
-import { DEFAULT_LAYOUT, normalizeLayout } from './data/landingSections'
+import {
+  SiteContentProvider, useContent,
+  EDIT_SELECT_MSG, EDIT_ACTION_MSG, EDIT_SET_SELECTED_MSG,
+} from './context/SiteContentContext'
+import { DEFAULT_LAYOUT, SECTION_LABEL, normalizeLayout } from './data/landingSections'
+import BlockFrame from './components/BlockFrame'
 import { useLang } from './hooks/useLang'
 import { useLandingAnimations } from './hooks/useLandingAnimations'
 import GlobalHeader from './components/GlobalHeader'
@@ -37,10 +42,30 @@ const OG_IMAGE = `${SITE_URL}/og-image.jpg`
 
 const SECTION_COMPONENTS = { hero: Hero, band: Band, community: Community, story: Story, pricing: Pricing, finalCta: FinalCta }
 
+const IS_EDIT = (() => {
+  try { return new URLSearchParams(window.location.search).get('edit') === '1' } catch { return false }
+})()
+
 function LandingPage({ lang, setLang }) {
   useLandingAnimations()
   const content = useContent()
   const layout = normalizeLayout(content.__layout ?? DEFAULT_LAYOUT)
+  const [selectedId, setSelectedId] = useState(null)
+
+  // On-canvas editing: talk to the parent Site Editor via postMessage.
+  useEffect(() => {
+    if (!IS_EDIT) return
+    const onMsg = (e) => {
+      if (e.origin !== window.location.origin) return
+      if (e.data?.type === EDIT_SET_SELECTED_MSG) setSelectedId(e.data.id ?? null)
+    }
+    window.addEventListener('message', onMsg)
+    return () => window.removeEventListener('message', onMsg)
+  }, [])
+
+  const post = (msg) => { try { window.parent?.postMessage(msg, window.location.origin) } catch { /* noop */ } }
+  const selectBlock = (id) => { setSelectedId(id); post({ type: EDIT_SELECT_MSG, id }) }
+  const blockAction = (id, action) => post({ type: EDIT_ACTION_MSG, id, action })
   const title = lang === 'hy' ? "Hasmik's Club — Կանանց ակումբ Երևանում" : "Hasmik's Club — A Women's Club in Yerevan"
   const description = lang === 'hy'
     ? 'Hasmik\'s Club-ը Երևանի կանանց մշակութային ակումբ է: Դասընթացներ, հանդիպումներ, և ընտանեկան մթնոլորտ:'
@@ -65,10 +90,29 @@ function LandingPage({ lang, setLang }) {
         <meta name="twitter:image" content={OG_IMAGE} />
       </Helmet>
       <GlobalHeader lang={lang} setLang={setLang} />
-      {layout.filter((s) => s.enabled).map((s) => {
-        const Section = SECTION_COMPONENTS[s.id]
-        return Section ? <Section key={s.id} lang={lang} /> : null
-      })}
+      {(() => {
+        const enabled = layout.filter((s) => s.enabled)
+        return enabled.map((s, i) => {
+          const Section = SECTION_COMPONENTS[s.id]
+          if (!Section) return null
+          const node = <Section key={s.id} lang={lang} />
+          if (!IS_EDIT) return node
+          return (
+            <BlockFrame
+              key={s.id}
+              id={s.id}
+              label={SECTION_LABEL[s.id] ?? s.id}
+              selected={selectedId === s.id}
+              canUp={i > 0}
+              canDown={i < enabled.length - 1}
+              onSelect={selectBlock}
+              onAction={blockAction}
+            >
+              {node}
+            </BlockFrame>
+          )
+        })
+      })()}
       <Footer lang={lang} />
     </>
   )

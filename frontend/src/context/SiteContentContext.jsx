@@ -46,8 +46,12 @@ function isPreviewMode() {
   }
 }
 
-export const PREVIEW_MSG = 'HC_SITE_PREVIEW'
-export const PREVIEW_READY_MSG = 'HC_SITE_PREVIEW_READY'
+export const PREVIEW_MSG = 'HC_SITE_PREVIEW'                 // parent -> iframe: overrides
+export const PREVIEW_READY_MSG = 'HC_SITE_PREVIEW_READY'     // iframe -> parent: ready for content
+// On-canvas block editing (child iframe <-> editor):
+export const EDIT_SELECT_MSG = 'HC_EDIT_SELECT'             // iframe -> parent: a block was clicked {id}
+export const EDIT_ACTION_MSG = 'HC_EDIT_ACTION'            // iframe -> parent: toolbar action {id, action}
+export const EDIT_SET_SELECTED_MSG = 'HC_EDIT_SET_SELECTED' // parent -> iframe: highlight this block {id}
 
 export function SiteContentProvider({ children }) {
   const [content, setContent] = useState(defaultContent)
