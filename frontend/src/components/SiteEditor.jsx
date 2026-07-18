@@ -5,7 +5,7 @@ import {
 } from 'lucide-react'
 import defaultContent from '../data/content'
 import { SECTIONS, resolvePath, EMPHASIS_HINT } from '../data/contentSchema'
-import { DEFAULT_LAYOUT, SECTION_LABEL, normalizeLayout } from '../data/landingSections'
+import { AVAILABLE_SECTIONS, DEFAULT_LAYOUT, SECTION_LABEL, normalizeLayout } from '../data/landingSections'
 import { adminGetSiteContent, adminSaveSiteContent, adminPublishSiteContent, adminUploadImage } from '../api/admin'
 import { PREVIEW_MSG, PREVIEW_READY_MSG } from '../context/SiteContentContext'
 import { Input } from './ui/input'
@@ -35,6 +35,13 @@ export default function SiteEditor({ flash }) {
   const iframeRef = useRef(null)
   const previewReady = useRef(false)
   const dragFrom = useRef(null)
+
+  // Which page the preview iframe shows: landing (/preview) or a standalone
+  // page like /about, based on the schema of whatever section is selected.
+  const selectedSchema = SECTIONS.find((s) => s.key === selected)
+  const previewPath = selectedSchema?.previewPath ?? '/preview'
+  const landingIds = new Set(AVAILABLE_SECTIONS.map((s) => s.id))
+  const otherSections = SECTIONS.filter((s) => !landingIds.has(s.key))
 
   // ── load draft ──
   useEffect(() => {
@@ -74,6 +81,9 @@ export default function SiteEditor({ flash }) {
 
   // ── push every draft change into the live preview ──
   useEffect(() => { if (overrides) postToPreview(overrides) }, [overrides, postToPreview])
+
+  // when the previewed page changes the iframe reloads; wait for its next READY
+  useEffect(() => { previewReady.current = false }, [previewPath])
 
   if (loading || !overrides) {
     return <div className="py-12 text-sm text-muted-foreground">Loading the site editor…</div>
@@ -150,7 +160,7 @@ export default function SiteEditor({ flash }) {
     } finally { setUploading(null) }
   }
 
-  const section = SECTIONS.find((s) => s.key === selected) ?? SECTIONS[0]
+  const section = selectedSchema ?? SECTIONS[0]
 
   return (
     <div className="space-y-4">
@@ -210,6 +220,25 @@ export default function SiteEditor({ flash }) {
             </div>
           </div>
 
+          {/* pages & elements (not part of the landing layout) */}
+          <div className="rounded-lg border bg-card p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Pages & elements</div>
+            <div className="space-y-1">
+              {otherSections.map((s) => (
+                <div
+                  key={s.key}
+                  onClick={() => setSelected(s.key)}
+                  className={`flex items-center gap-2 rounded-md border px-2 py-2 cursor-pointer transition-colors ${
+                    selected === s.key ? 'border-primary bg-primary/5' : 'border-transparent hover:bg-muted'
+                  }`}
+                >
+                  <span className="flex-1 text-sm">{s.label}</span>
+                  <span className="text-[10px] text-muted-foreground">{s.isPage ? 'page' : 'edit'}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* language toggle */}
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Editing language:</span>
@@ -221,7 +250,7 @@ export default function SiteEditor({ flash }) {
 
           {/* fields for the selected section */}
           <div className="rounded-lg border bg-card p-4 space-y-4">
-            <div className="text-sm font-semibold">{SECTION_LABEL[selected] ?? selected}</div>
+            <div className="text-sm font-semibold">{selectedSchema?.label ?? SECTION_LABEL[selected] ?? selected}</div>
             {section.key !== selected ? (
               <p className="text-sm text-muted-foreground">This section has no editable text.</p>
             ) : section.fields.map((field) => {
@@ -300,7 +329,7 @@ export default function SiteEditor({ flash }) {
                 key={reloadKey}
                 ref={iframeRef}
                 title="Landing preview"
-                src={`/preview?preview=1&k=${reloadKey}`}
+                src={`${previewPath}?preview=1&k=${reloadKey}`}
                 className="w-full block"
                 style={{ height: device === 'phone' ? 780 : 720, border: 0 }}
               />

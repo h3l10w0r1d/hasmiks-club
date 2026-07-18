@@ -94,6 +94,31 @@ export const SECTIONS = [
       { path: 'nav.join', label: '"Join" button label', type: 'text', bilingual: true },
     ],
   },
+  {
+    key: 'about',
+    label: 'About page',
+    isPage: true,          // a standalone page, not a landing section
+    previewPath: '/about',
+    fields: [
+      { path: 'about.eyebrow', label: 'Page title', type: 'text', bilingual: true },
+      { path: 'about.s1h', label: 'Section 1 · heading', type: 'text', bilingual: true },
+      { path: 'about.s1p', label: 'Section 1 · paragraphs (one per line)', type: 'list', bilingual: true },
+      { path: 'about.s1reel', label: 'Section 1 · Instagram reel URL', type: 'text', bilingual: false },
+      { path: 'about.s2h', label: 'Section 2 · heading', type: 'text', bilingual: true },
+      { path: 'about.s2p', label: 'Section 2 · paragraphs (one per line)', type: 'list', bilingual: true },
+      { path: 'about.s2reel', label: 'Section 2 · Instagram reel URL', type: 'text', bilingual: false },
+      { path: 'about.s3h', label: 'Section 3 · heading', type: 'text', bilingual: true },
+      { path: 'about.s3p', label: 'Section 3 · paragraphs (one per line)', type: 'list', bilingual: true },
+      { path: 'about.s3reel', label: 'Section 3 · Instagram reel URL', type: 'text', bilingual: false },
+      { path: 'about.s4h', label: 'Section 4 · heading', type: 'text', bilingual: true },
+      { path: 'about.s4p', label: 'Section 4 · paragraphs (one per line)', type: 'list', bilingual: true },
+      { path: 'about.s4reel', label: 'Section 4 · Instagram reel URL', type: 'text', bilingual: false },
+      { path: 'about.ctaText', label: 'Closing CTA · text', type: 'text', bilingual: true },
+      { path: 'about.cta', label: 'Closing CTA · button', type: 'text', bilingual: true },
+      { path: 'about.metaTitle', label: 'SEO title', type: 'text', bilingual: true },
+      { path: 'about.metaDesc', label: 'SEO description', type: 'textarea', bilingual: true },
+    ],
+  },
 ]
 
 // Resolve a field + active language to the concrete content path.
