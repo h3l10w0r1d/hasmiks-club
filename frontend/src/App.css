@@ -662,26 +662,52 @@ body{font-family:var(--font-serif);background:#fff;color:var(--mocha);overflow-x
 /* ═══════════════════════════════════════
    FOOTER
 ═══════════════════════════════════════ */
-footer{
-  background:#fff;
-  border-top:1px solid #f0ece8;
-  padding:28px 60px;
-  display:flex;justify-content:space-between;align-items:center;
-  gap:20px;flex-wrap:wrap;
+.site-footer{
+  background:var(--deep);
+  padding:64px 60px 0;
 }
+.ft-top{
+  max-width:1200px;margin:0 auto;padding-bottom:48px;
+  display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:40px;
+  border-bottom:1px solid rgba(255,255,255,0.1);
+}
+.ft-brand{display:flex;flex-direction:column;align-items:flex-start;gap:14px}
 .ft-logo{
   font-family:'Cormorant Garamond', 'Noto Sans Armenian',serif;
-  font-size:18px;font-weight:600;color:var(--deep);
+  font-size:22px;font-weight:600;color:#fff;
   text-decoration:none;
 }
-.ft-logo span{color:var(--rose)}
-.ft-copy{font-size:13px;color:var(--stone);letter-spacing:0.06em}
-.ft-nav{display:flex;gap:22px;flex-wrap:wrap}
-.ft-nav a{
-  font-size:15px;font-weight:500;letter-spacing:0.04em;
-  color:var(--taupe);text-decoration:none;transition:color .15s;
+.ft-logo span{color:var(--rose-lt)}
+.ft-tagline{font-size:14px;line-height:1.7;color:rgba(255,255,255,0.55);max-width:320px}
+.ft-social{
+  display:flex;align-items:center;justify-content:center;
+  width:38px;height:38px;border-radius:50%;
+  background:rgba(255,255,255,0.08);color:#fff;
+  transition:background .18s,color .18s;
 }
-.ft-nav a:hover{color:var(--rose)}
+.ft-social:hover{background:var(--rose);color:#fff}
+.ft-col-title{
+  font-size:12px;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;
+  color:rgba(255,255,255,0.4);margin-bottom:18px;
+}
+.ft-nav{display:flex;flex-direction:column;gap:12px}
+.ft-nav a{
+  font-size:15px;font-weight:500;
+  color:rgba(255,255,255,0.75);text-decoration:none;transition:color .15s;
+}
+.ft-nav a:hover{color:var(--rose-lt)}
+.ft-contact{display:flex;flex-direction:column;gap:12px}
+.ft-contact a,.ft-contact span{
+  display:flex;align-items:center;gap:9px;
+  font-size:14.5px;color:rgba(255,255,255,0.75);
+  text-decoration:none;transition:color .15s;line-height:1.4;
+}
+.ft-contact a:hover{color:var(--rose-lt)}
+.ft-contact svg{flex-shrink:0;color:rgba(255,255,255,0.4)}
+.ft-bottom{
+  max-width:1200px;margin:0 auto;padding:24px 0;
+}
+.ft-copy{font-size:13px;color:rgba(255,255,255,0.4);letter-spacing:0.04em}
 
 /* ═══════════════════════════════════════
    STATIC CONTENT PAGES — About / Contact / Terms
@@ -809,8 +835,7 @@ a.ci-row:hover .ci-value{color:var(--rose)}
 }
 
 @media(max-width:640px){
-  footer{flex-direction:column;gap:14px;text-align:center;padding:24px}
-  .ft-nav{justify-content:center}
+  .site-footer{padding:48px 24px 0}
   .page-hero{padding-top:48px}
   .page-section--card{padding:28px 24px;border-radius:14px}
 }
@@ -840,7 +865,7 @@ a.ci-row:hover .ci-value{color:var(--rose)}
   .pricing{padding:64px 28px}
   .plans{grid-template-columns:1fr}
   .final-content{padding:48px 24px}
-  footer{flex-direction:column;gap:10px;text-align:center;padding:22px 24px}
+  .ft-top{grid-template-columns:1fr;gap:32px}
 }
 @media(max-width:560px){
   .cards{grid-template-columns:1fr}
