@@ -1,25 +1,19 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  Save, Rocket, ExternalLink, Undo2, Redo2, Plus, Eye, EyeOff, ChevronDown,
-  Monitor, Smartphone, UploadCloud, Trash2, Image as ImageIcon, X,
+  Save, Rocket, ExternalLink, Undo2, Redo2, Plus, ChevronDown, Monitor, Smartphone,
 } from 'lucide-react'
 import defaultContent from '../data/content'
-import { SECTIONS, resolvePath, EMPHASIS_HINT } from '../data/contentSchema'
 import { AVAILABLE_SECTIONS, DEFAULT_LAYOUT, SECTION_LABEL, normalizeLayout } from '../data/landingSections'
-import { adminGetSiteContent, adminSaveSiteContent, adminPublishSiteContent, adminUploadImage } from '../api/admin'
+import { adminGetSiteContent, adminSaveSiteContent, adminPublishSiteContent } from '../api/admin'
 import {
-  PREVIEW_MSG, PREVIEW_READY_MSG, EDIT_SELECT_MSG, EDIT_ACTION_MSG, EDIT_SET_SELECTED_MSG,
+  PREVIEW_MSG, PREVIEW_READY_MSG, EDIT_ACTION_MSG, EDIT_TEXT_MSG, EDIT_IMAGE_MSG, EDIT_FOCUS_MSG,
 } from '../context/SiteContentContext'
-import { Input } from './ui/input'
-import { Textarea } from './ui/textarea'
 import { Button } from './ui/button'
-import { Field } from './ui/AdminShared'
 
 const getPath = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj)
 const valueEqual = (a, b) =>
   (Array.isArray(a) || Array.isArray(b)) ? JSON.stringify(a ?? []) === JSON.stringify(b ?? []) : (a ?? '') === (b ?? '')
 
-// Swap a section with its nearest ENABLED neighbour in the given direction.
 function moveSection(layout, id, dir) {
   const arr = layout.map((s) => ({ ...s }))
   const idx = arr.findIndex((s) => s.id === id)
@@ -41,19 +35,15 @@ export default function SiteEditor({ flash }) {
   const [publishing, setPublishing] = useState(false)
   const [lang, setLang] = useState('hy')
   const [device, setDevice] = useState('desktop')
-  const [selected, setSelected] = useState(null)   // section/page key, or null
-  const [uploading, setUploading] = useState(null)
+  const [page, setPage] = useState('landing')   // 'landing' | 'about'
   const [addOpen, setAddOpen] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
   const iframeRef = useRef(null)
   const previewReady = useRef(false)
+  const overridesRef = useRef(null)
+  overridesRef.current = overrides
+  const previewPath = page === 'about' ? '/about' : '/preview'
 
-  const selectedSchema = SECTIONS.find((s) => s.key === selected)
-  const previewPath = selectedSchema?.previewPath ?? '/preview'
-  const landingIds = new Set(AVAILABLE_SECTIONS.map((s) => s.id))
-  const pageSections = SECTIONS.filter((s) => !landingIds.has(s.key))
-
-  // ── load draft ──
   useEffect(() => {
     let alive = true
     adminGetSiteContent('draft')
@@ -68,80 +58,79 @@ export default function SiteEditor({ flash }) {
     const win = iframeRef.current?.contentWindow
     if (win && previewReady.current) win.postMessage({ type: PREVIEW_MSG, overrides: o }, window.location.origin)
   }, [])
-  const postSelected = useCallback((id) => {
-    const win = iframeRef.current?.contentWindow
-    if (win && previewReady.current) win.postMessage({ type: EDIT_SET_SELECTED_MSG, id }, window.location.origin)
-  }, [])
 
-  // reset ready flag whenever the previewed page changes (iframe reloads)
-  useEffect(() => { previewReady.current = false }, [previewPath])
-  // push draft into the live preview on every change
-  useEffect(() => { if (overrides) postToPreview(overrides) }, [overrides, postToPreview])
-  // keep the canvas highlight in sync with the selected block
-  useEffect(() => { postSelected(landingIds.has(selected) ? selected : null) }, [selected, postSelected]) // eslint-disable-line
-
-  // ── messages from the canvas ──
-  const layoutRef = useRef([])
-  useEffect(() => {
-    const onMessage = (event) => {
-      if (event.origin !== window.location.origin) return
-      const d = event.data || {}
-      if (d.type === PREVIEW_READY_MSG) {
-        previewReady.current = true
-        postToPreview(overrides || {})
-        postSelected(landingIds.has(selected) ? selected : null)
-      } else if (d.type === EDIT_SELECT_MSG) {
-        setSelected(d.id)
-      } else if (d.type === EDIT_ACTION_MSG) {
-        handleCanvasAction(d.id, d.action)
-      }
-    }
-    window.addEventListener('message', onMessage)
-    return () => window.removeEventListener('message', onMessage)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [overrides, selected, postToPreview, postSelected])
-
-  if (loading || !overrides) return <div className="py-12 text-sm text-muted-foreground">Loading the site editor…</div>
-
-  const layout = normalizeLayout(overrides.__layout ?? DEFAULT_LAYOUT)
-  layoutRef.current = layout
-  const dirty = JSON.stringify(overrides) !== JSON.stringify(saved)
-  const hiddenSections = layout.filter((s) => !s.enabled)
-
-  // ── history ──
-  const commit = () => {
-    const snap = JSON.stringify(overrides)
-    setHistory((h) => (h.past.length && h.past[h.past.length - 1] === snap ? h : { past: [...h.past, snap], future: [] }))
-  }
-  const undo = () => setHistory((h) => {
-    if (!h.past.length) return h
-    setOverrides(JSON.parse(h.past[h.past.length - 1]))
-    return { past: h.past.slice(0, -1), future: [JSON.stringify(overrides), ...h.future] }
-  })
-  const redo = () => setHistory((h) => {
-    if (!h.future.length) return h
-    setOverrides(JSON.parse(h.future[0]))
-    return { past: [...h.past, JSON.stringify(overrides)], future: h.future.slice(1) }
-  })
-
-  // ── value helpers ──
-  const resolved = (fp) => (fp in overrides ? overrides[fp] : getPath(defaultContent, fp))
-  const setField = (fp, value) => setOverrides((prev) => {
+  // ── value mutations ──
+  const setField = useCallback((fp, value) => setOverrides((prev) => {
     const next = { ...prev }
     if (valueEqual(value, getPath(defaultContent, fp))) delete next[fp]
     else next[fp] = value
     return next
-  })
-  const setLayout = (newLayout) => setOverrides((prev) => ({ ...prev, __layout: newLayout }))
+  }), [])
+  const setListItem = useCallback((fp, index, value) => setOverrides((prev) => {
+    const cur = fp in prev ? prev[fp] : getPath(defaultContent, fp)
+    const arr = Array.isArray(cur) ? [...cur] : []
+    arr[index] = value
+    const next = { ...prev }
+    if (valueEqual(arr, getPath(defaultContent, fp))) delete next[fp]
+    else next[fp] = arr
+    return next
+  }), [])
+  const setLayout = useCallback((newLayout) => setOverrides((prev) => ({ ...prev, __layout: newLayout })), [])
 
-  const toggleSection = (id) => { commit(); setLayout(layout.map((s) => (s.id === id ? { ...s, enabled: !s.enabled } : s))) }
-  const addSection = (id) => { commit(); setLayout(layout.map((s) => (s.id === id ? { ...s, enabled: true } : s))); setSelected(id); setAddOpen(false) }
+  // ── history ──
+  const commit = useCallback(() => {
+    const snap = JSON.stringify(overridesRef.current)
+    setHistory((h) => (h.past.length && h.past[h.past.length - 1] === snap ? h : { past: [...h.past, snap], future: [] }))
+  }, [])
+  const undo = useCallback(() => setHistory((h) => {
+    if (!h.past.length) return h
+    const cur = JSON.stringify(overridesRef.current)
+    setOverrides(JSON.parse(h.past[h.past.length - 1]))
+    return { past: h.past.slice(0, -1), future: [cur, ...h.future] }
+  }), [])
+  const redo = useCallback(() => setHistory((h) => {
+    if (!h.future.length) return h
+    const cur = JSON.stringify(overridesRef.current)
+    setOverrides(JSON.parse(h.future[0]))
+    return { past: [...h.past, cur], future: h.future.slice(1) }
+  }), [])
 
-  function handleCanvasAction(id, action) {
-    if (action === 'settings') { setSelected(id); return }
-    if (action === 'hide') { commit(); setLayout(layoutRef.current.map((s) => (s.id === id ? { ...s, enabled: false } : s))); return }
-    if (action === 'up' || action === 'down') { commit(); setLayout(moveSection(layoutRef.current, id, action)) }
-  }
+  // ── canvas messages ──
+  useEffect(() => {
+    const onMessage = (event) => {
+      if (event.origin !== window.location.origin) return
+      const d = event.data || {}
+      if (d.type === PREVIEW_READY_MSG) { previewReady.current = true; postToPreview(overridesRef.current || {}) }
+      else if (d.type === EDIT_FOCUS_MSG) commit()
+      else if (d.type === EDIT_TEXT_MSG) {
+        if (typeof d.listIndex === 'number') setListItem(d.path, d.listIndex, d.value)
+        else setField(d.path, d.value)
+      }
+      else if (d.type === EDIT_IMAGE_MSG) setField(d.path, d.url)
+      else if (d.type === EDIT_ACTION_MSG) {
+        const layout = normalizeLayout(overridesRef.current?.__layout ?? DEFAULT_LAYOUT)
+        commit()
+        if (d.action === 'hide') setLayout(layout.map((s) => (s.id === d.id ? { ...s, enabled: false } : s)))
+        else if (d.action === 'up' || d.action === 'down') setLayout(moveSection(layout, d.id, d.action))
+      }
+    }
+    window.addEventListener('message', onMessage)
+    return () => window.removeEventListener('message', onMessage)
+  }, [postToPreview, commit, setField, setListItem, setLayout])
+
+  // push draft into the live canvas on every change
+  useEffect(() => { if (overrides) postToPreview(overrides) }, [overrides, postToPreview])
+  // the canvas reloads when the previewed page changes; wait for its next READY
+  useEffect(() => { previewReady.current = false }, [previewPath])
+
+  if (loading || !overrides) return <div className="py-12 text-sm text-muted-foreground">Loading the site editor…</div>
+
+  const layout = normalizeLayout(overrides.__layout ?? DEFAULT_LAYOUT)
+  const hiddenSections = layout.filter((s) => !s.enabled)
+  const dirty = JSON.stringify(overrides) !== JSON.stringify(saved)
+
+  const addSection = (id) => { commit(); setLayout(layout.map((s) => (s.id === id ? { ...s, enabled: true } : s))); setAddOpen(false) }
+  const switchLang = (l) => { setLang(l); try { localStorage.setItem('hasmik_lang', l) } catch { /* noop */ } previewReady.current = false; setReloadKey((k) => k + 1) }
 
   const handleSave = async () => {
     setSaving(true)
@@ -155,17 +144,6 @@ export default function SiteEditor({ flash }) {
     catch (e) { flash?.(e?.response?.data?.detail || 'Failed to publish', true) }
     finally { setPublishing(false) }
   }
-  const switchLang = (l) => { setLang(l); try { localStorage.setItem('hasmik_lang', l) } catch { /* noop */ } previewReady.current = false; setReloadKey((k) => k + 1) }
-  const handleUpload = async (fp, file) => {
-    if (!file) return
-    setUploading(fp); commit()
-    try { const { url } = await adminUploadImage(file); setField(fp, url); flash?.('Image uploaded') }
-    catch (e) { flash?.(e?.response?.data?.detail || 'Image upload failed', true) }
-    finally { setUploading(null) }
-  }
-
-  const section = selectedSchema
-  const selectedLayout = layout.find((s) => s.id === selected)
 
   return (
     <div className="space-y-3">
@@ -180,8 +158,7 @@ export default function SiteEditor({ flash }) {
               {hiddenSections.length === 0
                 ? <div className="px-3 py-2 text-xs text-muted-foreground">All blocks are visible.</div>
                 : hiddenSections.map((s) => (
-                  <button key={s.id} type="button" onClick={() => addSection(s.id)}
-                    className="w-full text-left px-3 py-2 text-sm rounded hover:bg-muted">
+                  <button key={s.id} type="button" onClick={() => addSection(s.id)} className="w-full text-left px-3 py-2 text-sm rounded hover:bg-muted">
                     {SECTION_LABEL[s.id] ?? s.id}
                   </button>
                 ))}
@@ -190,8 +167,18 @@ export default function SiteEditor({ flash }) {
         </div>
 
         <div className="inline-flex rounded-md border overflow-hidden bg-background">
+          <button type="button" onClick={() => setPage('landing')} className={`px-3 py-1.5 text-sm ${page === 'landing' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>Landing</button>
+          <button type="button" onClick={() => setPage('about')} className={`px-3 py-1.5 text-sm border-l ${page === 'about' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>About</button>
+        </div>
+
+        <div className="inline-flex rounded-md border overflow-hidden bg-background">
           <button type="button" onClick={() => setDevice('desktop')} className={`px-2.5 py-1.5 ${device === 'desktop' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`} title="Desktop"><Monitor size={15} /></button>
           <button type="button" onClick={() => setDevice('phone')} className={`px-2.5 py-1.5 border-l ${device === 'phone' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`} title="Phone"><Smartphone size={15} /></button>
+        </div>
+
+        <div className="inline-flex rounded-md border overflow-hidden bg-background">
+          <button type="button" onClick={() => switchLang('hy')} className={`px-3 py-1.5 text-sm ${lang === 'hy' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>Հայ</button>
+          <button type="button" onClick={() => switchLang('en')} className={`px-3 py-1.5 text-sm border-l ${lang === 'en' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>Eng</button>
         </div>
 
         <div className="inline-flex rounded-md border overflow-hidden bg-background">
@@ -208,115 +195,15 @@ export default function SiteEditor({ flash }) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-start' }}>
-        {/* ── CANVAS ── */}
-        <div className="rounded-lg border bg-muted/30 flex flex-col" style={{ flex: '1 1 560px', minWidth: 0 }}>
-          <div className="px-3 py-1.5 border-b text-xs text-muted-foreground">Click a block on the page to edit it · changes update live</div>
-          <div className="flex-1 overflow-auto flex justify-center p-3" style={{ minHeight: 620 }}>
-            <div style={{ width: device === 'phone' ? 390 : '100%', maxWidth: '100%', transition: 'width .2s' }}
-              className={device === 'phone' ? 'rounded-2xl border-4 border-foreground/80 overflow-hidden shadow-xl bg-white' : 'rounded-md border bg-white overflow-hidden'}>
-              <iframe key={reloadKey} ref={iframeRef} title="Landing preview"
-                src={`${previewPath}?preview=1&edit=1&k=${reloadKey}`}
-                className="w-full block" style={{ height: device === 'phone' ? 760 : 700, border: 0 }} />
-            </div>
-          </div>
-        </div>
-
-        {/* ── SETTINGS DRAWER ── */}
-        <div className="rounded-lg border bg-card" style={{ width: 340, flexGrow: 0, flexShrink: 0, maxWidth: '100%' }}>
-          {/* layers */}
-          <div className="p-3 border-b">
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">Blocks</div>
-            <div className="space-y-1">
-              {layout.map((s) => (
-                <div key={s.id} onClick={() => setSelected(s.id)}
-                  className={`flex items-center gap-2 rounded-md px-2 py-1.5 cursor-pointer text-sm ${selected === s.id ? 'bg-primary/10 text-primary' : 'hover:bg-muted'} ${s.enabled ? '' : 'opacity-50'}`}>
-                  <span className="flex-1">{SECTION_LABEL[s.id] ?? s.id}</span>
-                  <button type="button" onClick={(e) => { e.stopPropagation(); toggleSection(s.id) }} className="p-0.5" title={s.enabled ? 'Hide' : 'Show'}>
-                    {s.enabled ? <Eye size={14} /> : <EyeOff size={14} className="text-muted-foreground" />}
-                  </button>
-                </div>
-              ))}
-            </div>
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mt-3 mb-2">Pages</div>
-            <div className="space-y-1">
-              {pageSections.map((s) => (
-                <div key={s.key} onClick={() => setSelected(s.key)}
-                  className={`flex items-center gap-2 rounded-md px-2 py-1.5 cursor-pointer text-sm ${selected === s.key ? 'bg-primary/10 text-primary' : 'hover:bg-muted'}`}>
-                  <span className="flex-1">{s.label}</span>
-                  <span className="text-[10px] text-muted-foreground">{s.isPage ? 'page' : ''}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* settings for the selected block */}
-          <div className="p-4 space-y-4">
-            {!section ? (
-              <p className="text-sm text-muted-foreground">Select a block to edit its content.</p>
-            ) : (
-              <>
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-semibold">{section.label}</div>
-                  <button type="button" onClick={() => setSelected(null)} className="text-muted-foreground hover:text-foreground"><X size={15} /></button>
-                </div>
-
-                {selectedLayout && (
-                  <button type="button" onClick={() => toggleSection(selected)}
-                    className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground">
-                    {selectedLayout.enabled ? <><EyeOff size={13} /> Hide this block</> : <><Eye size={13} /> Show this block</>}
-                  </button>
-                )}
-
-                <div className="inline-flex rounded-md border overflow-hidden">
-                  <button type="button" onClick={() => switchLang('hy')} className={`px-3 py-1 text-sm ${lang === 'hy' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}>Հայ</button>
-                  <button type="button" onClick={() => switchLang('en')} className={`px-3 py-1 text-sm border-l ${lang === 'en' ? 'bg-primary text-primary-foreground' : 'bg-background hover:bg-muted'}`}>Eng</button>
-                </div>
-
-                {section.fields.map((field) => {
-                  const fp = resolvePath(field, lang)
-                  const value = resolved(fp)
-                  const changed = !valueEqual(value, getPath(defaultContent, fp))
-                  const label = field.bilingual ? `${field.label} · ${lang === 'hy' ? 'HY' : 'EN'}` : field.label
-
-                  if (field.type === 'image') {
-                    return (
-                      <Field key={fp} label={label}>
-                        <div className="flex items-center gap-3">
-                          <div className="h-14 w-20 rounded-md border bg-muted overflow-hidden flex items-center justify-center shrink-0">
-                            {value ? <img src={value} alt="" className="h-full w-full object-cover" /> : <ImageIcon size={16} className="text-muted-foreground" />}
-                          </div>
-                          <div className="flex flex-col gap-1">
-                            <label className="inline-flex items-center gap-1.5 text-xs font-medium cursor-pointer text-primary">
-                              <UploadCloud size={14} /> {uploading === fp ? 'Uploading…' : (value ? 'Replace' : 'Upload')}
-                              <input type="file" accept="image/*" className="hidden" disabled={uploading === fp} onChange={(e) => handleUpload(fp, e.target.files?.[0])} />
-                            </label>
-                            {value
-                              ? <button type="button" onClick={() => { commit(); setField(fp, '') }} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"><Trash2 size={12} /> Remove</button>
-                              : <span className="text-xs text-muted-foreground">Bundled default</span>}
-                          </div>
-                        </div>
-                      </Field>
-                    )
-                  }
-
-                  return (
-                    <Field key={fp} label={<span className="inline-flex items-center gap-2">{label}{changed && <span className="inline-block h-1.5 w-1.5 rounded-full bg-amber-500" />}</span>}>
-                      {changed && <button type="button" onClick={() => { commit(); setField(fp, getPath(defaultContent, fp)) }} className="self-start -mt-0.5 text-xs text-muted-foreground hover:text-foreground">↺ reset</button>}
-                      {field.type === 'list' ? (
-                        <Textarea rows={Math.max(3, (Array.isArray(value) ? value.length : 0) + 1)} onFocus={commit}
-                          value={(Array.isArray(value) ? value : []).join('\n')} onChange={(e) => setField(fp, e.target.value.split('\n'))} placeholder="One item per line" />
-                      ) : field.type === 'textarea' ? (
-                        <Textarea rows={3} value={value ?? ''} onFocus={commit} onChange={(e) => setField(fp, e.target.value)} />
-                      ) : (
-                        <Input value={value ?? ''} onFocus={commit} onChange={(e) => setField(fp, e.target.value)} />
-                      )}
-                      {field.emphasis && <p className="mt-1 text-xs text-muted-foreground">{EMPHASIS_HINT}</p>}
-                    </Field>
-                  )
-                })}
-              </>
-            )}
+      {/* ── FULL-WIDTH CANVAS ── */}
+      <div className="rounded-lg border bg-muted/30 flex flex-col">
+        <div className="px-3 py-1.5 border-b text-xs text-muted-foreground">Click any text on the page to edit it · hover a section for its controls · changes update live</div>
+        <div className="flex-1 overflow-auto flex justify-center p-3" style={{ minHeight: 680 }}>
+          <div style={{ width: device === 'phone' ? 390 : '100%', maxWidth: '100%', transition: 'width .2s' }}
+            className={device === 'phone' ? 'rounded-2xl border-4 border-foreground/80 overflow-hidden shadow-xl bg-white' : 'rounded-md border bg-white overflow-hidden'}>
+            <iframe key={`${page}-${reloadKey}`} ref={iframeRef} title="Landing preview"
+              src={`${previewPath}?preview=1&edit=1&k=${reloadKey}`}
+              className="w-full block" style={{ height: device === 'phone' ? 780 : 760, border: 0 }} />
           </div>
         </div>
       </div>

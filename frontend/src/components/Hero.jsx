@@ -1,55 +1,38 @@
 import { Link } from 'react-router-dom'
 import { heroImg } from '../data/images'
 import { useContent } from '../context/SiteContentContext'
-import RichText from './RichText'
+import { E, EditableImage } from './Editable'
 
 export default function Hero({ lang }) {
   const t = useContent()
   const c = t.hero
   const hy = lang === 'hy'
+  const p = (b) => `hero.${b}${hy ? 'Hy' : 'En'}`
+  const v = (b) => (hy ? c[`${b}Hy`] : c[`${b}En`])
+
   return (
     <section className="hero">
       <div className="hero-img-side">
-        <img src={c.image || heroImg} alt="Hasmik" />
+        <EditableImage src={c.image || heroImg} alt="Hasmik" path="hero.image" />
         <div className="hero-img-overlay"></div>
-        <div className="hero-img-pill">
-          {hy ? c.pillHy : c.pillEn}
-        </div>
+        <E as="div" className="hero-img-pill" path={p('pill')} value={v('pill')} />
       </div>
 
       <div className="hero-text-side">
         <div className="eyebrow">
           <div className="eyebrow-line"></div>
-          <span className="eyebrow-text">
-            {hy ? c.eyebrowHy : c.eyebrowEn}
-          </span>
+          <E as="span" className="eyebrow-text" path={p('eyebrow')} value={v('eyebrow')} />
         </div>
 
-        <h1 className="hero-h1">
-          <RichText text={hy ? c.h1Hy : c.h1En} />
-        </h1>
+        <E as="h1" className="hero-h1" path={p('h1')} value={v('h1')} emphasis />
+        <E as="p" className="hero-p" path={p('p')} value={v('p')} emphasis />
 
-        <p className="hero-p">
-          <RichText text={hy ? c.pHy : c.pEn} />
-        </p>
-
-        <Link to="/register" className="btn-rose">
-          {hy ? c.joinHy : c.joinEn}
-        </Link>
+        <Link to="/register" className="btn-rose"><E as="span" path={p('join')} value={v('join')} /></Link>
 
         <div className="hero-stats">
-          <div className="hstat">
-            <div className="hstat-n">40K</div>
-            <div className="hstat-l">{hy ? c.stat1LabelHy : c.stat1LabelEn}</div>
-          </div>
-          <div className="hstat">
-            <div className="hstat-n">2</div>
-            <div className="hstat-l">{hy ? c.stat2LabelHy : c.stat2LabelEn}</div>
-          </div>
-          <div className="hstat">
-            <div className="hstat-n">#1</div>
-            <div className="hstat-l">{hy ? c.stat3LabelHy : c.stat3LabelEn}</div>
-          </div>
+          <div className="hstat"><div className="hstat-n">40K</div><E as="div" className="hstat-l" path={p('stat1Label')} value={v('stat1Label')} /></div>
+          <div className="hstat"><div className="hstat-n">2</div><E as="div" className="hstat-l" path={p('stat2Label')} value={v('stat2Label')} /></div>
+          <div className="hstat"><div className="hstat-n">#1</div><E as="div" className="hstat-l" path={p('stat3Label')} value={v('stat3Label')} /></div>
         </div>
       </div>
     </section>

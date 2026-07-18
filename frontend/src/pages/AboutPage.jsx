@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { Heart, HeartHandshake, Coffee, Compass } from 'lucide-react'
@@ -5,14 +6,17 @@ import GlobalHeader from '../components/GlobalHeader'
 import Footer from '../components/Footer'
 import InstagramEmbed from '../components/InstagramEmbed'
 import { useContent } from '../context/SiteContentContext'
+import { E, installEditGuards } from '../components/Editable'
 
 // One icon per section, same order/meaning in both languages.
 const SECTION_ICONS = [Heart, HeartHandshake, Coffee, Compass]
 
 export default function AboutPage({ lang = 'en', setLang }) {
+  useEffect(() => { installEditGuards() }, [])
   const t = useContent()
   const a = t.about
   const hy = lang === 'hy'
+  const sfx = hy ? 'Hy' : 'En'
   const L = (base) => (hy ? a[`${base}Hy`] : a[`${base}En`])
   const c = {
     metaTitle: L('metaTitle'),
@@ -37,7 +41,7 @@ export default function AboutPage({ lang = 'en', setLang }) {
 
       <main className="page-main">
         <header className="page-hero">
-          <h1 className="page-title">{c.eyebrow}</h1>
+          <E as="h1" className="page-title" path={`about.eyebrow${sfx}`} value={c.eyebrow} />
         </header>
 
         <div className="page-body about-body">
@@ -47,11 +51,10 @@ export default function AboutPage({ lang = 'en', setLang }) {
               <div className={`story-feature${i % 2 === 1 ? ' story-feature--reverse' : ''}`} key={i}>
                 <section className="page-section--card">
                   <div className="card-icon"><Icon size={22} /></div>
-                  <h2>{s.h}</h2>
-                  {s.p?.map((para, j) => <p key={j}>{para}</p>)}
-                  {s.list && (
-                    <ul>{s.list.map((li, j) => <li key={j}>{li}</li>)}</ul>
-                  )}
+                  <E as="h2" path={`about.s${i + 1}h${sfx}`} value={s.h} />
+                  {s.p?.map((para, j) => (
+                    <E as="p" key={j} path={`about.s${i + 1}p${sfx}`} value={para} listIndex={j} />
+                  ))}
                 </section>
                 <div className="story-feature-media">
                   <InstagramEmbed url={s.reel} />
@@ -61,8 +64,8 @@ export default function AboutPage({ lang = 'en', setLang }) {
           })}
 
           <section className="page-section page-section--card page-section--center">
-            <h2>{c.ctaText}</h2>
-            <Link to="/register" className="page-cta">{c.cta}</Link>
+            <E as="h2" path={`about.ctaText${sfx}`} value={c.ctaText} />
+            <Link to="/register" className="page-cta"><E as="span" path={`about.cta${sfx}`} value={c.cta} /></Link>
           </section>
         </div>
       </main>

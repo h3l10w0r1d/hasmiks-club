@@ -1,44 +1,31 @@
 import { storyImg } from '../data/images'
 import { useContent } from '../context/SiteContentContext'
-import RichText from './RichText'
+import { E, EditableImage } from './Editable'
 import Reveal from './Reveal'
 
 export default function Story({ lang }) {
   const t = useContent()
   const c = t.story
   const hy = lang === 'hy'
+  const p = (b) => `story.${b}${hy ? 'Hy' : 'En'}`
+  const v = (b) => (hy ? c[`${b}Hy`] : c[`${b}En`])
+
   return (
     <section className="story">
       <Reveal as="div" className="story-img">
-        <img src={c.image || storyImg} alt="Hasmik outside" />
-        <div className="story-label">
-          {hy ? c.labelHy : c.labelEn}
-        </div>
+        <EditableImage src={c.image || storyImg} alt="Hasmik outside" path="story.image" />
+        <E as="div" className="story-label" path={p('label')} value={v('label')} />
       </Reveal>
 
       <Reveal as="div" className="story-text-col" delay={120}>
-        <div className="sec-tag">{hy ? c.tagHy : c.tagEn}</div>
-        <h2 className="story-h">
-          <RichText text={hy ? c.hHy : c.hEn} />
-        </h2>
-        <p className="story-body">
-          {hy ? c.p1Hy : c.p1En}
-        </p>
-        <p className="story-body">
-          {hy ? c.p2Hy : c.p2En}
-        </p>
-        <p className="story-body">
-          {hy ? c.p3Hy : c.p3En}
-        </p>
-        <p className="story-body">
-          {hy ? c.p4Hy : c.p4En}
-        </p>
-        <p className="story-closing">
-          {hy ? c.closingHy : c.closingEn}
-        </p>
-        <div className="story-sig">
-          {hy ? c.sigHy : c.sigEn}
-        </div>
+        <E as="div" className="sec-tag" path={p('tag')} value={v('tag')} />
+        <E as="h2" className="story-h" path={p('h')} value={v('h')} emphasis />
+        <E as="p" className="story-body" path={p('p1')} value={v('p1')} />
+        <E as="p" className="story-body" path={p('p2')} value={v('p2')} />
+        <E as="p" className="story-body" path={p('p3')} value={v('p3')} />
+        <E as="p" className="story-body" path={p('p4')} value={v('p4')} />
+        <E as="p" className="story-closing" path={p('closing')} value={v('closing')} />
+        <E as="div" className="story-sig" path={p('sig')} value={v('sig')} />
       </Reveal>
     </section>
   )
