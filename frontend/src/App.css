@@ -1914,3 +1914,21 @@ a.ci-row:hover .ci-value{color:var(--rose)}
   padding: 5px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
 }
 .hc-embed-edit button:hover { background: #964040; }
+
+/* card-level (within-section) controls — Community/Pricing cards */
+.hc-card { outline: 2px dashed transparent; outline-offset: -2px; transition: outline-color .12s; border-radius: 6px; }
+.hc-card:hover { outline-color: rgba(126,52,52,0.4); }
+.hc-card-toolbar {
+  position: absolute; top: 6px; right: 6px; z-index: 39;
+  display: flex; gap: 2px; padding: 2px;
+  background: #1c1c1e; border-radius: 7px; box-shadow: 0 4px 14px rgba(0,0,0,.3);
+  opacity: 0; pointer-events: none; transition: opacity .12s;
+}
+.hc-card:hover > .hc-card-toolbar { opacity: 1; pointer-events: auto; }
+.hc-card-toolbar button {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 24px; height: 24px; border: 0; border-radius: 5px;
+  background: transparent; color: #fff; cursor: pointer;
+}
+.hc-card-toolbar button:hover { background: rgba(255,255,255,.15); }
+.hc-card-toolbar button:disabled { opacity: .35; cursor: default; }

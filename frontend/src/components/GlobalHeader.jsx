@@ -2,6 +2,8 @@ import { Link, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { Menu, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useContent } from '../context/SiteContentContext'
+import { E, EditableImage } from './Editable'
 import LangSwitch from './LangSwitch'
 
 /**
@@ -17,6 +19,9 @@ export default function GlobalHeader({ lang = 'hy', setLang }) {
   const { pathname } = useLocation()
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const site = useContent()
+  const nav = site.nav
+  const sfx = lang === 'hy' ? 'Hy' : 'En'
 
   const isActive = (path) => pathname === path
   const close = () => setMenuOpen(false)
@@ -32,26 +37,16 @@ export default function GlobalHeader({ lang = 'hy', setLang }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
-  const t = {
-    en: {
-      home: 'Home', events: 'Events', about: 'About', contact: 'Contact',
-      signIn: 'Sign In', join: 'Join the Club', dashboard: 'My Account', admin: 'Admin',
-    },
-    hy: {
-      home: 'Գլխավոր', events: 'Հանդիպումներ', about: 'Մեր մասին', contact: 'Կապ',
-      signIn: 'Մուտք', join: 'Անդամ դառնալ', dashboard: 'Իմ հաշիվը', admin: 'Ադմին',
-    },
-  }[lang] ?? {
-    home: 'Home', events: 'Events', about: 'About', contact: 'Contact', signIn: 'Sign In',
-    join: 'Join the Club', dashboard: 'My Account', admin: 'Admin',
-  }
+  // internal app labels (dashboard/admin) — not marketing content, stay fixed
+  const t = { hy: { dashboard: 'Իմ հաշիվը', admin: 'Ադմին' }, en: { dashboard: 'My Account', admin: 'Admin' } }[lang]
+    ?? { dashboard: 'My Account', admin: 'Admin' }
 
   const navLinks = (
     <>
-      <Link to="/"        className={`gh-link${isActive('/')        ? ' gh-link--active' : ''}`} onClick={close}>{t.home}</Link>
-      <Link to="/events"  className={`gh-link${isActive('/events')  ? ' gh-link--active' : ''}`} onClick={close}>{t.events}</Link>
-      <Link to="/about"   className={`gh-link${isActive('/about')   ? ' gh-link--active' : ''}`} onClick={close}>{t.about}</Link>
-      <Link to="/contact" className={`gh-link${isActive('/contact') ? ' gh-link--active' : ''}`} onClick={close}>{t.contact}</Link>
+      <Link to="/"        className={`gh-link${isActive('/')        ? ' gh-link--active' : ''}`} onClick={close}><E as="span" path={`nav.home${sfx}`} value={nav[`home${sfx}`]} /></Link>
+      <Link to="/events"  className={`gh-link${isActive('/events')  ? ' gh-link--active' : ''}`} onClick={close}><E as="span" path={`nav.events${sfx}`} value={nav[`events${sfx}`]} /></Link>
+      <Link to="/about"   className={`gh-link${isActive('/about')   ? ' gh-link--active' : ''}`} onClick={close}><E as="span" path={`nav.about${sfx}`} value={nav[`about${sfx}`]} /></Link>
+      <Link to="/contact" className={`gh-link${isActive('/contact') ? ' gh-link--active' : ''}`} onClick={close}><E as="span" path={`nav.contact${sfx}`} value={nav[`contact${sfx}`]} /></Link>
     </>
   )
 
@@ -62,8 +57,8 @@ export default function GlobalHeader({ lang = 'hy', setLang }) {
     </>
   ) : (
     <>
-      <Link to="/login" state={pathname !== '/login' ? { from: pathname } : undefined} className="gh-btn gh-btn--ghost" onClick={close}>{t.signIn}</Link>
-      <Link to="/register" className="gh-btn gh-btn--solid" onClick={close}>{t.join}</Link>
+      <Link to="/login" state={pathname !== '/login' ? { from: pathname } : undefined} className="gh-btn gh-btn--ghost" onClick={close}><E as="span" path={`nav.signIn${sfx}`} value={nav[`signIn${sfx}`]} /></Link>
+      <Link to="/register" className="gh-btn gh-btn--solid" onClick={close}><E as="span" path={`nav.join${sfx}`} value={nav[`join${sfx}`]} /></Link>
     </>
   )
 
@@ -73,7 +68,7 @@ export default function GlobalHeader({ lang = 'hy', setLang }) {
     <header className={`gh${scrolled ? ' gh--scrolled' : ''}`}>
       {/* ── brand ─────────────────────────────────────── */}
       <Link to="/" className="gh-brand" onClick={close}>
-        <img src="/logo-h.png" alt="" className="gh-logo" aria-hidden="true" />
+        <EditableImage src={nav.logo || '/logo-h.png'} alt="" className="gh-logo" path="nav.logo" />
         <span className="gh-brand-text">Hasmik's <span>Club</span></span>
       </Link>
 

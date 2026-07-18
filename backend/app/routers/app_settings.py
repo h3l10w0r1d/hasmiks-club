@@ -92,7 +92,11 @@ def update_settings_bulk(
 # ── Site Editor: landing-page overrides (draft + publish) ────────────────────
 def _validate_layout(value: Any) -> list:
     """The reserved __layout key is an ordered list of {id: str, enabled: bool}
-    controlling which sections show and in what order."""
+    controlling which sections show and in what order. Custom-block entries
+    (id starting with "custom-") also carry a "type" (e.g. "text"/"imageText")
+    naming which template to render — preserved here so the saved/published
+    copy round-trips byte-for-byte with what the client sent (otherwise the
+    editor's dirty-check never clears for a page with a custom block)."""
     if not isinstance(value, list):
         raise HTTPException(422, "__layout must be a list")
     if len(value) > MAX_LAYOUT_SECTIONS:
@@ -101,14 +105,36 @@ def _validate_layout(value: Any) -> list:
     for item in value:
         if not isinstance(item, dict) or not isinstance(item.get("id"), str) or not item["id"]:
             raise HTTPException(422, "Each __layout item needs a non-empty string id")
-        clean.append({"id": item["id"], "enabled": bool(item.get("enabled", True))})
+        entry = {"id": item["id"], "enabled": bool(item.get("enabled", True))}
+        if isinstance(item.get("type"), str):
+            entry["type"] = item["type"]
+        clean.append(entry)
     return clean
+
+
+def _validate_card_order(value: Any, key: str) -> list:
+    """Reserved "*.__<x>Order" keys: an array of the ORIGINAL integer indices
+    of a repeatable card list (e.g. Community's feature cards), in display order."""
+    if not isinstance(value, list) or len(value) > MAX_LAYOUT_SECTIONS:
+        raise HTTPException(422, f"'{key}' must be a list")
+    if not all(isinstance(v, int) and not isinstance(v, bool) for v in value):
+        raise HTTPException(422, f"'{key}' must contain only integers")
+    return value
+
+
+def _validate_card_hidden(value: Any, key: str) -> list:
+    """Reserved "*.__<x>Hidden" keys: a boolean per ORIGINAL card index,
+    True where that card is hidden."""
+    if not isinstance(value, list) or len(value) > MAX_LAYOUT_SECTIONS:
+        raise HTTPException(422, f"'{key}' must be a list")
+    return [bool(v) for v in value]
 
 
 def _validate_overrides(body: Any) -> dict:
     """Overrides are a flat map of dotted-path -> (str | list[str]), plus the
-    reserved __layout key. We reject anything else so a bad payload can't
-    corrupt the public landing page."""
+    reserved __layout key and the reserved per-card "__<x>Order"/"__<x>Hidden"
+    list keys. We reject anything else so a bad payload can't corrupt the
+    public landing page."""
     if not isinstance(body, dict):
         raise HTTPException(422, "Overrides must be an object")
     if len(body) > MAX_OVERRIDE_ENTRIES:
@@ -117,8 +143,13 @@ def _validate_overrides(body: Any) -> dict:
     for key, value in body.items():
         if not isinstance(key, str) or not key:
             raise HTTPException(422, "Override keys must be non-empty strings")
+        last_segment = key.rsplit(".", 1)[-1]
         if key == LAYOUT_KEY:
             clean[key] = _validate_layout(value)
+        elif last_segment.startswith("__") and last_segment.endswith("Order"):
+            clean[key] = _validate_card_order(value, key)
+        elif last_segment.startswith("__") and last_segment.endswith("Hidden"):
+            clean[key] = _validate_card_hidden(value, key)
         elif isinstance(value, str):
             if len(value) > MAX_VALUE_LEN:
                 raise HTTPException(422, f"Value for '{key}' is too long")

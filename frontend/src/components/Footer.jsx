@@ -2,9 +2,14 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Mail, Phone, MapPin, AtSign } from 'lucide-react'
 import { getPublicSettings } from '../api/payments'
+import { useContent } from '../context/SiteContentContext'
+import { E } from './Editable'
 
 export default function Footer({ lang = 'en' }) {
   const hy = lang === 'hy'
+  const sfx = hy ? 'Hy' : 'En'
+  const site = useContent()
+  const f = site.footer
   const [settings, setSettings] = useState(null)
 
   useEffect(() => {
@@ -19,19 +24,12 @@ export default function Footer({ lang = 'en' }) {
   const location = settings?.club_location || ''
 
   const t = {
-    tagline: hy
-      ? 'Ջերմ ակումբ 50+ հայ կանանց համար՝ հանդիպումներ, կապ ու պատկանելիություն։'
-      : 'A warm club for Armenian women 50+ — gatherings, connection, and belonging.',
-    linksTitle: hy ? 'Նավարկություն' : 'Explore',
-    contactTitle: hy ? 'Կապ' : 'Contact',
-    home:    hy ? 'Գլխավոր'        : 'Home',
-    events:  hy ? 'Հանդիպումներ'   : 'Events',
-    about:   hy ? 'Մեր մասին'      : 'About Us',
-    contact: hy ? 'Կապ'           : 'Contact',
-    terms:   hy ? 'Պայմաններ'     : 'Terms',
-    copy:    hy
-      ? '© 2026 Hasmik\'s Club — 50+ հայ կանանց ակումբ'
-      : '© 2026 Hasmik\'s Club — #1 · 50+ Armenian Women\'s Club',
+    tagline: f[`tagline${sfx}`],
+    linksTitle: f[`linksTitle${sfx}`],
+    contactTitle: f[`contactTitle${sfx}`],
+    home: f[`home${sfx}`], events: f[`events${sfx}`], about: f[`about${sfx}`],
+    contact: f[`contact${sfx}`], terms: f[`terms${sfx}`],
+    copy: f[`copy${sfx}`],
   }
 
   return (
@@ -39,7 +37,7 @@ export default function Footer({ lang = 'en' }) {
       <div className="ft-top">
         <div className="ft-brand">
           <Link to="/" className="ft-logo">Hasmik&apos;s <span>Club</span></Link>
-          <p className="ft-tagline">{t.tagline}</p>
+          <E as="p" className="ft-tagline" path={`footer.tagline${sfx}`} value={t.tagline} />
           {igUrl && (
             <a className="ft-social" href={igUrl} target="_blank" rel="noopener noreferrer" aria-label="Instagram">
               <AtSign size={17} />
@@ -48,18 +46,18 @@ export default function Footer({ lang = 'en' }) {
         </div>
 
         <div className="ft-col">
-          <div className="ft-col-title">{t.linksTitle}</div>
+          <E as="div" className="ft-col-title" path={`footer.linksTitle${sfx}`} value={t.linksTitle} />
           <nav className="ft-nav">
-            <Link to="/">{t.home}</Link>
-            <Link to="/events">{t.events}</Link>
-            <Link to="/about">{t.about}</Link>
-            <Link to="/contact">{t.contact}</Link>
-            <Link to="/terms">{t.terms}</Link>
+            <Link to="/"><E as="span" path={`footer.home${sfx}`} value={t.home} /></Link>
+            <Link to="/events"><E as="span" path={`footer.events${sfx}`} value={t.events} /></Link>
+            <Link to="/about"><E as="span" path={`footer.about${sfx}`} value={t.about} /></Link>
+            <Link to="/contact"><E as="span" path={`footer.contact${sfx}`} value={t.contact} /></Link>
+            <Link to="/terms"><E as="span" path={`footer.terms${sfx}`} value={t.terms} /></Link>
           </nav>
         </div>
 
         <div className="ft-col">
-          <div className="ft-col-title">{t.contactTitle}</div>
+          <E as="div" className="ft-col-title" path={`footer.contactTitle${sfx}`} value={t.contactTitle} />
           <div className="ft-contact">
             {email && <a href={`mailto:${email}`}><Mail size={15} />{email}</a>}
             {phone && <a href={`tel:${phone.replace(/[^\d+]/g, '')}`}><Phone size={15} />{phone}</a>}
@@ -69,7 +67,7 @@ export default function Footer({ lang = 'en' }) {
       </div>
 
       <div className="ft-bottom">
-        <div className="ft-copy">{t.copy}</div>
+        <E as="div" className="ft-copy" path={`footer.copy${sfx}`} value={t.copy} />
       </div>
     </footer>
   )

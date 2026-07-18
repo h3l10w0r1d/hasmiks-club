@@ -4,8 +4,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { SiteContentProvider, useContent, EDIT_ACTION_MSG } from './context/SiteContentContext'
-import { DEFAULT_LAYOUT, SECTION_LABEL, normalizeLayout } from './data/landingSections'
+import { DEFAULT_LAYOUT, SECTION_LABEL, BLOCK_TEMPLATE_LABEL, isCustomBlockId, normalizeLayout } from './data/landingSections'
 import BlockFrame from './components/BlockFrame'
+import CustomBlock from './components/CustomBlock'
 import { installEditGuards } from './components/Editable'
 import { useLang } from './hooks/useLang'
 import { useLandingAnimations } from './hooks/useLandingAnimations'
@@ -55,10 +56,9 @@ function LandingPage({ lang, setLang }) {
   const blockAction = (id, action) => {
     try { window.parent?.postMessage({ type: EDIT_ACTION_MSG, id, action }, window.location.origin) } catch { /* noop */ }
   }
-  const title = lang === 'hy' ? "Hasmik's Club — Կանանց ակումբ Երևանում" : "Hasmik's Club — A Women's Club in Yerevan"
-  const description = lang === 'hy'
-    ? 'Hasmik\'s Club-ը Երևանի կանանց մշակութային ակումբ է: Դասընթացներ, հանդիպումներ, և ընտանեկան մթնոլորտ:'
-    : "Hasmik's Club is a curated women's club in Yerevan — intimate gatherings, cultural events, and a circle of like-minded women."
+  const sfx = lang === 'hy' ? 'Hy' : 'En'
+  const title = content.landingMeta[`metaTitle${sfx}`]
+  const description = content.landingMeta[`metaDesc${sfx}`]
   return (
     <>
       <Helmet>
@@ -82,15 +82,19 @@ function LandingPage({ lang, setLang }) {
       {(() => {
         const enabled = layout.filter((s) => s.enabled)
         return enabled.map((s, i) => {
+          const isCustom = isCustomBlockId(s.id)
           const Section = SECTION_COMPONENTS[s.id]
-          if (!Section) return null
-          const node = <Section key={s.id} lang={lang} />
+          if (!isCustom && !Section) return null
+          const node = isCustom
+            ? <CustomBlock key={s.id} id={s.id} type={s.type} lang={lang} />
+            : <Section key={s.id} lang={lang} />
           if (!IS_EDIT) return node
+          const label = isCustom ? (BLOCK_TEMPLATE_LABEL[s.type] ?? 'Block') : (SECTION_LABEL[s.id] ?? s.id)
           return (
             <BlockFrame
               key={s.id}
               id={s.id}
-              label={SECTION_LABEL[s.id] ?? s.id}
+              label={label}
               canUp={i > 0}
               canDown={i < enabled.length - 1}
               onAction={blockAction}

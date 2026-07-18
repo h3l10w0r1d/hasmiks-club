@@ -1,7 +1,9 @@
 import { Handshake, MessageCircle, Flower2 } from 'lucide-react'
 import communityImg from '../assets/community.jpg'
 import { useContent } from '../context/SiteContentContext'
-import { E, EditableImage } from './Editable'
+import { E, EditableImage, IS_EDIT } from './Editable'
+import CardFrame from './CardFrame'
+import { visibleOrder, fullOrder } from '../utils/cardOrder'
 import Reveal from './Reveal'
 
 const PT_ICONS = { handshake: Handshake, chat: MessageCircle, flower: Flower2 }
@@ -12,6 +14,11 @@ export default function Community({ lang }) {
   const hy = lang === 'hy'
   const p = (b) => `community.${b}${hy ? 'Hy' : 'En'}`
   const v = (b) => (hy ? c[`${b}Hy`] : c[`${b}En`])
+  const ptCount = c.pts.length
+  // Edit mode shows every card (hidden ones dimmed) in its current order so a
+  // hidden card stays reachable to un-hide; the public site only shows visible ones.
+  const order = IS_EDIT ? fullOrder(c.__ptsOrder, ptCount) : visibleOrder(c.__ptsOrder, c.__ptsHidden, ptCount)
+  const visSet = IS_EDIT ? visibleOrder(c.__ptsOrder, c.__ptsHidden, ptCount) : null
 
   return (
     <section className="community">
@@ -28,15 +35,24 @@ export default function Community({ lang }) {
       </Reveal>
 
       <div className="cards community-cards">
-        {c.pts.map((pt, i) => {
+        {order.map((i, pos) => {
+          const pt = c.pts[i]
           const Icon = PT_ICONS[pt.ico]
           const suffix = hy ? 'Hy' : 'En'
-          return (
-            <Reveal as="div" className="card" key={i} delay={i * 90}>
+          const isHidden = visSet && !visSet.includes(i)
+          const card = (
+            <Reveal as="div" className="card" key={i} delay={pos * 90}>
               <div className="card-ico"><Icon size={20} strokeWidth={1.75} /></div>
               <E as="div" className="card-title" path={`community.pts.${i}.title${suffix}`} value={hy ? pt.titleHy : pt.titleEn} />
               <E as="p" className="card-text" path={`community.pts.${i}.body${suffix}`} value={hy ? pt.bodyHy : pt.bodyEn} />
             </Reveal>
+          )
+          if (!IS_EDIT) return card
+          return (
+            <CardFrame key={i} orderPath="community.__ptsOrder" hiddenPath="community.__ptsHidden" itemCount={ptCount}
+              index={i} canLeft={order.indexOf(i) > 0} canRight={order.indexOf(i) < order.length - 1} dimmed={isHidden}>
+              {card}
+            </CardFrame>
           )
         })}
       </div>

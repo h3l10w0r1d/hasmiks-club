@@ -16,7 +16,7 @@ const stripMarkers = (s) => String(s ?? '').replace(/\*\*/g, '').replace(/\*/g, 
 
 // Inline-editable text. Uncontrolled (textContent set imperatively) so React
 // re-renders from live preview updates never fight the caret while typing.
-export function E({ as: Tag = 'span', className, path, value, emphasis = false, listIndex }) {
+export function E({ as: Tag = 'span', className, style, path, value, emphasis = false, listIndex }) {
   const ref = useRef(null)
   const focused = useRef(false)
 
@@ -26,7 +26,7 @@ export function E({ as: Tag = 'span', className, path, value, emphasis = false, 
   }, [value, emphasis])
 
   if (!IS_EDIT) {
-    return <Tag className={className}>{emphasis ? <RichText text={value} /> : value}</Tag>
+    return <Tag className={className} style={style}>{emphasis ? <RichText text={value} /> : value}</Tag>
   }
 
   const send = (el) => post({ type: EDIT_TEXT_MSG, path, value: el.innerText.replace(/\n+$/,''), listIndex })
@@ -34,6 +34,7 @@ export function E({ as: Tag = 'span', className, path, value, emphasis = false, 
     <Tag
       ref={ref}
       className={`${className || ''} hc-editable`}
+      style={style}
       contentEditable
       suppressContentEditableWarning
       data-hc-path={path}

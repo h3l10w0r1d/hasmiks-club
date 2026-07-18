@@ -1,18 +1,39 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  Save, Rocket, ExternalLink, Undo2, Redo2, Plus, ChevronDown, Monitor, Smartphone,
+  Save, Rocket, ExternalLink, Undo2, Redo2, Plus, ChevronDown, Monitor, Smartphone, Search, X,
 } from 'lucide-react'
 import defaultContent from '../data/content'
-import { AVAILABLE_SECTIONS, DEFAULT_LAYOUT, SECTION_LABEL, normalizeLayout } from '../data/landingSections'
+import {
+  AVAILABLE_SECTIONS, DEFAULT_LAYOUT, SECTION_LABEL, normalizeLayout,
+  BLOCK_TEMPLATES, isCustomBlockId, newCustomBlockId,
+} from '../data/landingSections'
 import { adminGetSiteContent, adminSaveSiteContent, adminPublishSiteContent } from '../api/admin'
 import {
   PREVIEW_MSG, PREVIEW_READY_MSG, EDIT_ACTION_MSG, EDIT_TEXT_MSG, EDIT_IMAGE_MSG, EDIT_FOCUS_MSG,
 } from '../context/SiteContentContext'
+import { moveInOrder, toggleHidden } from '../utils/cardOrder'
 import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Textarea } from './ui/textarea'
+import { Field } from './ui/AdminShared'
+
+// Which content namespace holds each page's SEO meta fields (metaTitle/metaDesc).
+const SEO_NAMESPACE = { landing: 'landingMeta', about: 'about', contact: 'contact', events: 'events', terms: 'terms' }
 
 const getPath = (obj, path) => path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), obj)
 const valueEqual = (a, b) =>
   (Array.isArray(a) || Array.isArray(b)) ? JSON.stringify(a ?? []) === JSON.stringify(b ?? []) : (a ?? '') === (b ?? '')
+
+// Pages the editor's canvas can point at. Landing is the only one with a
+// section layout (Add Block/reorder/hide); the others are single fixed pages
+// whose text is still fully inline-editable on the canvas.
+const PAGES = [
+  { key: 'landing', label: 'Landing', path: '/preview' },
+  { key: 'about', label: 'About', path: '/about' },
+  { key: 'contact', label: 'Contact', path: '/contact' },
+  { key: 'events', label: 'Events', path: '/events' },
+  { key: 'terms', label: 'Terms', path: '/terms' },
+]
 
 function moveSection(layout, id, dir) {
   const arr = layout.map((s) => ({ ...s }))
@@ -35,14 +56,16 @@ export default function SiteEditor({ flash }) {
   const [publishing, setPublishing] = useState(false)
   const [lang, setLang] = useState('hy')
   const [device, setDevice] = useState('desktop')
-  const [page, setPage] = useState('landing')   // 'landing' | 'about'
+  const [page, setPage] = useState('landing')
   const [addOpen, setAddOpen] = useState(false)
+  const [pageMenuOpen, setPageMenuOpen] = useState(false)
+  const [seoOpen, setSeoOpen] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
   const iframeRef = useRef(null)
   const previewReady = useRef(false)
   const overridesRef = useRef(null)
   overridesRef.current = overrides
-  const previewPath = page === 'about' ? '/about' : '/preview'
+  const previewPath = PAGES.find((p) => p.key === page)?.path ?? '/preview'
 
   useEffect(() => {
     let alive = true
@@ -76,6 +99,9 @@ export default function SiteEditor({ flash }) {
     return next
   }), [])
   const setLayout = useCallback((newLayout) => setOverrides((prev) => ({ ...prev, __layout: newLayout })), [])
+  // Unconditional override write (no default-value comparison) — used for the
+  // card order/hidden arrays, which have no "default" in content.js to compare against.
+  const setRaw = useCallback((path, value) => setOverrides((prev) => ({ ...prev, [path]: value })), [])
 
   // ── history ──
   const commit = useCallback(() => {
@@ -108,15 +134,22 @@ export default function SiteEditor({ flash }) {
       }
       else if (d.type === EDIT_IMAGE_MSG) setField(d.path, d.url)
       else if (d.type === EDIT_ACTION_MSG) {
-        const layout = normalizeLayout(overridesRef.current?.__layout ?? DEFAULT_LAYOUT)
         commit()
+        if (d.target === 'card') {
+          const curOrder = overridesRef.current?.[d.orderPath]
+          const curHidden = overridesRef.current?.[d.hiddenPath]
+          if (d.action === 'hide') setRaw(d.hiddenPath, toggleHidden(curHidden, d.itemCount, d.index))
+          else if (d.action === 'left' || d.action === 'right') setRaw(d.orderPath, moveInOrder(curOrder, curHidden, d.itemCount, d.index, d.action))
+          return
+        }
+        const layout = normalizeLayout(overridesRef.current?.__layout ?? DEFAULT_LAYOUT)
         if (d.action === 'hide') setLayout(layout.map((s) => (s.id === d.id ? { ...s, enabled: false } : s)))
         else if (d.action === 'up' || d.action === 'down') setLayout(moveSection(layout, d.id, d.action))
       }
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
-  }, [postToPreview, commit, setField, setListItem, setLayout])
+  }, [postToPreview, commit, setField, setListItem, setLayout, setRaw])
 
   // push draft into the live canvas on every change
   useEffect(() => { if (overrides) postToPreview(overrides) }, [overrides, postToPreview])
@@ -130,7 +163,18 @@ export default function SiteEditor({ flash }) {
   const dirty = JSON.stringify(overrides) !== JSON.stringify(saved)
 
   const addSection = (id) => { commit(); setLayout(layout.map((s) => (s.id === id ? { ...s, enabled: true } : s))); setAddOpen(false) }
+  const addCustomBlock = (type) => { commit(); setLayout([...layout, { id: newCustomBlockId(), enabled: true, type }]); setAddOpen(false) }
   const switchLang = (l) => { setLang(l); try { localStorage.setItem('hasmik_lang', l) } catch { /* noop */ } previewReady.current = false; setReloadKey((k) => k + 1) }
+  const switchPage = (key) => { setPage(key); setPageMenuOpen(false); setSeoOpen(false) }
+  const currentPageLabel = PAGES.find((p) => p.key === page)?.label ?? 'Landing'
+
+  // ── SEO meta fields for whichever page is currently previewed ──
+  const sfx = lang === 'hy' ? 'Hy' : 'En'
+  const seoNs = SEO_NAMESPACE[page]
+  const seoTitlePath = `${seoNs}.metaTitle${sfx}`
+  const seoDescPath = `${seoNs}.metaDesc${sfx}`
+  const seoTitle = seoTitlePath in overrides ? overrides[seoTitlePath] : getPath(defaultContent, seoTitlePath)
+  const seoDesc = seoDescPath in overrides ? overrides[seoDescPath] : getPath(defaultContent, seoDescPath)
 
   const handleSave = async () => {
     setSaving(true)
@@ -150,26 +194,54 @@ export default function SiteEditor({ flash }) {
       {/* ── TOP TOOLBAR ── */}
       <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card px-3 py-2">
         <div className="relative">
-          <Button size="sm" className="gap-1.5" onClick={() => setAddOpen((o) => !o)}>
-            <Plus size={15} /> Add Block <ChevronDown size={13} />
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setPageMenuOpen((o) => !o)}>
+            {currentPageLabel} <ChevronDown size={13} />
           </Button>
-          {addOpen && (
-            <div className="absolute z-50 mt-1 w-56 rounded-md border bg-popover shadow-lg p-1">
-              {hiddenSections.length === 0
-                ? <div className="px-3 py-2 text-xs text-muted-foreground">All blocks are visible.</div>
-                : hiddenSections.map((s) => (
-                  <button key={s.id} type="button" onClick={() => addSection(s.id)} className="w-full text-left px-3 py-2 text-sm rounded hover:bg-muted">
-                    {SECTION_LABEL[s.id] ?? s.id}
-                  </button>
-                ))}
+          {pageMenuOpen && (
+            <div className="absolute z-50 mt-1 w-44 rounded-md border bg-popover shadow-lg p-1">
+              {PAGES.map((p) => (
+                <button key={p.key} type="button" onClick={() => switchPage(p.key)}
+                  className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-muted ${page === p.key ? 'bg-muted font-medium' : ''}`}>
+                  {p.label}
+                </button>
+              ))}
             </div>
           )}
         </div>
 
-        <div className="inline-flex rounded-md border overflow-hidden bg-background">
-          <button type="button" onClick={() => setPage('landing')} className={`px-3 py-1.5 text-sm ${page === 'landing' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>Landing</button>
-          <button type="button" onClick={() => setPage('about')} className={`px-3 py-1.5 text-sm border-l ${page === 'about' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`}>About</button>
-        </div>
+        {page === 'landing' && (
+          <div className="relative">
+            <Button size="sm" className="gap-1.5" onClick={() => setAddOpen((o) => !o)}>
+              <Plus size={15} /> Add Block <ChevronDown size={13} />
+            </Button>
+            {addOpen && (
+              <div className="absolute z-50 mt-1 w-60 rounded-md border bg-popover shadow-lg p-1">
+                {hiddenSections.filter((s) => !isCustomBlockId(s.id)).map((s) => (
+                  <button key={s.id} type="button" onClick={() => addSection(s.id)} className="w-full text-left px-3 py-2 text-sm rounded hover:bg-muted">
+                    Show: {SECTION_LABEL[s.id] ?? s.id}
+                  </button>
+                ))}
+                {hiddenSections.some((s) => isCustomBlockId(s.id)) && (
+                  <>
+                    <div className="my-1 border-t" />
+                    {hiddenSections.filter((s) => isCustomBlockId(s.id)).map((s) => (
+                      <button key={s.id} type="button" onClick={() => addSection(s.id)} className="w-full text-left px-3 py-2 text-sm rounded hover:bg-muted">
+                        Show: {BLOCK_TEMPLATES.find((b) => b.type === s.type)?.label ?? 'Block'}
+                      </button>
+                    ))}
+                  </>
+                )}
+                <div className="my-1 border-t" />
+                <div className="px-3 py-1 text-[11px] uppercase tracking-wide text-muted-foreground">New block</div>
+                {BLOCK_TEMPLATES.map((b) => (
+                  <button key={b.type} type="button" onClick={() => addCustomBlock(b.type)} className="w-full text-left px-3 py-2 text-sm rounded hover:bg-muted">
+                    + {b.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="inline-flex rounded-md border overflow-hidden bg-background">
           <button type="button" onClick={() => setDevice('desktop')} className={`px-2.5 py-1.5 ${device === 'desktop' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted'}`} title="Desktop"><Monitor size={15} /></button>
@@ -184,6 +256,27 @@ export default function SiteEditor({ flash }) {
         <div className="inline-flex rounded-md border overflow-hidden bg-background">
           <button type="button" onClick={undo} disabled={!history.past.length} className="px-2.5 py-1.5 hover:bg-muted disabled:opacity-40" title="Undo"><Undo2 size={15} /></button>
           <button type="button" onClick={redo} disabled={!history.future.length} className="px-2.5 py-1.5 border-l hover:bg-muted disabled:opacity-40" title="Redo"><Redo2 size={15} /></button>
+        </div>
+
+        <div className="relative">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setSeoOpen((o) => !o)}>
+            <Search size={14} /> SEO
+          </Button>
+          {seoOpen && (
+            <div className="absolute z-50 mt-1 w-80 rounded-md border bg-popover shadow-lg p-3 space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold">{currentPageLabel} — search preview</div>
+                <button type="button" onClick={() => setSeoOpen(false)} className="text-muted-foreground hover:text-foreground"><X size={14} /></button>
+              </div>
+              <Field label={`Page title · ${lang === 'hy' ? 'HY' : 'EN'}`}>
+                <Input value={seoTitle ?? ''} onFocus={commit} onChange={(e) => setField(seoTitlePath, e.target.value)} />
+              </Field>
+              <Field label={`Description · ${lang === 'hy' ? 'HY' : 'EN'}`}>
+                <Textarea rows={3} value={seoDesc ?? ''} onFocus={commit} onChange={(e) => setField(seoDescPath, e.target.value)} />
+              </Field>
+              <p className="text-xs text-muted-foreground">Shown in the browser tab and search-engine results — not visible on the page itself.</p>
+            </div>
+          )}
         </div>
 
         <a href="/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-1"><ExternalLink size={13} /> Live site</a>

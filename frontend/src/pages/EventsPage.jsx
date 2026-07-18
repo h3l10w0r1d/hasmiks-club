@@ -11,6 +11,8 @@ import { createCheckout } from '../api/payments'
 import GlobalHeader from '../components/GlobalHeader'
 import ConfirmDialog from '../components/ConfirmDialog'
 import GuestCheckoutModal from '../components/GuestCheckoutModal'
+import { useContent } from '../context/SiteContentContext'
+import { E, installEditGuards } from '../components/Editable'
 
 /* ─── i18n ──────────────────────────────────────────────────────────────── */
 const copy = {
@@ -114,6 +116,12 @@ function DateTile({ iso, lang }) {
 
 /* ─── main component ─────────────────────────────────────────────────────── */
 export default function EventsPage({ lang = 'en' }) {
+  useEffect(() => { installEditGuards() }, [])
+  const site = useContent()
+  const hy = lang === 'hy'
+  const sfx = hy ? 'Hy' : 'En'
+  const ev0 = site.events
+  const evc = { heading: ev0[`heading${sfx}`], sub: ev0[`sub${sfx}`], noEvents: ev0[`noEvents${sfx}`] }
   const { user, setUser, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -244,8 +252,8 @@ export default function EventsPage({ lang = 'en' }) {
 
       {/* ── hero ────────────────────────────────────────────────────── */}
       <div style={styles.hero}>
-        <h1 style={styles.h1}>{t.heading}</h1>
-        <p style={styles.sub}>{t.sub}</p>
+        <E as="h1" style={styles.h1} path={`events.heading${sfx}`} value={evc.heading} />
+        <E as="p" style={styles.sub} path={`events.sub${sfx}`} value={evc.sub} />
       </div>
 
       {/* ── upgrade banner for logged-in but inactive users ────────── */}
@@ -276,7 +284,7 @@ export default function EventsPage({ lang = 'en' }) {
         {!loading && events.length === 0 && (
           <div style={styles.emptyState}>
             <Flower2 size={36} strokeWidth={1.5} color="var(--rose)" />
-            <p style={{ marginTop: 12, color: '#786050', fontSize: 16 }}>{t.noEvents}</p>
+            <E as="p" style={{ marginTop: 12, color: '#786050', fontSize: 16 }} path={`events.noEvents${sfx}`} value={evc.noEvents} />
           </div>
         )}
 
