@@ -2,7 +2,8 @@ import './App.css'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { AuthProvider, useAuth } from './context/AuthContext'
-import { SiteContentProvider } from './context/SiteContentContext'
+import { SiteContentProvider, useContent } from './context/SiteContentContext'
+import { DEFAULT_LAYOUT, normalizeLayout } from './data/landingSections'
 import { useLang } from './hooks/useLang'
 import { useLandingAnimations } from './hooks/useLandingAnimations'
 import GlobalHeader from './components/GlobalHeader'
@@ -34,8 +35,12 @@ import NotFoundPage from './pages/NotFoundPage'
 const SITE_URL = 'https://www.hasmiksclub.am'
 const OG_IMAGE = `${SITE_URL}/og-image.jpg`
 
+const SECTION_COMPONENTS = { hero: Hero, band: Band, community: Community, story: Story, pricing: Pricing, finalCta: FinalCta }
+
 function LandingPage({ lang, setLang }) {
   useLandingAnimations()
+  const content = useContent()
+  const layout = normalizeLayout(content.__layout ?? DEFAULT_LAYOUT)
   const title = lang === 'hy' ? "Hasmik's Club — Կանանց ակումբ Երևանում" : "Hasmik's Club — A Women's Club in Yerevan"
   const description = lang === 'hy'
     ? 'Hasmik\'s Club-ը Երևանի կանանց մշակութային ակումբ է: Դասընթացներ, հանդիպումներ, և ընտանեկան մթնոլորտ:'
@@ -60,12 +65,10 @@ function LandingPage({ lang, setLang }) {
         <meta name="twitter:image" content={OG_IMAGE} />
       </Helmet>
       <GlobalHeader lang={lang} setLang={setLang} />
-      <Hero lang={lang} />
-      <Band lang={lang} />
-      <Community lang={lang} />
-      <Story lang={lang} />
-      <Pricing lang={lang} />
-      <FinalCta lang={lang} />
+      {layout.filter((s) => s.enabled).map((s) => {
+        const Section = SECTION_COMPONENTS[s.id]
+        return Section ? <Section key={s.id} lang={lang} /> : null
+      })}
       <Footer lang={lang} />
     </>
   )
@@ -102,6 +105,9 @@ function AppRoutes() {
           <LandingPage lang={lang} setLang={setLang} />
         </GuestOnlyRoute>
       } />
+      {/* Ungated render of the landing page for the admin Site Editor's live
+          preview iframe (loaded as /preview?preview=1) — never redirects. */}
+      <Route path="/preview" element={<LandingPage lang={lang} setLang={setLang} />} />
       <Route path="/login" element={
         <GuestOnlyRoute>
           <LoginPage lang={lang} />

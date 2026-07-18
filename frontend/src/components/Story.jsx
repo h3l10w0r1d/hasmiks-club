@@ -10,7 +10,7 @@ export default function Story({ lang }) {
   return (
     <section className="story">
       <Reveal as="div" className="story-img">
-        <img src={storyImg} alt="Hasmik outside" />
+        <img src={c.image || storyImg} alt="Hasmik outside" />
         <div className="story-label">
           {hy ? c.labelHy : c.labelEn}
         </div>

@@ -10,7 +10,7 @@ export default function Hero({ lang }) {
   return (
     <section className="hero">
       <div className="hero-img-side">
-        <img src={heroImg} alt="Hasmik" />
+        <img src={c.image || heroImg} alt="Hasmik" />
         <div className="hero-img-overlay"></div>
         <div className="hero-img-pill">
           {hy ? c.pillHy : c.pillEn}

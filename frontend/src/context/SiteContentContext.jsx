@@ -34,11 +34,40 @@ export function applyOverrides(base, overrides) {
   return clone
 }
 
+// When the landing page is embedded in the Site Editor's live preview it loads
+// with ?preview=1. In that mode it does NOT fetch published content; instead it
+// renders whatever draft overrides the editor posts to it via postMessage, so
+// edits appear instantly as you type.
+function isPreviewMode() {
+  try {
+    return new URLSearchParams(window.location.search).get('preview') === '1'
+  } catch {
+    return false
+  }
+}
+
+export const PREVIEW_MSG = 'HC_SITE_PREVIEW'
+export const PREVIEW_READY_MSG = 'HC_SITE_PREVIEW_READY'
+
 export function SiteContentProvider({ children }) {
   const [content, setContent] = useState(defaultContent)
 
   useEffect(() => {
     let alive = true
+
+    if (isPreviewMode()) {
+      const onMessage = (event) => {
+        if (event.origin !== window.location.origin) return
+        if (event.data && event.data.type === PREVIEW_MSG) {
+          setContent(applyOverrides(defaultContent, event.data.overrides || {}))
+        }
+      }
+      window.addEventListener('message', onMessage)
+      // tell the editor we're ready to receive the first draft payload
+      try { window.parent?.postMessage({ type: PREVIEW_READY_MSG }, window.location.origin) } catch { /* noop */ }
+      return () => { window.removeEventListener('message', onMessage) }
+    }
+
     getSiteContent()
       .then((overrides) => {
         if (alive && overrides && Object.keys(overrides).length) {

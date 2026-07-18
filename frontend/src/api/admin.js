@@ -79,9 +79,11 @@ export const adminGetAuditLog         = ()     => client.get('/admin/audit-log')
 export const adminGetSettings         = ()           => client.get('/admin/settings').then(r => r.data)
 export const adminSaveSettings        = (data)       => client.put('/admin/settings', data).then(r => r.data)
 
-// site editor — landing-page copy overrides ({ "dotted.path": value } map)
-export const adminGetSiteContent      = ()           => client.get('/admin/settings/site-content').then(r => r.data)
-export const adminSaveSiteContent     = (overrides)  => client.put('/admin/settings/site-content', overrides).then(r => r.data)
+// site editor — landing-page overrides ({ "dotted.path": value, __layout } map)
+// with a draft copy the editor edits and a published copy the public site serves.
+export const adminGetSiteContent      = (env = 'draft') => client.get('/admin/settings/site-content', { params: { env } }).then(r => r.data)
+export const adminSaveSiteContent     = (overrides)     => client.put('/admin/settings/site-content', overrides).then(r => r.data)
+export const adminPublishSiteContent  = ()              => client.post('/admin/settings/site-content/publish').then(r => r.data)
 
 // roles & permissions
 export const adminGetRoles            = ()           => client.get('/admin/roles').then(r => r.data)

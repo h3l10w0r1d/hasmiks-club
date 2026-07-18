@@ -7,6 +7,7 @@ const t = {
   },
 
   hero: {
+    image: ``,   // overridable cover image URL; empty = bundled default
     pillEn: `"The most important thing I know — women are stronger together."`,
     pillHy: `«Ամենակարևորը, ինչ գիտեմ — կանայք ավելի ուժեղ են միասին»`,
     eyebrowEn: `#1 · 50+ Armenian Women's Club`,
@@ -33,6 +34,7 @@ const t = {
   },
 
   community: {
+    image: ``,   // overridable group photo URL; empty = bundled default
     tagEn: `Our Community`,
     tagHy: `Մեր համայնքը`,
     hEn: `What you get in *the club*.`,
@@ -70,6 +72,7 @@ const t = {
   },
 
   story: {
+    image: ``,   // overridable portrait URL; empty = bundled default
     labelEn: `From Hasmik`,
     labelHy: `Հասմիկից`,
     tagEn: `Our Story`,

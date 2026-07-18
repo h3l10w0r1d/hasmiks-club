@@ -24,7 +24,7 @@ export default function Community({ lang }) {
       </Reveal>
 
       <Reveal as="div" className="community-photo" delay={80}>
-        <img src={communityImg}
+        <img src={c.image || communityImg}
           alt={hy ? "Hasmik's Club-ի անդամները միասին" : "Members of Hasmik's Club together"} />
       </Reveal>
 

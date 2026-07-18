@@ -15,6 +15,7 @@ export const SECTIONS = [
     key: 'hero',
     label: 'Hero',
     fields: [
+      { path: 'hero.image', label: 'Cover image', type: 'image', bilingual: false },
       { path: 'hero.eyebrow', label: 'Eyebrow (small label)', type: 'text', bilingual: true },
       { path: 'hero.h1', label: 'Headline', type: 'textarea', bilingual: true, emphasis: true },
       { path: 'hero.p', label: 'Paragraph', type: 'textarea', bilingual: true, emphasis: true },
@@ -29,6 +30,7 @@ export const SECTIONS = [
     key: 'community',
     label: 'What You Get',
     fields: [
+      { path: 'community.image', label: 'Group photo', type: 'image', bilingual: false },
       { path: 'community.tag', label: 'Section tag', type: 'text', bilingual: true },
       { path: 'community.h', label: 'Heading', type: 'text', bilingual: true, emphasis: true },
       { path: 'community.p1', label: 'Intro paragraph 1', type: 'textarea', bilingual: true },
@@ -45,6 +47,7 @@ export const SECTIONS = [
     key: 'story',
     label: 'Story',
     fields: [
+      { path: 'story.image', label: 'Portrait image', type: 'image', bilingual: false },
       { path: 'story.tag', label: 'Section tag', type: 'text', bilingual: true },
       { path: 'story.label', label: 'Photo caption', type: 'text', bilingual: true },
       { path: 'story.h', label: 'Heading', type: 'text', bilingual: true, emphasis: true },
