@@ -53,6 +53,11 @@ export const EDIT_ACTION_MSG = 'HC_EDIT_ACTION'   // block toolbar action {id, a
 export const EDIT_TEXT_MSG = 'HC_EDIT_TEXT'       // inline text edit {path, value, listIndex?}
 export const EDIT_IMAGE_MSG = 'HC_EDIT_IMAGE'     // image replaced/removed {path, url}
 export const EDIT_FOCUS_MSG = 'HC_EDIT_FOCUS'     // an editable gained focus (for undo snapshots)
+// Grow/shrink one or more parallel string-array overrides in lockstep — used
+// for a block's repeatable paragraphs, or paired arrays like FAQ question/answer
+// and Stats number/label (adding a FAQ row appends '' to both the Q and A arrays
+// at once so they stay the same length and index-aligned).
+export const EDIT_LIST_OP_MSG = 'HC_EDIT_LIST_OP' // {paths: string[], op: 'add' | 'remove', index?}
 
 export function SiteContentProvider({ children }) {
   const [content, setContent] = useState(defaultContent)

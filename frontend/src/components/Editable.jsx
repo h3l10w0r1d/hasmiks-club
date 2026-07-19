@@ -1,8 +1,8 @@
 import { useRef, useEffect, useState } from 'react'
-import { UploadCloud, Trash2, Link2 } from 'lucide-react'
+import { UploadCloud, Trash2, Link2, Plus, X } from 'lucide-react'
 import RichText from './RichText'
 import { adminUploadImage } from '../api/admin'
-import { EDIT_TEXT_MSG, EDIT_IMAGE_MSG, EDIT_FOCUS_MSG } from '../context/SiteContentContext'
+import { EDIT_TEXT_MSG, EDIT_IMAGE_MSG, EDIT_FOCUS_MSG, EDIT_LIST_OP_MSG } from '../context/SiteContentContext'
 
 // True when this document is the Site Editor's editable canvas (/preview?edit=1).
 export const IS_EDIT = (() => {
@@ -11,6 +11,30 @@ export const IS_EDIT = (() => {
 
 function post(msg) {
   try { window.parent?.postMessage(msg, window.location.origin) } catch { /* noop */ }
+}
+
+// A tiny "+ Add <label>" button (edit mode only) that appends an empty entry
+// to one or more parallel string-array overrides (see EDIT_LIST_OP_MSG).
+export function AddItemButton({ paths, label }) {
+  if (!IS_EDIT) return null
+  return (
+    <button type="button" className="hc-add-item"
+      onClick={() => { post({ type: EDIT_FOCUS_MSG }); post({ type: EDIT_LIST_OP_MSG, paths, op: 'add' }) }}>
+      <Plus size={13} /> {label}
+    </button>
+  )
+}
+
+// A small "×" control (edit mode only) that removes one entry (by index) from
+// one or more parallel string-array overrides — the inverse of AddItemButton.
+export function RemoveItemButton({ paths, index }) {
+  if (!IS_EDIT) return null
+  return (
+    <button type="button" className="hc-remove-item" title="Remove"
+      onClick={(e) => { e.stopPropagation(); post({ type: EDIT_FOCUS_MSG }); post({ type: EDIT_LIST_OP_MSG, paths, op: 'remove', index }) }}>
+      <X size={12} />
+    </button>
+  )
 }
 const stripMarkers = (s) => String(s ?? '').replace(/\*\*/g, '').replace(/\*/g, '')
 

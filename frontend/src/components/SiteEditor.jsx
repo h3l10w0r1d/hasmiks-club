@@ -5,11 +5,11 @@ import {
 import defaultContent from '../data/content'
 import {
   AVAILABLE_SECTIONS, DEFAULT_LAYOUT, SECTION_LABEL, normalizeLayout,
-  BLOCK_TEMPLATES, isCustomBlockId, newCustomBlockId,
+  BLOCK_TEMPLATES, BLOCK_SEED, isCustomBlockId, newCustomBlockId,
 } from '../data/landingSections'
 import { adminGetSiteContent, adminSaveSiteContent, adminPublishSiteContent } from '../api/admin'
 import {
-  PREVIEW_MSG, PREVIEW_READY_MSG, EDIT_ACTION_MSG, EDIT_TEXT_MSG, EDIT_IMAGE_MSG, EDIT_FOCUS_MSG,
+  PREVIEW_MSG, PREVIEW_READY_MSG, EDIT_ACTION_MSG, EDIT_TEXT_MSG, EDIT_IMAGE_MSG, EDIT_FOCUS_MSG, EDIT_LIST_OP_MSG,
 } from '../context/SiteContentContext'
 import { moveInOrder, toggleHidden } from '../utils/cardOrder'
 import { Button } from './ui/button'
@@ -133,6 +133,16 @@ export default function SiteEditor({ flash }) {
         else setField(d.path, d.value)
       }
       else if (d.type === EDIT_IMAGE_MSG) setField(d.path, d.url)
+      else if (d.type === EDIT_LIST_OP_MSG) {
+        commit()
+        for (const path of d.paths || []) {
+          const cur = overridesRef.current?.[path] ?? getPath(defaultContent, path)
+          const arr = Array.isArray(cur) ? [...cur] : []
+          if (d.op === 'add') arr.push('')
+          else if (d.op === 'remove' && typeof d.index === 'number') arr.splice(d.index, 1)
+          setRaw(path, arr)
+        }
+      }
       else if (d.type === EDIT_ACTION_MSG) {
         commit()
         if (d.target === 'card') {
@@ -163,7 +173,21 @@ export default function SiteEditor({ flash }) {
   const dirty = JSON.stringify(overrides) !== JSON.stringify(saved)
 
   const addSection = (id) => { commit(); setLayout(layout.map((s) => (s.id === id ? { ...s, enabled: true } : s))); setAddOpen(false) }
-  const addCustomBlock = (type) => { commit(); setLayout([...layout, { id: newCustomBlockId(), enabled: true, type }]); setAddOpen(false) }
+  const addCustomBlock = (type) => {
+    commit()
+    const id = newCustomBlockId()
+    setLayout([...layout, { id, enabled: true, type }])
+    // Seed real starting content (not just a cosmetic placeholder) so Add/Remove
+    // on repeatable fields (paragraphs, stat pairs, FAQ rows) work correctly
+    // from the very first click — see BLOCK_SEED for why.
+    const seed = BLOCK_SEED[type] || {}
+    setOverrides((prev) => {
+      const next = { ...prev }
+      for (const [key, value] of Object.entries(seed)) next[`custom.${id}.${key}`] = value
+      return next
+    })
+    setAddOpen(false)
+  }
   const switchLang = (l) => { setLang(l); try { localStorage.setItem('hasmik_lang', l) } catch { /* noop */ } previewReady.current = false; setReloadKey((k) => k + 1) }
   const switchPage = (key) => { setPage(key); setPageMenuOpen(false); setSeoOpen(false) }
   const currentPageLabel = PAGES.find((p) => p.key === page)?.label ?? 'Landing'

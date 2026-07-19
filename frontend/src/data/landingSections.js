@@ -17,8 +17,43 @@ export const AVAILABLE_SECTIONS = [
 export const BLOCK_TEMPLATES = [
   { type: 'text', label: 'Text Block' },
   { type: 'imageText', label: 'Image + Text' },
+  { type: 'testimonial', label: 'Testimonial' },
+  { type: 'stats', label: 'Stats' },
+  { type: 'faq', label: 'FAQ' },
 ]
 export const BLOCK_TEMPLATE_LABEL = Object.fromEntries(BLOCK_TEMPLATES.map((b) => [b.type, b.label]))
+
+// Initial content written into a block's `custom.<id>.*` overrides the moment
+// it's added (not just shown as a cosmetic placeholder). This matters for the
+// repeatable-array fields (paragraphs, stat pairs, FAQ rows): if "Add" only ever
+// saw a placeholder that was never actually stored, the first click would
+// replace the placeholder with one blank item instead of adding a second one.
+// Seeding real starting content here means Add/Remove always operate on an
+// array that's genuinely there from block #1.
+export const BLOCK_SEED = {
+  text: {
+    headingEn: 'Add a heading', headingHy: 'Ավելացրեք վերնագիր',
+    itemsEn: ['Write your text here…'], itemsHy: ['Գրեք ձեր տեքստը այստեղ…'],
+  },
+  imageText: {
+    headingEn: 'Add a heading', headingHy: 'Ավելացրեք վերնագիր',
+    itemsEn: ['Write your text here…'], itemsHy: ['Գրեք ձեր տեքստը այստեղ…'],
+  },
+  testimonial: {
+    quoteEn: `"A happy member's story goes here."`, quoteHy: '«Երջանիկ անդամի պատմությունը գրեք այստեղ»',
+    nameEn: 'Member name', nameHy: 'Անդամի անուն',
+  },
+  stats: {
+    headingEn: 'Add a heading', headingHy: 'Ավելացրեք վերնագիր',
+    numbersEn: ['100', '100', '100'], numbersHy: ['100', '100', '100'],
+    statLabelsEn: ['Label', 'Label', 'Label'], statLabelsHy: ['Պիտակ', 'Պիտակ', 'Պիտակ'],
+  },
+  faq: {
+    headingEn: 'Add a heading', headingHy: 'Ավելացրեք վերնագիր',
+    questionsEn: ['Question goes here?', 'Question goes here?'], questionsHy: ['Հարցը գրեք այստեղ', 'Հարցը գրեք այստեղ'],
+    answersEn: ['Answer goes here.', 'Answer goes here.'], answersHy: ['Պատասխանը գրեք այստեղ', 'Պատասխանը գրեք այստեղ'],
+  },
+}
 
 export const isCustomBlockId = (id) => typeof id === 'string' && id.startsWith('custom-')
 export const newCustomBlockId = () => `custom-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
@@ -43,7 +78,8 @@ export function normalizeLayout(stored) {
         out.push({ id: item.id, enabled: item.enabled !== false })
         seen.add(item.id)
       } else if (isCustomBlockId(item.id)) {
-        out.push({ id: item.id, enabled: item.enabled !== false, type: item.type === 'imageText' ? 'imageText' : 'text' })
+        const validType = BLOCK_TEMPLATES.some((b) => b.type === item.type) ? item.type : 'text'
+        out.push({ id: item.id, enabled: item.enabled !== false, type: validType })
         seen.add(item.id)
       }
     }

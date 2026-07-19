@@ -1932,3 +1932,29 @@ a.ci-row:hover .ci-value{color:var(--rose)}
 }
 .hc-card-toolbar button:hover { background: rgba(255,255,255,.15); }
 .hc-card-toolbar button:disabled { opacity: .35; cursor: default; }
+
+/* add/remove repeatable items (paragraphs, FAQ rows, stat pairs) */
+.hc-add-item {
+  display: inline-flex; align-items: center; gap: 5px;
+  margin: 8px 0; padding: 6px 12px; border-radius: 999px;
+  border: 1px dashed rgba(126,52,52,0.5); background: rgba(126,52,52,0.04);
+  color: #7E3434; font-size: 12px; font-weight: 600; cursor: pointer;
+  font-family: 'Jost','Noto Sans Armenian',sans-serif;
+}
+.hc-add-item:hover { background: rgba(126,52,52,0.1); }
+.hc-item-row { position: relative; }
+.hc-remove-item {
+  position: absolute; top: -8px; right: -8px; z-index: 40;
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%; border: 0;
+  background: #1c1c1e; color: #fff; cursor: pointer;
+  opacity: 0; transition: opacity .12s;
+}
+.hc-item-row:hover .hc-remove-item { opacity: 1; }
+.hc-remove-item:hover { background: #7E3434; }
+
+/* FAQ block */
+.faq-item { padding: 16px 0; border-bottom: 1px solid var(--sand, #e5d5d5); }
+.faq-item:last-child { border-bottom: none; }
+.faq-q { font-weight: 600; color: var(--deep, #2c1a1a); margin-bottom: 6px; }
+.faq-a { color: var(--taupe, #786050); line-height: 1.7; margin: 0; }
