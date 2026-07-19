@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
   Search, Pin, MessageCircle, X, Image as ImageIcon, Smile,
-  Loader2, SmilePlus, Send, ChevronDown,
+  Loader2, SmilePlus, Send, ChevronDown, Flag,
 } from 'lucide-react'
 import {
-  getTopics, createTopic, getTopic, createPost, react,
+  getTopics, createTopic, getTopic, createPost, react, reportContent,
   uploadForumImage, searchGifs, trendingGifs,
 } from '../api/forum'
 import { cldOptimize } from '../utils/cloudinary'
@@ -45,6 +45,9 @@ const T = (lang) => ({
   subReply:    lang === 'hy' ? 'Բաժանորդագրվեք՝ պատասխանելու համար' : 'Subscribe to reply',
   subscribe:   lang === 'hy' ? 'Բաժանորդագրվել' : 'Subscribe',
   uploading:   lang === 'hy' ? 'Բեռնում...' : 'Uploading…',
+  report:      lang === 'hy' ? 'Բողոքել' : 'Report',
+  reported:    lang === 'hy' ? 'Ուղարկված է' : 'Reported',
+  reportPrompt: lang === 'hy' ? 'Ինչու՞ եք բողոքում (ոչ պարտադիր)' : 'Why are you reporting this? (optional)',
 })
 
 const fmtDate = (d, lang) => new Date(d).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-US', { month: 'short', day: 'numeric' })
@@ -115,6 +118,43 @@ function ReactionBar({ targetType, targetId, reactions = [], isActive, onSubscri
         </div>
       )}
     </div>
+  )
+}
+
+/* ── Report/flag button — lets a member send a target to the moderation queue */
+function ReportButton({ lang, targetType, targetId, isActive, onSubscribe }) {
+  const t = T(lang)
+  const [state, setState] = useState('idle') // idle | prompting | sent
+  const [reason, setReason] = useState('')
+
+  if (state === 'sent') {
+    return <span style={{ fontSize: 12, color: '#aaa', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Flag size={13} /> {t.reported}</span>
+  }
+
+  const submit = async () => {
+    try { await reportContent(targetType, targetId, reason.trim() || null) } catch { /* ignore */ }
+    setState('sent')
+  }
+
+  if (state === 'prompting') {
+    return (
+      <div onClick={e => e.stopPropagation()} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <input autoFocus value={reason} onChange={e => setReason(e.target.value)} placeholder={t.reportPrompt}
+          style={{ fontSize: 12, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--sand)', width: 180 }}
+          onKeyDown={e => { if (e.key === 'Enter') submit() }} />
+        <button onClick={submit} style={{ background: 'none', border: 'none', color: 'var(--rose)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{t.report}</button>
+      </div>
+    )
+  }
+
+  return (
+    <button
+      onClick={e => { e.stopPropagation(); isActive ? setState('prompting') : onSubscribe?.() }}
+      title={t.report}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: 'none', border: 'none', color: '#c9bdb7', fontSize: 12, cursor: 'pointer' }}
+    >
+      <Flag size={13} />
+    </button>
   )
 }
 
@@ -390,6 +430,7 @@ export default function ForumTab({ lang = 'en', isActive, onSubscribe, checkoutL
                   <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12.5, color: '#a89e98', fontWeight: 600 }}>
                     <MessageCircle size={14} /> {topic.post_count} {t.replies}
                   </span>
+                  <ReportButton lang={lang} targetType="topic" targetId={topic.id} isActive={isActive} onSubscribe={onSubscribe} />
                 </div>
               </div>
             </div>
@@ -416,9 +457,10 @@ export default function ForumTab({ lang = 'en', isActive, onSubscribe, checkoutL
             </div>
             <p style={{ fontSize: 15, color: '#493f3a', lineHeight: 1.7, margin: '0 0 16px', whiteSpace: 'pre-wrap' }}>{openTopic.body}</p>
             {openTopic.image_url && <img src={cldOptimize(openTopic.image_url, { width: 900 })} alt="" style={{ maxWidth: '100%', borderRadius: 12, marginBottom: 16, display: 'block' }} />}
-            <div style={{ paddingBottom: 18, borderBottom: '1px solid var(--sand)', marginBottom: 20 }}>
+            <div style={{ paddingBottom: 18, borderBottom: '1px solid var(--sand)', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
               <ReactionBar targetType="topic" targetId={openTopic.id} reactions={openTopic.reactions} isActive={isActive} onSubscribe={onSubscribe}
                 onUpdate={(r) => { setOpenTopic(tp => ({ ...tp, reactions: r })); applyTopicReactions(openTopic.id, r) }} />
+              <ReportButton lang={lang} targetType="topic" targetId={openTopic.id} isActive={isActive} onSubscribe={onSubscribe} />
             </div>
 
             {/* posts */}
@@ -431,8 +473,11 @@ export default function ForumTab({ lang = 'en', isActive, onSubscribe, checkoutL
                   </div>
                   {post.body && <p style={{ fontSize: 14.5, color: '#493f3a', lineHeight: 1.6, margin: '0 0 8px', whiteSpace: 'pre-wrap' }}>{post.body}</p>}
                   {post.image_url && <img src={cldOptimize(post.image_url, { width: 700 })} alt="" style={{ maxHeight: 220, maxWidth: '100%', borderRadius: 10, marginBottom: 8, display: 'block' }} />}
-                  <ReactionBar targetType="post" targetId={post.id} reactions={post.reactions} isActive={isActive} onSubscribe={onSubscribe}
-                    onUpdate={(r) => setOpenTopic(tp => ({ ...tp, posts: tp.posts.map(p => p.id === post.id ? { ...p, reactions: r } : p) }))} />
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                    <ReactionBar targetType="post" targetId={post.id} reactions={post.reactions} isActive={isActive} onSubscribe={onSubscribe}
+                      onUpdate={(r) => setOpenTopic(tp => ({ ...tp, posts: tp.posts.map(p => p.id === post.id ? { ...p, reactions: r } : p) }))} />
+                    <ReportButton lang={lang} targetType="post" targetId={post.id} isActive={isActive} onSubscribe={onSubscribe} />
+                  </div>
                 </div>
               </div>
             ))}

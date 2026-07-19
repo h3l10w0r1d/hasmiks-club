@@ -1,7 +1,7 @@
 import client from './client'
 
 // members
-export const adminGetMembers          = ()           => client.get('/admin/members').then(r => r.data)
+export const adminGetMembers          = (q)          => client.get('/admin/members', { params: q ? { q } : {} }).then(r => r.data)
 export const adminGetMemberDetail     = (id)         => client.get(`/admin/members/${id}/detail`).then(r => r.data)
 export const adminInviteToEvent       = (id, eventId) => client.post(`/admin/members/${id}/invite-to-event`, { event_id: eventId }).then(r => r.data)
 export const adminUpdateMember        = (id, data)   => client.patch(`/admin/members/${id}`, data).then(r => r.data)
@@ -18,7 +18,7 @@ export const adminDeclineApplication  = (id)         => client.post(`/admin/appl
 export const adminGetReferrals        = ()           => client.get('/admin/referrals').then(r => r.data)
 
 // events
-export const adminGetEvents           = ()           => client.get('/admin/events').then(r => r.data)
+export const adminGetEvents           = (q)          => client.get('/admin/events', { params: q ? { q } : {} }).then(r => r.data)
 export const adminGetEventAttendees   = (id)         => client.get(`/admin/events/${id}/attendees`).then(r => r.data)
 export const adminCreateEvent         = (data)       => client.post('/admin/events', data).then(r => r.data)
 export const adminUpdateEvent         = (id, data)   => client.patch(`/admin/events/${id}`, data).then(r => r.data)
@@ -68,6 +68,11 @@ export const adminGetAnalytics        = ()     => client.get('/admin/analytics')
 
 // broadcast
 export const adminBroadcast           = (data) => client.post('/admin/broadcast', data).then(r => r.data)
+
+// forum moderation
+export const adminGetForumReports     = (status = 'pending') => client.get('/forum/reports', { params: { status } }).then(r => r.data)
+export const adminResolveForumReport  = (id, deleteTarget)   => client.post(`/forum/reports/${id}/resolve`, null, { params: { delete_target: !!deleteTarget } }).then(r => r.data)
+export const adminDismissForumReport  = (id)                 => client.post(`/forum/reports/${id}/dismiss`).then(r => r.data)
 
 // csv export
 export const adminExportCsv           = ()     => client.get('/admin/members/export', { responseType: 'blob' }).then(r => r.data)

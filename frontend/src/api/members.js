@@ -4,7 +4,10 @@ export const getMe = () => client.get('/members/me').then((r) => r.data)
 
 export const updateMe = (data) => client.patch('/members/me', data).then((r) => r.data)
 
-export const getMemberDirectory = () => client.get('/members/directory').then(r => r.data)
+export const exportMyData = () => client.get('/members/me/export', { responseType: 'blob' }).then((r) => r.data)
+export const deleteMyAccount = () => client.delete('/members/me').then((r) => r.data)
+
+export const getMemberDirectory = (q) => client.get('/members/directory', { params: q ? { q } : {} }).then(r => r.data)
 export const getGallery = () => client.get('/gallery').then(r => r.data)
 export const getAlbum = (id) => client.get(`/gallery/${id}`).then(r => r.data)
 

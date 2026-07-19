@@ -18,6 +18,10 @@ export const pinTopic     = (id)            => client.patch(`/forum/${id}/pin`)
 export const react        = (targetType, targetId, emoji) =>
   client.post(`/forum/${targetType}/${targetId}/react`, { emoji }).then(r => r.data)
 
+// moderation
+export const reportContent = (targetType, targetId, reason) =>
+  client.post(`/forum/${targetType}/${targetId}/report`, { reason }).then(r => r.data)
+
 // attachments
 export const uploadForumImage = (file) => {
   const fd = new FormData()

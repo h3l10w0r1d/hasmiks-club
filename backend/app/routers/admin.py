@@ -74,8 +74,12 @@ def _content_out(item: ContentItem, unlocked: bool = False) -> ContentOut:
 # ── members ───────────────────────────────────────────────────────────────────
 
 @router.get("/members", response_model=List[UserOut])
-def list_members(db: Session = Depends(get_db), _: User = Depends(require_permission('manage_members'))):
-    return db.query(User).order_by(User.joined_at.desc()).all()
+def list_members(q: Optional[str] = None, db: Session = Depends(get_db), _: User = Depends(require_permission('manage_members'))):
+    query = db.query(User).order_by(User.joined_at.desc())
+    if q and q.strip():
+        like = f"%{q.strip()}%"
+        query = query.filter(User.full_name.ilike(like) | User.email.ilike(like))
+    return query.all()
 
 
 @router.get("/members/export")
@@ -369,8 +373,12 @@ async def upload_image(file: UploadFile = File(...), admin: User = Depends(get_c
 # ── events ────────────────────────────────────────────────────────────────────
 
 @router.get("/events", response_model=List[EventOut])
-def list_events(db: Session = Depends(get_db), _: User = Depends(require_permission('manage_events'))):
-    return [_event_out(e) for e in db.query(Event).order_by(Event.event_date.desc()).all()]
+def list_events(q: Optional[str] = None, db: Session = Depends(get_db), _: User = Depends(require_permission('manage_events'))):
+    query = db.query(Event).order_by(Event.event_date.desc())
+    if q and q.strip():
+        like = f"%{q.strip()}%"
+        query = query.filter(Event.title.ilike(like) | Event.location.ilike(like))
+    return [_event_out(e) for e in query.all()]
 
 
 class AttendeeOut(BaseModel):

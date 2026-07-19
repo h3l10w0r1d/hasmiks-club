@@ -15,10 +15,11 @@ import 'yet-another-react-lightbox/styles.css'
 import 'yet-another-react-lightbox/plugins/captions.css'
 import 'yet-another-react-lightbox/plugins/thumbnails.css'
 import { useAuth } from '../context/AuthContext'
-import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum, addProfilePhoto, deleteProfilePhoto, getMemberProfile, unlinkTelegram } from '../api/members'
+import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum, addProfilePhoto, deleteProfilePhoto, getMemberProfile, unlinkTelegram, exportMyData, deleteMyAccount } from '../api/members'
 import { getEvents, rsvp, cancelRsvp, joinWaitlist, leaveWaitlist, getWaitlistPosition, memberGuestTicketCheckout } from '../api/events'
 import { getLibrary } from '../api/content'
 import { getMemberSettings, createCheckout, cancelAutoRenew } from '../api/payments'
+import { getNotificationPreferences, updateNotificationPreferences } from '../api/notifications'
 import { refreshToken as apiRefresh } from '../api/auth'
 import { sanitizeHtml, stripHtml } from '../utils/sanitizeHtml'
 import NotificationBell from '../components/NotificationBell'
@@ -103,6 +104,15 @@ function groupEventsByDate(events, lang) {
   return groups
 }
 
+// Mirrors backend NOTIFICATION_TYPES (app/routers/notifications.py) — every
+// value ever passed as Notification.type.
+const NOTIF_TYPES = [
+  { key: 'rsvp',     en: 'Event RSVPs',      hy: 'Միջոցառումների հաստատումներ' },
+  { key: 'waitlist', en: 'Waitlist',         hy: 'Սպասման ցուցակ' },
+  { key: 'content',  en: 'New content',      hy: 'Նոր բովանդակություն' },
+  { key: 'system',   en: 'Account & system', hy: 'Հաշիվ և համակարգ' },
+]
+
 export default function DashboardPage({ lang, setLang }) {
   const { user, setUser, signOut } = useAuth()
   const navigate = useNavigate()
@@ -124,6 +134,8 @@ export default function DashboardPage({ lang, setLang }) {
   const [librarySearch, setLibrarySearch] = useState('')
   const [libraryType, setLibraryType] = useState('all')
   const [directory, setDirectory] = useState([])
+  const [directorySearch, setDirectorySearch] = useState('')
+  const [directorySearchResults, setDirectorySearchResults] = useState(null) // null = not searching, use full `directory`
   const [waitlistPositions, setWaitlistPositions] = useState({}) // eventId -> {on_waitlist, position}
   const [profileForm, setProfileForm] = useState({ full_name: '', photo_url: '', show_in_directory: true, bio: '', facebook_url: '', telegram_username: '', phone: '', whatsapp: '' })
   const [profilePhotos, setProfilePhotos] = useState([])
@@ -287,6 +299,17 @@ export default function DashboardPage({ lang, setLang }) {
     if (tab === 'community') getMemberDirectory().then(setDirectory).catch(() => {})
     // forum data is loaded inside the ForumTab component
   }, [tab])
+
+  // Debounced member-directory search — keeps `directory` itself untouched
+  // (it also backs the "Club" stat card on the home tab) and only swaps in
+  // search results while the query box has text.
+  useEffect(() => {
+    if (!directorySearch.trim()) { setDirectorySearchResults(null); return }
+    const id = setTimeout(() => {
+      getMemberDirectory(directorySearch.trim()).then(setDirectorySearchResults).catch(() => {})
+    }, 300)
+    return () => clearTimeout(id)
+  }, [directorySearch])
 
   // Auto-save the profile form: debounce edits, skip the initial fetch-populated value.
   useEffect(() => {
@@ -465,6 +488,61 @@ export default function DashboardPage({ lang, setLang }) {
   }
 
   const handleSignOut = () => { signOut(); navigate('/') }
+
+  const [notifPrefs, setNotifPrefs] = useState(null)
+  useEffect(() => {
+    if (tab === 'profile' && notifPrefs === null) {
+      getNotificationPreferences().then(setNotifPrefs).catch(() => {})
+    }
+  }, [tab, notifPrefs])
+  const toggleNotifPref = (type, channel) => {
+    if (!notifPrefs) return
+    const next = { ...notifPrefs, [type]: { ...notifPrefs[type], [channel]: !notifPrefs[type][channel] } }
+    setNotifPrefs(next)
+    updateNotificationPreferences(next).catch(() => setNotifPrefs(notifPrefs)) // revert on failure
+  }
+
+  const [exportingData, setExportingData] = useState(false)
+  const handleExportData = async () => {
+    setExportingData(true)
+    try {
+      const blob = await exportMyData()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url; a.download = `my-data-${new Date().toISOString().slice(0, 10)}.json`; a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      setMsg(lang === 'hy' ? 'Չհաջողվեց ներբեռնել տվյալները' : 'Could not download your data')
+      setTimeout(() => setMsg(''), 3000)
+    } finally {
+      setExportingData(false)
+    }
+  }
+
+  const [deletingAccount, setDeletingAccount] = useState(false)
+  const confirmDeleteAccount = () => {
+    setConfirmDialog({
+      title: lang === 'hy' ? 'Ջնջե՞լ հաշիվը' : 'Delete your account?',
+      body: lang === 'hy'
+        ? 'Ձեր անձնական տվյալները (անուն, էլ. փոստ, լուսանկարներ, կոնտակտներ) կհեռացվեն ընդմիշտ, և դուք կդուրս գաք համակարգից: Այս գործողությունը հնարավոր չէ հետարկել:'
+        : 'Your personal details (name, email, photos, contact info) are permanently removed and you\'ll be signed out. This cannot be undone.',
+      confirmLabel: lang === 'hy' ? 'Ջնջել հաշիվը' : 'Delete my account',
+      danger: true,
+      onConfirm: async () => {
+        setDeletingAccount(true)
+        try {
+          await deleteMyAccount()
+          signOut()
+          navigate('/')
+        } catch {
+          setMsg(lang === 'hy' ? 'Չհաջողվեց ջնջել հաշիվը' : 'Could not delete your account')
+          setTimeout(() => setMsg(''), 3000)
+        } finally {
+          setDeletingAccount(false)
+        }
+      },
+    })
+  }
 
   const handleSubscribe = async () => {
     setCheckoutLoading(true)
@@ -973,15 +1051,25 @@ export default function DashboardPage({ lang, setLang }) {
                           {new Date(user.next_billing_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB')}
                         </p>
                       )}
-                      <button
-                        onClick={handleCancelAutoRenew}
-                        disabled={cancelRenewLoading}
-                        style={{ background: 'none', border: '1px solid #ddd', borderRadius: 8, padding: '7px 14px', cursor: cancelRenewLoading ? 'default' : 'pointer', fontSize: 12.5, color: '#888', opacity: cancelRenewLoading ? 0.6 : 1 }}
-                      >
-                        {cancelRenewLoading
-                          ? (lang === 'hy' ? 'Անջատվում է…' : 'Turning off…')
-                          : (lang === 'hy' ? 'Անջատել ինքնավերականգնումը' : 'Turn off auto-renew')}
-                      </button>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        <button
+                          onClick={handleSubscribe}
+                          disabled={checkoutLoading}
+                          title={lang === 'hy' ? 'Կվերաձևակերպի ընթացիկ ժամանակաշրջանը նոր քարտով' : 'Renews the current period now on a new card'}
+                          style={{ background: 'none', border: '1px solid var(--rose)', borderRadius: 8, padding: '7px 14px', cursor: checkoutLoading ? 'default' : 'pointer', fontSize: 12.5, color: 'var(--rose)', opacity: checkoutLoading ? 0.6 : 1 }}
+                        >
+                          {checkoutLoading ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…') : (lang === 'hy' ? 'Թարմացնել քարտը' : 'Update card')}
+                        </button>
+                        <button
+                          onClick={handleCancelAutoRenew}
+                          disabled={cancelRenewLoading}
+                          style={{ background: 'none', border: '1px solid #ddd', borderRadius: 8, padding: '7px 14px', cursor: cancelRenewLoading ? 'default' : 'pointer', fontSize: 12.5, color: '#888', opacity: cancelRenewLoading ? 0.6 : 1 }}
+                        >
+                          {cancelRenewLoading
+                            ? (lang === 'hy' ? 'Անջատվում է…' : 'Turning off…')
+                            : (lang === 'hy' ? 'Անջատել ինքնավերականգնումը' : 'Turn off auto-renew')}
+                        </button>
+                      </div>
                     </>
                   ) : (
                     <>
@@ -1130,6 +1218,52 @@ export default function DashboardPage({ lang, setLang }) {
                       )}
                     </div>
                     <input ref={galleryInputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleGalleryAdd} />
+                  </div>
+
+                  <div className="profile-card">
+                    <p className="profile-card-title">{lang === 'hy' ? 'Ծանուցումներ' : 'Notifications'}</p>
+                    <p style={{ fontSize: 12, color: '#aaa', marginTop: -10, marginBottom: 14 }}>
+                      {lang === 'hy' ? 'Ընտրեք, թե ինչի մասին եք ուզում ստանալ ծանուցում, և ինչպես:' : 'Choose what you get notified about, and how.'}
+                    </p>
+                    {!notifPrefs ? (
+                      <p style={{ fontSize: 12.5, color: '#aaa' }}>{lang === 'hy' ? 'Բեռնվում է…' : 'Loading…'}</p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 70px 70px', gap: 8, fontSize: 11, color: '#aaa', fontWeight: 700, textTransform: 'uppercase' }}>
+                          <span />
+                          <span style={{ textAlign: 'center' }}>{lang === 'hy' ? 'Հավելված' : 'In-app'}</span>
+                          <span style={{ textAlign: 'center' }}>{lang === 'hy' ? 'Push' : 'Push'}</span>
+                        </div>
+                        {NOTIF_TYPES.map(nt => (
+                          <div key={nt.key} style={{ display: 'grid', gridTemplateColumns: '1fr 70px 70px', gap: 8, alignItems: 'center' }}>
+                            <span style={{ fontSize: 13.5, color: 'var(--deep)' }}>{lang === 'hy' ? nt.hy : nt.en}</span>
+                            <span style={{ textAlign: 'center' }}>
+                              <input type="checkbox" checked={notifPrefs[nt.key]?.in_app ?? true} onChange={() => toggleNotifPref(nt.key, 'in_app')} />
+                            </span>
+                            <span style={{ textAlign: 'center' }}>
+                              <input type="checkbox" checked={notifPrefs[nt.key]?.push ?? true} onChange={() => toggleNotifPref(nt.key, 'push')} />
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="profile-card">
+                    <p className="profile-card-title">{lang === 'hy' ? 'Իմ տվյալները' : 'My data'}</p>
+                    <p style={{ fontSize: 12, color: '#aaa', marginTop: -10, marginBottom: 14 }}>
+                      {lang === 'hy' ? 'Ներբեռնեք ձեր տվյալների պատճենը կամ ընդմիշտ ջնջեք ձեր հաշիվը:' : 'Download a copy of your data, or permanently delete your account.'}
+                    </p>
+                    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                      <button type="button" onClick={handleExportData} disabled={exportingData}
+                        style={{ background: 'none', border: '1px solid var(--sand)', borderRadius: 8, padding: '8px 16px', cursor: exportingData ? 'default' : 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--deep)', opacity: exportingData ? 0.6 : 1 }}>
+                        {exportingData ? (lang === 'hy' ? 'Ներբեռնվում է…' : 'Downloading…') : (lang === 'hy' ? 'Ներբեռնել իմ տվյալները' : 'Download my data')}
+                      </button>
+                      <button type="button" onClick={confirmDeleteAccount} disabled={deletingAccount}
+                        style={{ background: 'none', border: '1px solid #e0a0a8', borderRadius: 8, padding: '8px 16px', cursor: deletingAccount ? 'default' : 'pointer', fontSize: 13, fontWeight: 600, color: '#c0394b', opacity: deletingAccount ? 0.6 : 1 }}>
+                        {deletingAccount ? (lang === 'hy' ? 'Ջնջվում է…' : 'Deleting…') : (lang === 'hy' ? 'Ջնջել իմ հաշիվը' : 'Delete my account')}
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1369,14 +1503,25 @@ export default function DashboardPage({ lang, setLang }) {
           {tab === 'community' && (
             <div className="dash-section">
               <h2 className="dash-section-title">{lang === 'hy' ? 'Մեր Անդամները' : 'Our Members'}</h2>
-              <p style={{ color: '#888', fontSize: 14, marginBottom: 28 }}>
+              <p style={{ color: '#888', fontSize: 14, marginBottom: 20 }}>
                 {lang === 'hy' ? 'Ծանոթացեք Hasmik\'s Club-ի ակտիվ անդամների հետ' : "Meet the active members of Hasmik's Club"}
               </p>
-              {directory.length === 0
-                ? <p className="dash-empty">{t.noMembers}</p>
+              {directory.length > 0 && (
+                <div style={{ position: 'relative', maxWidth: 320, marginBottom: 24 }}>
+                  <Search size={16} color="#bbb" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
+                  <input
+                    value={directorySearch}
+                    onChange={e => setDirectorySearch(e.target.value)}
+                    placeholder={lang === 'hy' ? 'Որոնել անդամի' : 'Search members…'}
+                    style={{ width: '100%', boxSizing: 'border-box', padding: '9px 12px 9px 36px', borderRadius: 10, border: '1px solid var(--sand)', fontSize: 14 }}
+                  />
+                </div>
+              )}
+              {(directorySearchResults ?? directory).length === 0
+                ? <p className="dash-empty">{directorySearchResults ? (lang === 'hy' ? 'Անդամ չի գտնվել' : 'No matching members') : t.noMembers}</p>
                 : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 20 }}>
-                    {directory.map(m => (
+                    {(directorySearchResults ?? directory).map(m => (
                       <div key={m.id}
                         onClick={() => setSelectedMember(m)}
                         style={{ textAlign: 'center', background: '#fff', borderRadius: 14, padding: '24px 16px', boxShadow: '0 2px 10px rgba(192,57,75,.07)', cursor: 'pointer', transition: 'transform 0.15s, box-shadow 0.15s' }}

@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from app.core.deps import get_current_user, get_current_active_member, require_permission
 from app.core.config import settings
 from app.database import get_db
-from app.models.forum import ForumTopic, ForumPost, ForumReaction
+from app.models.forum import ForumTopic, ForumPost, ForumReaction, ForumReport
 from app.models.user import User
 
 router = APIRouter(prefix="/forum", tags=["forum"])
@@ -185,6 +185,135 @@ def create_topic(body: TopicIn, db: Session = Depends(get_db),
     db.commit()
     db.refresh(topic)
     return _serialize_topic(topic, [])
+
+# ── moderation: reports ───────────────────────────────────────────────────────
+# Declared before the "/{topic_id}" catch-all below so literal paths like
+# "/reports" don't get swallowed by it (FastAPI matches routes in declaration
+# order; a bare "{topic_id}" path param structurally matches ANY single
+# segment, then 422s on int coercion instead of falling through).
+
+class ReportIn(BaseModel):
+    reason: Optional[str] = None
+
+class ReportOut(BaseModel):
+    id: int
+    target_type: str
+    target_id: int
+    reason: Optional[str] = None
+    status: str
+    created_at: datetime
+    reporter: AuthorOut
+    target_title: Optional[str] = None   # topic title, or the parent topic's title for a post
+    target_body: str                     # snippet of the reported content itself
+    target_author: Optional[AuthorOut] = None
+    target_exists: bool                  # false if the content was since hard-removed some other way
+
+
+def _report_target_preview(db: Session, target_type: str, target_id: int):
+    if target_type == "topic":
+        t = db.query(ForumTopic).filter(ForumTopic.id == target_id).first()
+        if not t:
+            return None, "", None, False
+        return t.title, t.body[:200], t.author, True
+    post = db.query(ForumPost).filter(ForumPost.id == target_id).first()
+    if not post:
+        return None, "", None, False
+    topic = db.query(ForumTopic).filter(ForumTopic.id == post.topic_id).first()
+    return (topic.title if topic else None), post.body[:200], post.author, True
+
+
+@router.post("/{target_type}/{target_id}/report", response_model=ReportOut, status_code=201)
+def report_target(target_type: str, target_id: int, payload: ReportIn,
+                  db: Session = Depends(get_db),
+                  user: User = Depends(get_current_active_member)):
+    if target_type not in ("topic", "post"):
+        raise HTTPException(400, "target_type must be 'topic' or 'post'")
+    if target_type == "topic":
+        _topic_or_404(db, target_id)
+    else:
+        exists = db.query(ForumPost).filter(ForumPost.id == target_id, ForumPost.is_deleted == False).first()
+        if not exists:
+            raise HTTPException(404, "Post not found")
+
+    existing = db.query(ForumReport).filter(
+        ForumReport.reporter_id == user.id, ForumReport.target_type == target_type,
+        ForumReport.target_id == target_id, ForumReport.status == "pending",
+    ).first()
+    report = existing or ForumReport(reporter_id=user.id, target_type=target_type, target_id=target_id)
+    report.reason = (payload.reason or "").strip()[:500] or report.reason
+    if not existing:
+        db.add(report)
+    db.commit()
+    db.refresh(report)
+
+    title, body, author, exists_flag = _report_target_preview(db, target_type, target_id)
+    return ReportOut(
+        id=report.id, target_type=report.target_type, target_id=report.target_id,
+        reason=report.reason, status=report.status, created_at=report.created_at,
+        reporter=AuthorOut.model_validate(user), target_title=title, target_body=body,
+        target_author=AuthorOut.model_validate(author) if author else None, target_exists=exists_flag,
+    )
+
+
+@router.get("/reports", response_model=List[ReportOut])
+def list_reports(status: str = "pending", db: Session = Depends(get_db),
+                 _: User = Depends(require_permission('manage_members'))):
+    if status not in ("pending", "resolved", "dismissed", "all"):
+        raise HTTPException(400, "Invalid status filter")
+    query = db.query(ForumReport)
+    if status != "all":
+        query = query.filter(ForumReport.status == status)
+    reports = query.order_by(ForumReport.created_at.desc()).all()
+
+    out = []
+    for r in reports:
+        title, body, author, exists_flag = _report_target_preview(db, r.target_type, r.target_id)
+        out.append(ReportOut(
+            id=r.id, target_type=r.target_type, target_id=r.target_id, reason=r.reason,
+            status=r.status, created_at=r.created_at, reporter=AuthorOut.model_validate(r.reporter),
+            target_title=title, target_body=body,
+            target_author=AuthorOut.model_validate(author) if author else None, target_exists=exists_flag,
+        ))
+    return out
+
+
+@router.post("/reports/{report_id}/resolve", status_code=204)
+def resolve_report(report_id: int, delete_target: bool = False,
+                   db: Session = Depends(get_db),
+                   admin: User = Depends(require_permission('manage_members'))):
+    """Mark a report resolved. Optionally also soft-deletes the reported
+    content in the same action (?delete_target=true)."""
+    report = db.query(ForumReport).filter(ForumReport.id == report_id).first()
+    if not report:
+        raise HTTPException(404, "Report not found")
+    if delete_target:
+        if report.target_type == "topic":
+            t = db.query(ForumTopic).filter(ForumTopic.id == report.target_id).first()
+            if t:
+                t.is_deleted = True
+        else:
+            p = db.query(ForumPost).filter(ForumPost.id == report.target_id).first()
+            if p:
+                p.is_deleted = True
+                topic = db.query(ForumTopic).filter(ForumTopic.id == p.topic_id).first()
+                if topic:
+                    topic.post_count = max(0, (topic.post_count or 1) - 1)
+    report.status = "resolved"
+    report.resolved_at = datetime.now(timezone.utc)
+    report.resolved_by_id = admin.id
+    db.commit()
+
+
+@router.post("/reports/{report_id}/dismiss", status_code=204)
+def dismiss_report(report_id: int, db: Session = Depends(get_db),
+                   admin: User = Depends(require_permission('manage_members'))):
+    report = db.query(ForumReport).filter(ForumReport.id == report_id).first()
+    if not report:
+        raise HTTPException(404, "Report not found")
+    report.status = "dismissed"
+    report.resolved_at = datetime.now(timezone.utc)
+    report.resolved_by_id = admin.id
+    db.commit()
 
 
 @router.get("/{topic_id}", response_model=TopicDetail)

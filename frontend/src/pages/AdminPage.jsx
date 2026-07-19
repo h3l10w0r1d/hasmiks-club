@@ -9,7 +9,7 @@ import {
   SendHorizonal, StickyNote, Filter, UserCheck,
   Inbox, GalleryHorizontal, Settings2, Trophy, Link2, Plus, Trash2, ExternalLink,
   Shield, MapPin, Pencil, Unlock, CreditCard, RotateCcw, Ban, ScrollText, Crop,
-  Ticket, QrCode, BadgeCheck, Menu, X, Gift, Eye, PanelsTopLeft,
+  Ticket, QrCode, BadgeCheck, Menu, X, Gift, Eye, PanelsTopLeft, Flag,
 } from 'lucide-react'
 
 import { Button }       from '../components/ui/button'
@@ -52,6 +52,7 @@ import {
   adminGetPayments, adminRefreshPayment, adminRefundPayment, adminCancelPayment, adminGetPaymentLogs,
   adminGetGuestTickets, adminGetGuestTicketLogs,
   adminGetGiftCards, adminResendGiftCard,
+  adminGetForumReports, adminResolveForumReport, adminDismissForumReport,
 } from '../api/admin'
 
 // ── permissions ───────────────────────────────────────────────────────────────
@@ -102,6 +103,7 @@ const TABS = [
   { key: 'site_editor',  icon: PanelsTopLeft,     label: 'Site Editor'  },
   { key: 'content',      icon: BookOpen,          label: 'Content'      },
   { key: 'gallery',      icon: GalleryHorizontal, label: 'Gallery'      },
+  { key: 'moderation',   icon: Flag,              label: 'Moderation'   },
   { key: 'analytics',    icon: BarChart3,         label: 'Analytics'    },
   { key: 'payments',     icon: CreditCard,        label: 'Payments'     },
   { key: 'one_timers',   icon: Ticket,            label: 'One-Timers'   },
@@ -114,7 +116,7 @@ const TABS = [
 const TAB_GROUPS = [
   { label: 'OVERVIEW', keys: ['today'] },
   { label: 'PEOPLE',   keys: ['members', 'applications', 'roles'] },
-  { label: 'CONTENT',  keys: ['events', 'site_editor', 'content', 'gallery'] },
+  { label: 'CONTENT',  keys: ['events', 'site_editor', 'content', 'gallery', 'moderation'] },
   { label: 'INSIGHTS', keys: ['analytics', 'payments', 'one_timers', 'gift_cards'] },
   { label: 'OUTREACH', keys: ['broadcast'] },
   { label: 'CONFIG',   keys: ['audit', 'settings'] },
@@ -128,6 +130,7 @@ const TAB_PERMISSION_MAP = {
   site_editor:  'manage_settings',
   content:      'manage_content',
   gallery:      'manage_gallery',
+  moderation:   'manage_members',
   analytics:    'view_analytics',
   payments:     'manage_payments',
   one_timers:   'manage_events',
@@ -240,8 +243,29 @@ export default function AdminPage() {
   const [loading,   setLoading]   = useState({})
 
   const [memberSearch,   setMemberSearch]  = useState('')
+  const [memberSearchResults, setMemberSearchResults] = useState(null) // null = not searching, use full `members`
   const [eventFilter,    setEventFilter]   = useState('all')   // all | upcoming | past
+  const [eventSearch,    setEventSearch]   = useState('')
+  const [eventSearchResults, setEventSearchResults] = useState(null)   // null = not searching, use full `events`
   const [contentFilter,  setContentFilter] = useState('all')   // all | recipe | ebook
+
+  // Real (server-side) search — debounced, falls back to the already-loaded
+  // full list when the query is empty so KPI counts stay accurate.
+  useEffect(() => {
+    if (!memberSearch.trim()) { setMemberSearchResults(null); return }
+    const id = setTimeout(() => {
+      adminGetMembers(memberSearch.trim()).then(setMemberSearchResults).catch(() => {})
+    }, 300)
+    return () => clearTimeout(id)
+  }, [memberSearch])
+
+  useEffect(() => {
+    if (!eventSearch.trim()) { setEventSearchResults(null); return }
+    const id = setTimeout(() => {
+      adminGetEvents(eventSearch.trim()).then(setEventSearchResults).catch(() => {})
+    }, 300)
+    return () => clearTimeout(id)
+  }, [eventSearch])
 
   const [applications, setApplications] = useState([])
   const [albums,       setAlbums]       = useState([])
@@ -290,6 +314,10 @@ export default function AdminPage() {
   const [giftCardTypeFilter,   setGiftCardTypeFilter]   = useState('all')
   const [resendingGiftId,  setResendingGiftId]  = useState(null)
 
+  const [reports,          setReports]          = useState([])
+  const [reportStatusFilter, setReportStatusFilter] = useState('pending')
+  const [reportActionId,   setReportActionId]   = useState(null)
+
   const flash = (msg, isErr = false) => {
     setToast({ msg, type: isErr ? 'error' : 'success' })
     setTimeout(() => setToast(null), 3200)
@@ -316,6 +344,7 @@ export default function AdminPage() {
   useEffect(() => { if (tab === 'payments')     load('payments')     }, [tab])
   useEffect(() => { if (tab === 'one_timers')   load('one_timers')   }, [tab])
   useEffect(() => { if (tab === 'gift_cards')   load('gift_cards')   }, [tab])
+  useEffect(() => { if (tab === 'moderation')   load('moderation')   }, [tab, reportStatusFilter])
 
   const load = async (t) => {
     setLoad(t, true)
@@ -331,6 +360,7 @@ export default function AdminPage() {
       if (t === 'payments')     setPayments(await adminGetPayments())
       if (t === 'one_timers')   setGuestTickets(await adminGetGuestTickets())
       if (t === 'gift_cards')  setGiftCards(await adminGetGiftCards())
+      if (t === 'moderation')  setReports(await adminGetForumReports(reportStatusFilter))
       if (t === 'settings') {
         const s = await adminGetSettings()
         setAdminSettings(s)
@@ -370,6 +400,31 @@ export default function AdminPage() {
         setMembers(ms => ms.filter(x => x.id !== m.id))
         flash('Member deleted')
       },
+    })
+  }
+  const handleDismissReport = async (report) => {
+    setReportActionId(report.id)
+    try {
+      await adminDismissForumReport(report.id)
+      setReports(rs => rs.filter(r => r.id !== report.id))
+      flash('Report dismissed')
+    } catch { flash('Failed to dismiss report', true) }
+    finally { setReportActionId(null) }
+  }
+  const handleResolveReport = async (report, deleteTarget) => {
+    setReportActionId(report.id)
+    try {
+      await adminResolveForumReport(report.id, deleteTarget)
+      setReports(rs => rs.filter(r => r.id !== report.id))
+      flash(deleteTarget ? 'Content removed and report resolved' : 'Report resolved')
+    } catch { flash('Failed to resolve report', true) }
+    finally { setReportActionId(null) }
+  }
+  const confirmDeleteReportedContent = (report) => {
+    setDeleteTarget({
+      label: `Delete this ${report.target_type}? This cannot be undone.`,
+      confirmLabel: 'Delete content',
+      onConfirm: () => handleResolveReport(report, true),
     })
   }
   const handleExportCsv = async () => {
@@ -714,10 +769,8 @@ export default function AdminPage() {
   const segmentCount  = broadcastForm.segment === 'active' ? activeCount : broadcastForm.segment === 'inactive' ? inactiveCount : members.length
 
   // filtered data
-  const filteredMembers = members.filter(m =>
-    !memberSearch || m.full_name.toLowerCase().includes(memberSearch.toLowerCase()) || m.email.toLowerCase().includes(memberSearch.toLowerCase())
-  )
-  const filteredEvents = events.filter(ev => {
+  const filteredMembers = memberSearchResults ?? members
+  const filteredEvents = (eventSearchResults ?? events).filter(ev => {
     if (eventFilter === 'upcoming') return new Date(ev.event_date) >= new Date()
     if (eventFilter === 'past')     return new Date(ev.event_date) < new Date()
     return true
@@ -1151,7 +1204,16 @@ export default function AdminPage() {
               </Card>
               )}
 
-              {/* filter */}
+              {/* search + filter */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  className="pl-9"
+                  placeholder="Search by title or location…"
+                  value={eventSearch}
+                  onChange={e => setEventSearch(e.target.value)}
+                />
+              </div>
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Filter className="h-3 w-3" /> Filter</span>
                 {['all', 'upcoming', 'past'].map(f => (
@@ -1498,6 +1560,75 @@ export default function AdminPage() {
                           {openAlbum?.id === album.id && (
                             <GalleryManager album={openAlbum} onAlbumChange={handleAlbumPatch} flash={flash} />
                           )}
+                        </Card>
+                      ))}
+                    </div>
+                  )
+              }
+            </div>
+          )}
+
+          {/* ══ MODERATION ══ */}
+          {tab === 'moderation' && (
+            <div className="space-y-6">
+              <SectionHeader title="Moderation" sub="Forum posts and topics flagged by members" />
+
+              <div className="flex items-center gap-3 flex-wrap">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5"><Filter className="h-3 w-3" /> Status</span>
+                {['pending', 'resolved', 'dismissed', 'all'].map(f => (
+                  <Button key={f} size="sm" variant={reportStatusFilter === f ? 'default' : 'outline'} onClick={() => setReportStatusFilter(f)}>
+                    {f.charAt(0).toUpperCase() + f.slice(1)}
+                  </Button>
+                ))}
+                <Badge variant="secondary" className="ml-auto">{reports.length} reports</Badge>
+              </div>
+
+              {isLoading('moderation')
+                ? <div className="space-y-3">{[1, 2].map(i => <Card key={i}><CardContent className="p-5"><Skeleton className="h-4 w-48 mb-2" /><Skeleton className="h-3 w-72" /></CardContent></Card>)}</div>
+                : reports.length === 0
+                  ? <Card><CardContent className="p-10 text-center text-muted-foreground text-sm">No {reportStatusFilter !== 'all' ? reportStatusFilter : ''} reports</CardContent></Card>
+                  : (
+                    <div className="space-y-3">
+                      {reports.map(r => (
+                        <Card key={r.id}>
+                          <CardContent className="p-5 space-y-3">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2">
+                                <Badge variant="outline" className="uppercase text-[10px]">{r.target_type}</Badge>
+                                <span className="text-xs text-muted-foreground">
+                                  Reported by {r.reporter?.full_name} · {new Date(r.created_at).toLocaleString()}
+                                </span>
+                              </div>
+                              <Badge variant={r.status === 'pending' ? 'default' : 'secondary'}>{r.status}</Badge>
+                            </div>
+                            {r.reason && <p className="text-sm italic text-muted-foreground">"{r.reason}"</p>}
+                            <div className="rounded-md border bg-muted/30 p-3">
+                              {!r.target_exists ? (
+                                <p className="text-sm text-muted-foreground">Content no longer exists.</p>
+                              ) : (
+                                <>
+                                  {r.target_title && <p className="text-sm font-semibold mb-1">{r.target_title}</p>}
+                                  <p className="text-sm text-muted-foreground">{r.target_body}</p>
+                                  {r.target_author && <p className="text-xs text-muted-foreground mt-1">— {r.target_author.full_name}</p>}
+                                </>
+                              )}
+                            </div>
+                            {r.status === 'pending' && (
+                              <div className="flex gap-2">
+                                <Button size="sm" variant="outline" disabled={reportActionId === r.id} onClick={() => handleDismissReport(r)}>
+                                  Dismiss
+                                </Button>
+                                <Button size="sm" variant="outline" disabled={reportActionId === r.id} onClick={() => handleResolveReport(r, false)}>
+                                  Resolve (keep content)
+                                </Button>
+                                {r.target_exists && (
+                                  <Button size="sm" variant="destructive" disabled={reportActionId === r.id} onClick={() => confirmDeleteReportedContent(r)}>
+                                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete content
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </CardContent>
                         </Card>
                       ))}
                     </div>

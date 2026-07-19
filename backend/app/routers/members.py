@@ -1,9 +1,11 @@
+import json
 from datetime import datetime, timezone
-from typing import List
+from typing import List, Optional
 
 import cloudinary
 import cloudinary.uploader
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -12,6 +14,7 @@ from app.models.rsvp import RSVP
 from app.models.event import Event
 from app.models.content import ContentItem, MemberContent
 from app.models.forum import ForumTopic, ForumPost
+from app.models.ameria_payment import AmeriaPayment
 from app.schemas.user import (
     UserOut, UserUpdate, MemberDirectoryOut, ProfilePhotoOut,
     MemberProfileOut, MemberEventOut, MemberLibraryOut, MemberForumActivityOut,
@@ -21,6 +24,8 @@ from app.core.config import settings
 from app.core.telegram_auth import TelegramSignInRequest, verify_telegram_payload
 from app.core import email as mailer
 from app.core.email import _is_profile_complete
+from app.core.audit import log as audit_log
+from app.core import ameriabank
 
 router = APIRouter(prefix="/members", tags=["members"])
 
@@ -173,16 +178,91 @@ def unlink_telegram(
 
 @router.get("/directory", response_model=List[MemberDirectoryOut])
 def member_directory(
+    q: Optional[str] = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     """Active members who opted in to the directory."""
-    return (
-        db.query(User)
-        .filter(User.membership_status == "active", User.show_in_directory == True, User.id != current_user.id)
-        .order_by(User.full_name)
-        .all()
+    query = db.query(User).filter(
+        User.membership_status == "active", User.show_in_directory == True, User.id != current_user.id
     )
+    if q and q.strip():
+        query = query.filter(User.full_name.ilike(f"%{q.strip()}%"))
+    return query.order_by(User.full_name).all()
+
+
+@router.get("/me/export")
+def export_my_data(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Self-service data export (GDPR-style right of access) — everything the
+    admin CSV export has about this member, plus the data only they can see
+    about themselves. Payment records are included with amount/date/status
+    only; card numbers/approval codes/RRNs are never exposed here."""
+    user = current_user
+    rsvps = db.query(RSVP).filter(RSVP.user_id == user.id).all()
+    unlocked = db.query(MemberContent).filter(MemberContent.user_id == user.id).all()
+    topics = db.query(ForumTopic).filter(ForumTopic.user_id == user.id, ForumTopic.is_deleted == False).all()
+    posts = db.query(ForumPost).filter(ForumPost.user_id == user.id, ForumPost.is_deleted == False).all()
+    payments = db.query(AmeriaPayment).filter(AmeriaPayment.user_id == user.id).order_by(AmeriaPayment.created_at).all()
+
+    payload = {
+        "profile": {
+            "id": user.id, "email": user.email, "full_name": user.full_name,
+            "phone": user.phone, "whatsapp": user.whatsapp, "facebook_url": user.facebook_url,
+            "telegram_username": user.telegram_username, "bio": user.bio,
+            "membership_status": user.membership_status, "joined_at": user.joined_at.isoformat() if user.joined_at else None,
+            "lang_pref": user.lang_pref, "show_in_directory": user.show_in_directory,
+            "referral_code": user.referral_code,
+        },
+        "profile_photos": [p.url for p in user.profile_photos],
+        "event_rsvps": [{"event_id": r.event_id, "created_at": r.created_at.isoformat() if r.created_at else None, "checked_in": r.checked_in} for r in rsvps],
+        "unlocked_content": [{"content_id": c.content_id, "unlocked_at": c.unlocked_at.isoformat() if c.unlocked_at else None} for c in unlocked],
+        "forum_topics": [{"id": t.id, "title": t.title, "body": t.body, "created_at": t.created_at.isoformat() if t.created_at else None} for t in topics],
+        "forum_posts": [{"id": p.id, "topic_id": p.topic_id, "body": p.body, "created_at": p.created_at.isoformat() if p.created_at else None} for p in posts],
+        "payments": [{"amount": float(p.amount), "currency": p.currency, "status": p.status, "created_at": p.created_at.isoformat() if p.created_at else None} for p in payments],
+    }
+    filename = f"my-data-{datetime.now(timezone.utc).strftime('%Y%m%d')}.json"
+    return JSONResponse(content=payload, headers={"Content-Disposition": f"attachment; filename={filename}"})
+
+
+@router.delete("/me")
+def delete_my_account(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """Self-service account deletion. Anonymizes personal fields and closes
+    the account rather than hard-deleting the row — RSVPs/payments/forum
+    posts stay referentially intact (accounting + community-history reasons),
+    they just no longer point to any identifiable person. Irreversible."""
+    user = current_user
+
+    if user.binding_active and user.card_holder_id:
+        try:
+            ameriabank.deactivate_binding(user.card_holder_id)
+        except ameriabank.AmeriaBankError:
+            pass  # best-effort — don't block account closure on the bank being unreachable
+
+    for photo in list(user.profile_photos):
+        db.delete(photo)
+
+    user.full_name = "Deleted member"
+    user.email = None
+    user.password_hash = None
+    user.google_id = None
+    user.telegram_id = None
+    user.telegram_username = None
+    user.photo_url = None
+    user.bio = None
+    user.facebook_url = None
+    user.phone = None
+    user.whatsapp = None
+    user.admin_notes = None
+    user.referral_code = None
+    user.show_in_directory = False
+    user.membership_status = "cancelled"
+    user.binding_active = False
+    user.card_holder_id = None
+    user.verification_token = None
+
+    audit_log(db, "self_delete_account", admin_id=user.id, entity_type="user", entity_id=user.id)
+    db.commit()
+    return {"deleted": True}
 
 
 @router.get("/{user_id}", response_model=MemberProfileOut)

@@ -58,3 +58,30 @@ class ForumReaction(Base):
         UniqueConstraint('user_id', 'target_type', 'target_id', 'emoji', name='uq_forum_reaction'),
         Index('ix_forum_reactions_target', 'target_type', 'target_id'),
     )
+
+
+class ForumReport(Base):
+    """A member flagging a topic or post for moderator review.
+
+    Same polymorphic target_type/target_id shape as ForumReaction. A pending
+    report is resolved (moderator took action, e.g. deleted the content) or
+    dismissed (moderator reviewed it and left the content as-is).
+    """
+    __tablename__ = "forum_reports"
+    id            = Column(Integer, primary_key=True)
+    reporter_id   = Column(Integer, ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    target_type   = Column(String(10), nullable=False)  # 'topic' | 'post'
+    target_id     = Column(Integer, nullable=False)
+    reason        = Column(Text, nullable=True)
+    status        = Column(String(20), nullable=False, default='pending')  # pending | resolved | dismissed
+    created_at    = Column(DateTime(timezone=True), server_default=func.now())
+    resolved_at   = Column(DateTime(timezone=True), nullable=True)
+    resolved_by_id = Column(Integer, ForeignKey('users.id', ondelete='SET NULL'), nullable=True)
+
+    reporter    = relationship("User", foreign_keys=[reporter_id])
+    resolved_by = relationship("User", foreign_keys=[resolved_by_id])
+
+    __table_args__ = (
+        Index('ix_forum_reports_target', 'target_type', 'target_id'),
+        Index('ix_forum_reports_status', 'status'),
+    )

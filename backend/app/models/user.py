@@ -48,6 +48,11 @@ class User(Base):
     # to them too. Cleared the moment a card is actually added.
     card_required_by = Column(DateTime(timezone=True), nullable=True)
 
+    # JSON object {type: {"in_app": bool, "push": bool}} — missing type/channel
+    # both default to enabled. Keyed by Notification.type ("rsvp"/"waitlist"/
+    # "content"/"system"). See app/core/notify.py for how this is consulted.
+    notification_prefs = Column(Text, nullable=True)
+
     is_admin = Column(Boolean, default=False, nullable=False, server_default='false')
     role = Column(String(20), nullable=False, default='member', server_default='member')
     permissions = Column(Text, nullable=True)  # JSON list of strings, overrides role defaults if set
