@@ -40,6 +40,24 @@ const PAGES = [
   { key: 'terms', label: 'Terms', path: '/terms' },
 ]
 
+// Centered dialog (backdrop + card) — used instead of an anchored dropdown
+// for panels with real form content (SEO, History), since an absolutely
+// positioned dropdown can get squeezed to nothing by the toolbar's flex-wrap
+// at narrow widths.
+function Modal({ title, onClose, children }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-24" onClick={onClose}>
+      <div className="w-full max-w-md rounded-lg border bg-popover shadow-xl p-4 space-y-3" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold">{title}</div>
+          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground"><X size={14} /></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 function moveSection(layout, id, dir) {
   const arr = layout.map((s) => ({ ...s }))
   const idx = arr.findIndex((s) => s.id === id)
@@ -396,57 +414,13 @@ export default function SiteEditor({ flash }) {
           <button type="button" onClick={redo} disabled={!history.future.length} className="px-2.5 py-1.5 border-l hover:bg-muted disabled:opacity-40" title="Redo"><Redo2 size={15} /></button>
         </div>
 
-        <div className="relative">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setSeoOpen((o) => !o); setHistoryOpen(false) }}>
-            <Search size={14} /> SEO
-          </Button>
-          {seoOpen && (
-            <div className="absolute z-50 mt-1 w-80 rounded-md border bg-popover shadow-lg p-3 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold">{currentPageLabel} — search preview</div>
-                <button type="button" onClick={() => setSeoOpen(false)} className="text-muted-foreground hover:text-foreground"><X size={14} /></button>
-              </div>
-              <Field label={`Page title · ${lang === 'hy' ? 'HY' : 'EN'}`}>
-                <Input value={seoTitle ?? ''} onFocus={commit} onChange={(e) => setField(seoTitlePath, e.target.value)} />
-              </Field>
-              <Field label={`Description · ${lang === 'hy' ? 'HY' : 'EN'}`}>
-                <Textarea rows={3} value={seoDesc ?? ''} onFocus={commit} onChange={(e) => setField(seoDescPath, e.target.value)} />
-              </Field>
-              <p className="text-xs text-muted-foreground">Shown in the browser tab and search-engine results — not visible on the page itself.</p>
-            </div>
-          )}
-        </div>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setSeoOpen(true); setHistoryOpen(false) }}>
+          <Search size={14} /> SEO
+        </Button>
 
-        <div className="relative">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={openHistory}>
-            <History size={14} /> History
-          </Button>
-          {historyOpen && (
-            <div className="absolute z-50 mt-1 w-72 rounded-md border bg-popover shadow-lg p-3 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="text-sm font-semibold">Past publishes</div>
-                <button type="button" onClick={() => setHistoryOpen(false)} className="text-muted-foreground hover:text-foreground"><X size={14} /></button>
-              </div>
-              {historyList == null && <p className="text-xs text-muted-foreground">Loading…</p>}
-              {historyList != null && historyList.length === 0 && (
-                <p className="text-xs text-muted-foreground">No past publishes yet — each time you hit Publish, the version it replaces is saved here.</p>
-              )}
-              {historyList != null && historyList.length > 0 && (
-                <div className="space-y-1 max-h-64 overflow-y-auto">
-                  {historyList.map((h) => (
-                    <div key={h.index} className="flex items-center justify-between text-xs rounded px-2 py-1.5 hover:bg-muted">
-                      <span>{h.publishedAt ? new Date(h.publishedAt).toLocaleString() : 'Unknown time'}</span>
-                      <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" disabled={restoring} onClick={() => restoreHistory(h.index)}>
-                        Restore to draft
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">Restoring loads that version into the draft for review — it won't go live until you Publish again.</p>
-            </div>
-          )}
-        </div>
+        <Button variant="outline" size="sm" className="gap-1.5" onClick={openHistory}>
+          <History size={14} /> History
+        </Button>
 
         <a href="/" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground px-1"><ExternalLink size={13} /> Live site</a>
 
@@ -456,6 +430,44 @@ export default function SiteEditor({ flash }) {
           <Button size="sm" className="gap-1.5" onClick={handlePublish} disabled={publishing}><Rocket size={14} /> {publishing ? 'Publishing…' : 'Publish'}</Button>
         </div>
       </div>
+
+      {seoOpen && (
+        <Modal onClose={() => setSeoOpen(false)} title={`${currentPageLabel} — search preview`}>
+          <div className="space-y-3">
+            <Field label={`Page title · ${lang === 'hy' ? 'HY' : 'EN'}`}>
+              <Input value={seoTitle ?? ''} onFocus={commit} onChange={(e) => setField(seoTitlePath, e.target.value)} />
+            </Field>
+            <Field label={`Description · ${lang === 'hy' ? 'HY' : 'EN'}`}>
+              <Textarea rows={3} value={seoDesc ?? ''} onFocus={commit} onChange={(e) => setField(seoDescPath, e.target.value)} />
+            </Field>
+            <p className="text-xs text-muted-foreground">Shown in the browser tab and search-engine results — not visible on the page itself.</p>
+          </div>
+        </Modal>
+      )}
+
+      {historyOpen && (
+        <Modal onClose={() => setHistoryOpen(false)} title="Past publishes">
+          <div className="space-y-2">
+            {historyList == null && <p className="text-xs text-muted-foreground">Loading…</p>}
+            {historyList != null && historyList.length === 0 && (
+              <p className="text-xs text-muted-foreground">No past publishes yet — each time you hit Publish, the version it replaces is saved here.</p>
+            )}
+            {historyList != null && historyList.length > 0 && (
+              <div className="space-y-1 max-h-72 overflow-y-auto">
+                {historyList.map((h) => (
+                  <div key={h.index} className="flex items-center justify-between text-xs rounded px-2 py-1.5 hover:bg-muted">
+                    <span>{h.publishedAt ? new Date(h.publishedAt).toLocaleString() : 'Unknown time'}</span>
+                    <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" disabled={restoring} onClick={() => restoreHistory(h.index)}>
+                      Restore to draft
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-muted-foreground">Restoring loads that version into the draft for review — it won't go live until you Publish again.</p>
+          </div>
+        </Modal>
+      )}
 
       {/* ── FULL-WIDTH CANVAS ── */}
       <div className="rounded-lg border bg-muted/30 flex flex-col">
