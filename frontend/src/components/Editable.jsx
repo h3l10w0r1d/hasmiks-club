@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from 'react'
-import { UploadCloud, Trash2, Link2, Plus, X } from 'lucide-react'
+import { UploadCloud, Trash2, Link2, Plus, X, Images } from 'lucide-react'
 import RichText from './RichText'
-import { adminUploadImage } from '../api/admin'
+import { adminUploadImage, adminGetMediaLibrary, adminDeleteMediaLibraryItem } from '../api/admin'
 import { EDIT_TEXT_MSG, EDIT_IMAGE_MSG, EDIT_FOCUS_MSG, EDIT_LIST_OP_MSG } from '../context/SiteContentContext'
 
 // True when this document is the Site Editor's editable canvas (/preview?edit=1).
@@ -76,6 +76,8 @@ export function E({ as: Tag = 'span', className, style, path, value, emphasis = 
 export function EditableImage({ src, alt, className, style, path }) {
   const inputRef = useRef(null)
   const [busy, setBusy] = useState(false)
+  const [libraryOpen, setLibraryOpen] = useState(false)
+  const [library, setLibrary] = useState(null)
 
   if (!IS_EDIT) return <img src={src} alt={alt} className={className} style={style} />
 
@@ -90,6 +92,23 @@ export function EditableImage({ src, alt, className, style, path }) {
     finally { setBusy(false) }
   }
 
+  const openLibrary = async () => {
+    setLibraryOpen((o) => !o)
+    if (library == null) {
+      try { setLibrary(await adminGetMediaLibrary()) } catch { setLibrary([]) }
+    }
+  }
+  const pick = (url) => {
+    post({ type: EDIT_FOCUS_MSG })
+    post({ type: EDIT_IMAGE_MSG, path, url })
+    setLibraryOpen(false)
+  }
+  const removeFromLibrary = async (e, url) => {
+    e.stopPropagation()
+    setLibrary((cur) => (cur || []).filter((u) => u !== url))
+    try { await adminDeleteMediaLibraryItem(url) } catch { /* best effort */ }
+  }
+
   return (
     <span className="hc-img-wrap" onClick={(e) => e.stopPropagation()}>
       <img src={src} alt={alt} className={className} style={style} />
@@ -97,10 +116,30 @@ export function EditableImage({ src, alt, className, style, path }) {
         <button type="button" onClick={() => inputRef.current?.click()}>
           <UploadCloud size={14} /> {busy ? 'Uploading…' : 'Replace'}
         </button>
+        <button type="button" onClick={openLibrary}>
+          <Images size={14} /> Library
+        </button>
         <button type="button" onClick={() => { post({ type: EDIT_FOCUS_MSG }); post({ type: EDIT_IMAGE_MSG, path, url: '' }) }}>
           <Trash2 size={14} /> Remove
         </button>
       </span>
+      {libraryOpen && (
+        <div className="hc-media-lib" onClick={(e) => e.stopPropagation()}>
+          <div className="hc-media-lib-title">Media library</div>
+          {library == null && <div className="hc-media-lib-empty">Loading…</div>}
+          {library != null && library.length === 0 && <div className="hc-media-lib-empty">No uploaded images yet</div>}
+          {library != null && library.length > 0 && (
+            <div className="hc-media-lib-grid">
+              {library.map((url) => (
+                <span key={url} className="hc-media-lib-item" onClick={() => pick(url)}>
+                  <img src={url} alt="" />
+                  <button type="button" className="hc-media-lib-del" title="Remove from library" onClick={(e) => removeFromLibrary(e, url)}><X size={11} /></button>
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
       <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
     </span>
   )
@@ -136,13 +175,54 @@ export function EditableReel({ path, value, children }) {
   )
 }
 
+// A CTA href may be an internal route ("/register", "#pricing") or a full
+// external URL the admin pasted in (e.g. a Telegram invite) — this tells the
+// caller which kind of anchor to render.
+export const isExternalHref = (href) => /^https?:\/\//i.test(href || '')
+
+// Wraps a fixed-section CTA (Hero/FinalCta button) with a small "edit link
+// destination" control (edit mode only) — the button's visible text stays
+// editable via the normal <E>, this only changes where it navigates to.
+export function EditableLinkHref({ path, value, children }) {
+  const [open, setOpen] = useState(false)
+  const [url, setUrl] = useState(value || '')
+  useEffect(() => { setUrl(value || '') }, [value])
+
+  if (!IS_EDIT) return children
+
+  const apply = () => {
+    post({ type: EDIT_FOCUS_MSG })
+    post({ type: EDIT_TEXT_MSG, path, value: url.trim() || '/register' })
+    setOpen(false)
+  }
+  return (
+    <span className="hc-cta-wrap" onClick={(e) => e.stopPropagation()}>
+      {children}
+      <button type="button" className="hc-cta-link-btn" title="Edit link destination" onClick={() => setOpen((o) => !o)}>
+        <Link2 size={12} />
+      </button>
+      {open && (
+        <span className="hc-cta-link-pop">
+          <input
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); apply() } }}
+            placeholder="/register or https://…"
+          />
+          <button type="button" onClick={apply}>Apply</button>
+        </span>
+      )}
+    </span>
+  )
+}
+
 // In edit mode, keep links/buttons inert so clicking to edit never navigates.
 export function installEditGuards() {
   if (!IS_EDIT) return
   const handler = (e) => {
     const a = e.target.closest?.('a, button')
     if (!a) return
-    if (a.closest('.hc-block-toolbar, .hc-img-controls, .hc-embed-edit')) return   // editor chrome stays live
+    if (a.closest('.hc-block-toolbar, .hc-img-controls, .hc-embed-edit, .hc-cta-link-btn, .hc-cta-link-pop, .hc-media-lib')) return   // editor chrome stays live
     e.preventDefault()
   }
   document.addEventListener('click', handler, true)

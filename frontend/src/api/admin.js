@@ -84,6 +84,12 @@ export const adminSaveSettings        = (data)       => client.put('/admin/setti
 export const adminGetSiteContent      = (env = 'draft') => client.get('/admin/settings/site-content', { params: { env } }).then(r => r.data)
 export const adminSaveSiteContent     = (overrides)     => client.put('/admin/settings/site-content', overrides).then(r => r.data)
 export const adminPublishSiteContent  = ()              => client.post('/admin/settings/site-content/publish').then(r => r.data)
+export const adminGetSiteContentHistory = ()            => client.get('/admin/settings/site-content/history').then(r => r.data)
+export const adminRestoreSiteContentHistory = (index)   => client.post(`/admin/settings/site-content/history/${index}/restore`).then(r => r.data)
+
+// media library (reusable image picker for the Site Editor)
+export const adminGetMediaLibrary     = ()           => client.get('/admin/settings/media-library').then(r => r.data)
+export const adminDeleteMediaLibraryItem = (url)     => client.delete('/admin/settings/media-library', { params: { url } }).then(r => r.data)
 
 // roles & permissions
 export const adminGetRoles            = ()           => client.get('/admin/roles').then(r => r.data)

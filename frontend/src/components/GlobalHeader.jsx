@@ -41,12 +41,21 @@ export default function GlobalHeader({ lang = 'hy', setLang }) {
   const t = { hy: { dashboard: 'Իմ հաշիվը', admin: 'Ադմին' }, en: { dashboard: 'My Account', admin: 'Admin' } }[lang]
     ?? { dashboard: 'My Account', admin: 'Admin' }
 
+  // Admin-created pages beyond the fixed set (see data/sitePages.js), shown in
+  // nav when the admin has toggled "Show in nav" for them.
+  const extraPages = (Array.isArray(site.__pages) ? site.__pages : []).filter((pg) => pg.showInNav)
+
   const navLinks = (
     <>
       <Link to="/"        className={`gh-link${isActive('/')        ? ' gh-link--active' : ''}`} onClick={close}><E as="span" path={`nav.home${sfx}`} value={nav[`home${sfx}`]} /></Link>
       <Link to="/events"  className={`gh-link${isActive('/events')  ? ' gh-link--active' : ''}`} onClick={close}><E as="span" path={`nav.events${sfx}`} value={nav[`events${sfx}`]} /></Link>
       <Link to="/about"   className={`gh-link${isActive('/about')   ? ' gh-link--active' : ''}`} onClick={close}><E as="span" path={`nav.about${sfx}`} value={nav[`about${sfx}`]} /></Link>
       <Link to="/contact" className={`gh-link${isActive('/contact') ? ' gh-link--active' : ''}`} onClick={close}><E as="span" path={`nav.contact${sfx}`} value={nav[`contact${sfx}`]} /></Link>
+      {extraPages.map((pg) => {
+        const path = `/p/${pg.slug}`
+        const label = (lang === 'hy' ? pg.navHy : pg.navEn) || (lang === 'hy' ? pg.titleHy : pg.titleEn) || pg.slug
+        return <Link key={pg.id} to={path} className={`gh-link${isActive(path) ? ' gh-link--active' : ''}`} onClick={close}>{label}</Link>
+      })}
     </>
   )
 

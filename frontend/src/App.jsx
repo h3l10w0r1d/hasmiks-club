@@ -1,10 +1,11 @@
 import './App.css'
 import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { SiteContentProvider, useContent, EDIT_ACTION_MSG } from './context/SiteContentContext'
 import { DEFAULT_LAYOUT, SECTION_LABEL, BLOCK_TEMPLATE_LABEL, isCustomBlockId, normalizeLayout } from './data/landingSections'
+import { normalizePageLayout } from './data/sitePages'
 import BlockFrame from './components/BlockFrame'
 import CustomBlock from './components/CustomBlock'
 import { installEditGuards } from './components/Editable'
@@ -53,8 +54,8 @@ function LandingPage({ lang, setLang }) {
   // On-canvas editing: keep links inert so clicking to edit never navigates.
   useEffect(() => { if (IS_EDIT) installEditGuards() }, [])
 
-  const blockAction = (id, action) => {
-    try { window.parent?.postMessage({ type: EDIT_ACTION_MSG, id, action }, window.location.origin) } catch { /* noop */ }
+  const blockAction = (id, action, payload) => {
+    try { window.parent?.postMessage({ type: EDIT_ACTION_MSG, id, action, ...payload }, window.location.origin) } catch { /* noop */ }
   }
   const sfx = lang === 'hy' ? 'Hy' : 'En'
   const title = content.landingMeta[`metaTitle${sfx}`]
@@ -90,6 +91,7 @@ function LandingPage({ lang, setLang }) {
             : <Section key={s.id} lang={lang} />
           if (!IS_EDIT) return node
           const label = isCustom ? (BLOCK_TEMPLATE_LABEL[s.type] ?? 'Block') : (SECTION_LABEL[s.id] ?? s.id)
+          const cb = isCustom ? (content.custom?.[s.id] || {}) : null
           return (
             <BlockFrame
               key={s.id}
@@ -98,12 +100,71 @@ function LandingPage({ lang, setLang }) {
               canUp={i > 0}
               canDown={i < enabled.length - 1}
               onAction={blockAction}
+              isCustom={isCustom}
+              bg={cb?.bg}
+              spacing={cb?.spacing}
             >
               {node}
             </BlockFrame>
           )
         })
       })()}
+      <Footer lang={lang} />
+    </>
+  )
+}
+
+// Renders an admin-created page (beyond the fixed landing/about/contact/
+// events/terms set) at /p/:slug. A blank canvas of custom blocks — same
+// rendering/editing machinery as the landing page's custom blocks, just
+// without the fixed designed sections (Hero, Story, etc.).
+function CustomPage({ lang, setLang }) {
+  const { slug } = useParams()
+  const content = useContent()
+  const pages = Array.isArray(content.__pages) ? content.__pages : []
+  const pageDef = pages.find((pg) => pg.slug === slug)
+
+  useEffect(() => { if (IS_EDIT) installEditGuards() }, [])
+
+  if (!pageDef) return <NotFoundPage lang={lang} />
+
+  const sfx = lang === 'hy' ? 'Hy' : 'En'
+  const pageContent = content.page?.[pageDef.id] || {}
+  const layout = normalizePageLayout(pageContent.__layout)
+  const fallbackTitle = lang === 'hy' ? pageDef.titleHy : pageDef.titleEn
+  const title = pageContent[`metaTitle${sfx}`] || fallbackTitle
+  const description = pageContent[`metaDesc${sfx}`] || ''
+
+  const blockAction = (id, action, payload) => {
+    try { window.parent?.postMessage({ type: EDIT_ACTION_MSG, id, action, ...payload }, window.location.origin) } catch { /* noop */ }
+  }
+
+  return (
+    <>
+      <Helmet>
+        <title>{title}</title>
+        {description && <meta name="description" content={description} />}
+      </Helmet>
+      <GlobalHeader lang={lang} setLang={setLang} />
+      {layout.filter((s) => s.enabled).map((s, i, enabled) => {
+        const node = <CustomBlock key={s.id} id={s.id} type={s.type} lang={lang} />
+        if (!IS_EDIT) return node
+        return (
+          <BlockFrame
+            key={s.id}
+            id={s.id}
+            label={BLOCK_TEMPLATE_LABEL[s.type] ?? 'Block'}
+            canUp={i > 0}
+            canDown={i < enabled.length - 1}
+            onAction={blockAction}
+            isCustom
+            bg={content.custom?.[s.id]?.bg}
+            spacing={content.custom?.[s.id]?.spacing}
+          >
+            {node}
+          </BlockFrame>
+        )
+      })}
       <Footer lang={lang} />
     </>
   )
@@ -185,6 +246,7 @@ function AppRoutes() {
       <Route path="/about" element={<AboutPage lang={lang} setLang={setLang} />} />
       <Route path="/contact" element={<ContactPage lang={lang} setLang={setLang} />} />
       <Route path="/terms" element={<TermsPage lang={lang} setLang={setLang} />} />
+      <Route path="/p/:slug" element={<CustomPage lang={lang} setLang={setLang} />} />
       <Route path="/gift" element={<GiftPage lang={lang} />} />
       <Route path="/gift/claim/:token" element={<GiftClaimPage lang={lang} />} />
       <Route path="*" element={<NotFoundPage lang={lang} />} />

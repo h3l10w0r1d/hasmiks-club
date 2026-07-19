@@ -1,13 +1,18 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import {
-  Save, Rocket, ExternalLink, Undo2, Redo2, Plus, ChevronDown, Monitor, Smartphone, Search, X,
+  Save, Rocket, ExternalLink, Undo2, Redo2, Plus, ChevronDown, Monitor, Smartphone, Search, X, History,
+  FilePlus, Trash2, Eye, EyeOff,
 } from 'lucide-react'
 import defaultContent from '../data/content'
 import {
   AVAILABLE_SECTIONS, DEFAULT_LAYOUT, SECTION_LABEL, normalizeLayout,
   BLOCK_TEMPLATES, BLOCK_SEED, isCustomBlockId, newCustomBlockId,
 } from '../data/landingSections'
-import { adminGetSiteContent, adminSaveSiteContent, adminPublishSiteContent } from '../api/admin'
+import { PAGES_KEY, newPageId, slugify, uniqueSlug, normalizePageLayout } from '../data/sitePages'
+import {
+  adminGetSiteContent, adminSaveSiteContent, adminPublishSiteContent,
+  adminGetSiteContentHistory, adminRestoreSiteContentHistory,
+} from '../api/admin'
 import {
   PREVIEW_MSG, PREVIEW_READY_MSG, EDIT_ACTION_MSG, EDIT_TEXT_MSG, EDIT_IMAGE_MSG, EDIT_FOCUS_MSG, EDIT_LIST_OP_MSG,
 } from '../context/SiteContentContext'
@@ -47,6 +52,16 @@ function moveSection(layout, id, dir) {
   return arr
 }
 
+// Landing has the single reserved "__layout" key; an admin-created page (id
+// always starts with "page-", see newPageId()) has its own block layout at
+// the nested reserved key "page.<id>.__layout". Fixed content pages
+// (about/contact/events/terms) have neither — they're not block-based.
+function getLayoutKey(page) {
+  if (page === 'landing') return '__layout'
+  if (page.startsWith('page-')) return `page.${page}.__layout`
+  return null
+}
+
 export default function SiteEditor({ flash }) {
   const [overrides, setOverrides] = useState(null)
   const [saved, setSaved] = useState(null)
@@ -60,12 +75,19 @@ export default function SiteEditor({ flash }) {
   const [addOpen, setAddOpen] = useState(false)
   const [pageMenuOpen, setPageMenuOpen] = useState(false)
   const [seoOpen, setSeoOpen] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [historyList, setHistoryList] = useState(null)
+  const [restoring, setRestoring] = useState(false)
   const [reloadKey, setReloadKey] = useState(0)
   const iframeRef = useRef(null)
   const previewReady = useRef(false)
   const overridesRef = useRef(null)
   overridesRef.current = overrides
-  const previewPath = PAGES.find((p) => p.key === page)?.path ?? '/preview'
+  const fixedPage = PAGES.find((p) => p.key === page)
+  const dynamicPages = Array.isArray(overrides?.[PAGES_KEY]) ? overrides[PAGES_KEY] : []
+  const dynamicPageDef = !fixedPage ? dynamicPages.find((pg) => pg.id === page) : null
+  const previewPath = fixedPage ? fixedPage.path : (dynamicPageDef ? `/p/${dynamicPageDef.slug}` : '/preview')
+  const layoutKey = getLayoutKey(page)
 
   useEffect(() => {
     let alive = true
@@ -98,7 +120,7 @@ export default function SiteEditor({ flash }) {
     else next[fp] = arr
     return next
   }), [])
-  const setLayout = useCallback((newLayout) => setOverrides((prev) => ({ ...prev, __layout: newLayout })), [])
+  const setLayout = useCallback((key, newLayout) => setOverrides((prev) => ({ ...prev, [key]: newLayout })), [])
   // Unconditional override write (no default-value comparison) — used for the
   // card order/hidden arrays, which have no "default" in content.js to compare against.
   const setRaw = useCallback((path, value) => setOverrides((prev) => ({ ...prev, [path]: value })), [])
@@ -152,14 +174,29 @@ export default function SiteEditor({ flash }) {
           else if (d.action === 'left' || d.action === 'right') setRaw(d.orderPath, moveInOrder(curOrder, curHidden, d.itemCount, d.index, d.action))
           return
         }
-        const layout = normalizeLayout(overridesRef.current?.__layout ?? DEFAULT_LAYOUT)
-        if (d.action === 'hide') setLayout(layout.map((s) => (s.id === d.id ? { ...s, enabled: false } : s)))
-        else if (d.action === 'up' || d.action === 'down') setLayout(moveSection(layout, d.id, d.action))
+        if (d.action === 'style') { setField(`custom.${d.id}.${d.styleKey}`, d.value); return }
+        const key = getLayoutKey(page)
+        if (!key) return
+        const currentLayout = key === '__layout'
+          ? normalizeLayout(overridesRef.current?.__layout ?? DEFAULT_LAYOUT)
+          : normalizePageLayout(overridesRef.current?.[key])
+        if (d.action === 'delete') {
+          setLayout(key, currentLayout.filter((s) => s.id !== d.id))
+          setOverrides((prev) => {
+            const next = { ...prev }
+            const prefix = `custom.${d.id}.`
+            for (const k of Object.keys(next)) if (k.startsWith(prefix)) delete next[k]
+            return next
+          })
+          return
+        }
+        if (d.action === 'hide') setLayout(key, currentLayout.map((s) => (s.id === d.id ? { ...s, enabled: false } : s)))
+        else if (d.action === 'up' || d.action === 'down') setLayout(key, moveSection(currentLayout, d.id, d.action))
       }
     }
     window.addEventListener('message', onMessage)
     return () => window.removeEventListener('message', onMessage)
-  }, [postToPreview, commit, setField, setListItem, setLayout, setRaw])
+  }, [postToPreview, commit, setField, setListItem, setLayout, setRaw, page])
 
   // push draft into the live canvas on every change
   useEffect(() => { if (overrides) postToPreview(overrides) }, [overrides, postToPreview])
@@ -168,15 +205,17 @@ export default function SiteEditor({ flash }) {
 
   if (loading || !overrides) return <div className="py-12 text-sm text-muted-foreground">Loading the site editor…</div>
 
-  const layout = normalizeLayout(overrides.__layout ?? DEFAULT_LAYOUT)
+  const layout = layoutKey
+    ? (layoutKey === '__layout' ? normalizeLayout(overrides.__layout ?? DEFAULT_LAYOUT) : normalizePageLayout(overrides[layoutKey]))
+    : []
   const hiddenSections = layout.filter((s) => !s.enabled)
   const dirty = JSON.stringify(overrides) !== JSON.stringify(saved)
 
-  const addSection = (id) => { commit(); setLayout(layout.map((s) => (s.id === id ? { ...s, enabled: true } : s))); setAddOpen(false) }
+  const addSection = (id) => { commit(); setLayout(layoutKey, layout.map((s) => (s.id === id ? { ...s, enabled: true } : s))); setAddOpen(false) }
   const addCustomBlock = (type) => {
     commit()
     const id = newCustomBlockId()
-    setLayout([...layout, { id, enabled: true, type }])
+    setLayout(layoutKey, [...layout, { id, enabled: true, type }])
     // Seed real starting content (not just a cosmetic placeholder) so Add/Remove
     // on repeatable fields (paragraphs, stat pairs, FAQ rows) work correctly
     // from the very first click — see BLOCK_SEED for why.
@@ -190,11 +229,49 @@ export default function SiteEditor({ flash }) {
   }
   const switchLang = (l) => { setLang(l); try { localStorage.setItem('hasmik_lang', l) } catch { /* noop */ } previewReady.current = false; setReloadKey((k) => k + 1) }
   const switchPage = (key) => { setPage(key); setPageMenuOpen(false); setSeoOpen(false) }
-  const currentPageLabel = PAGES.find((p) => p.key === page)?.label ?? 'Landing'
+  const currentPageLabel = fixedPage?.label
+    ?? (dynamicPageDef ? ((lang === 'hy' ? dynamicPageDef.titleHy : dynamicPageDef.titleEn) || dynamicPageDef.slug) : 'Landing')
+
+  const createPage = () => {
+    const title = window.prompt('New page title (shown in the browser tab, and in the nav menu if enabled):')
+    if (!title || !title.trim()) return
+    commit()
+    const id = newPageId()
+    const slug = uniqueSlug(slugify(title), dynamicPages.map((pg) => pg.slug))
+    const pageDef = { id, slug, titleEn: title.trim(), titleHy: title.trim(), navEn: title.trim(), navHy: title.trim(), showInNav: true }
+    setOverrides((prev) => ({ ...prev, [PAGES_KEY]: [...dynamicPages, pageDef], [`page.${id}.__layout`]: [] }))
+    setPage(id)
+    setPageMenuOpen(false)
+  }
+  const togglePageNav = (pg) => {
+    commit()
+    setOverrides((prev) => ({
+      ...prev,
+      [PAGES_KEY]: (prev[PAGES_KEY] || []).map((p) => (p.id === pg.id ? { ...p, showInNav: !p.showInNav } : p)),
+    }))
+  }
+  const deletePage = (pg) => {
+    if (!window.confirm(`Delete "${pg.titleEn || pg.slug}"? This removes the page and its blocks from the draft (you can still Undo).`)) return
+    commit()
+    setOverrides((prev) => {
+      const next = { ...prev }
+      const pageLayout = normalizePageLayout(next[`page.${pg.id}.__layout`])
+      for (const block of pageLayout) {
+        const blockPrefix = `custom.${block.id}.`
+        for (const k of Object.keys(next)) if (k.startsWith(blockPrefix)) delete next[k]
+      }
+      const pagePrefix = `page.${pg.id}.`
+      for (const k of Object.keys(next)) if (k.startsWith(pagePrefix)) delete next[k]
+      next[PAGES_KEY] = (next[PAGES_KEY] || []).filter((p) => p.id !== pg.id)
+      return next
+    })
+    if (page === pg.id) setPage('landing')
+    setPageMenuOpen(false)
+  }
 
   // ── SEO meta fields for whichever page is currently previewed ──
   const sfx = lang === 'hy' ? 'Hy' : 'En'
-  const seoNs = SEO_NAMESPACE[page]
+  const seoNs = fixedPage ? SEO_NAMESPACE[page] : `page.${page}`
   const seoTitlePath = `${seoNs}.metaTitle${sfx}`
   const seoDescPath = `${seoNs}.metaDesc${sfx}`
   const seoTitle = seoTitlePath in overrides ? overrides[seoTitlePath] : getPath(defaultContent, seoTitlePath)
@@ -212,6 +289,23 @@ export default function SiteEditor({ flash }) {
     catch (e) { flash?.(e?.response?.data?.detail || 'Failed to publish', true) }
     finally { setPublishing(false) }
   }
+  const openHistory = async () => {
+    setHistoryOpen((o) => !o)
+    setSeoOpen(false)
+    try { setHistoryList(await adminGetSiteContentHistory()) } catch { setHistoryList([]) }
+  }
+  const restoreHistory = async (index) => {
+    setRestoring(true)
+    commit()
+    try {
+      const content = await adminRestoreSiteContentHistory(index)
+      setOverrides(content)
+      setSaved(content)
+      setHistoryOpen(false)
+      flash?.('Restored into the draft — review it, then Save/Publish when ready')
+    } catch (e) { flash?.(e?.response?.data?.detail || 'Failed to restore', true) }
+    finally { setRestoring(false) }
+  }
 
   return (
     <div className="space-y-3">
@@ -222,18 +316,38 @@ export default function SiteEditor({ flash }) {
             {currentPageLabel} <ChevronDown size={13} />
           </Button>
           {pageMenuOpen && (
-            <div className="absolute z-50 mt-1 w-44 rounded-md border bg-popover shadow-lg p-1">
+            <div className="absolute z-50 mt-1 w-64 rounded-md border bg-popover shadow-lg p-1">
               {PAGES.map((p) => (
                 <button key={p.key} type="button" onClick={() => switchPage(p.key)}
                   className={`w-full text-left px-3 py-2 text-sm rounded hover:bg-muted ${page === p.key ? 'bg-muted font-medium' : ''}`}>
                   {p.label}
                 </button>
               ))}
+              {dynamicPages.length > 0 && <div className="my-1 border-t" />}
+              {dynamicPages.map((pg) => (
+                <div key={pg.id} className={`flex items-center gap-1 rounded ${page === pg.id ? 'bg-muted' : ''}`}>
+                  <button type="button" onClick={() => switchPage(pg.id)}
+                    className={`flex-1 text-left px-3 py-2 text-sm rounded hover:bg-muted truncate ${page === pg.id ? 'font-medium' : ''}`}>
+                    {pg.titleEn || pg.slug}
+                  </button>
+                  <button type="button" title={pg.showInNav ? 'Shown in nav — click to hide' : 'Hidden from nav — click to show'}
+                    onClick={(e) => { e.stopPropagation(); togglePageNav(pg) }} className="p-1.5 text-muted-foreground hover:text-foreground">
+                    {pg.showInNav ? <Eye size={14} /> : <EyeOff size={14} />}
+                  </button>
+                  <button type="button" title="Delete page" onClick={(e) => { e.stopPropagation(); deletePage(pg) }} className="p-1.5 mr-1 text-muted-foreground hover:text-destructive">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+              <div className="my-1 border-t" />
+              <button type="button" onClick={createPage} className="w-full flex items-center gap-1.5 text-left px-3 py-2 text-sm rounded hover:bg-muted text-primary">
+                <FilePlus size={14} /> New page
+              </button>
             </div>
           )}
         </div>
 
-        {page === 'landing' && (
+        {layoutKey && (
           <div className="relative">
             <Button size="sm" className="gap-1.5" onClick={() => setAddOpen((o) => !o)}>
               <Plus size={15} /> Add Block <ChevronDown size={13} />
@@ -283,7 +397,7 @@ export default function SiteEditor({ flash }) {
         </div>
 
         <div className="relative">
-          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setSeoOpen((o) => !o)}>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => { setSeoOpen((o) => !o); setHistoryOpen(false) }}>
             <Search size={14} /> SEO
           </Button>
           {seoOpen && (
@@ -299,6 +413,37 @@ export default function SiteEditor({ flash }) {
                 <Textarea rows={3} value={seoDesc ?? ''} onFocus={commit} onChange={(e) => setField(seoDescPath, e.target.value)} />
               </Field>
               <p className="text-xs text-muted-foreground">Shown in the browser tab and search-engine results — not visible on the page itself.</p>
+            </div>
+          )}
+        </div>
+
+        <div className="relative">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={openHistory}>
+            <History size={14} /> History
+          </Button>
+          {historyOpen && (
+            <div className="absolute z-50 mt-1 w-72 rounded-md border bg-popover shadow-lg p-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <div className="text-sm font-semibold">Past publishes</div>
+                <button type="button" onClick={() => setHistoryOpen(false)} className="text-muted-foreground hover:text-foreground"><X size={14} /></button>
+              </div>
+              {historyList == null && <p className="text-xs text-muted-foreground">Loading…</p>}
+              {historyList != null && historyList.length === 0 && (
+                <p className="text-xs text-muted-foreground">No past publishes yet — each time you hit Publish, the version it replaces is saved here.</p>
+              )}
+              {historyList != null && historyList.length > 0 && (
+                <div className="space-y-1 max-h-64 overflow-y-auto">
+                  {historyList.map((h) => (
+                    <div key={h.index} className="flex items-center justify-between text-xs rounded px-2 py-1.5 hover:bg-muted">
+                      <span>{h.publishedAt ? new Date(h.publishedAt).toLocaleString() : 'Unknown time'}</span>
+                      <Button variant="outline" size="sm" className="h-6 px-2 text-[11px]" disabled={restoring} onClick={() => restoreHistory(h.index)}>
+                        Restore to draft
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground">Restoring loads that version into the draft for review — it won't go live until you Publish again.</p>
             </div>
           )}
         </div>

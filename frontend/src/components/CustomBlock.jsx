@@ -44,10 +44,19 @@ export default function CustomBlock({ id, type, lang }) {
   const seed = seedFor(type)
   const heading = cb[`heading${sfx}`] ?? seed[`heading${sfx}`]
 
+  // Optional per-block style overrides (set via the editor's Style popover):
+  // custom.<id>.bg ('cream'|'sand'|'dark') and .spacing ('compact'|'roomy').
+  // 'default' for either means "no override" — inherit the surrounding theme.
+  const wrapClass = [
+    cb.bg && cb.bg !== 'default' ? `hc-cb-bg-${cb.bg}` : null,
+    cb.spacing && cb.spacing !== 'default' ? `hc-cb-sp-${cb.spacing}` : null,
+  ].filter(Boolean).join(' ')
+  const cls = (base) => `${base}${wrapClass ? ` ${wrapClass}` : ''}`
+
   if (type === 'imageText') {
     const image = cb.image || ''
     return (
-      <section className="story">
+      <section className={cls('story')}>
         {(image || IS_EDIT) && (
           <Reveal as="div" className="story-img">
             <EditableImage src={image} alt="" path={`custom.${id}.image`} />
@@ -64,7 +73,7 @@ export default function CustomBlock({ id, type, lang }) {
   if (type === 'testimonial') {
     const photo = cb.photo || ''
     return (
-      <section className="pricing">
+      <section className={cls('pricing')}>
         <Reveal as="div" style={{ maxWidth: 640, margin: '0 auto', textAlign: 'center' }}>
           {(photo || IS_EDIT) && (
             <div style={{ marginBottom: 16 }}>
@@ -82,7 +91,7 @@ export default function CustomBlock({ id, type, lang }) {
     const numbers = cb[`numbers${sfx}`]?.length ? cb[`numbers${sfx}`] : seed[`numbers${sfx}`]
     const labels = cb[`statLabels${sfx}`]?.length ? cb[`statLabels${sfx}`] : seed[`statLabels${sfx}`]
     return (
-      <section className="pricing">
+      <section className={cls('pricing')}>
         <Reveal as="div" style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
           <E as="h2" className="sec-h" style={{ textAlign: 'center' }} path={path('heading')} value={heading} />
           <div className="hero-stats" style={{ justifyContent: 'center', margin: '24px auto 0' }}>
@@ -104,7 +113,7 @@ export default function CustomBlock({ id, type, lang }) {
     const questions = cb[`questions${sfx}`]?.length ? cb[`questions${sfx}`] : seed[`questions${sfx}`]
     const answers = cb[`answers${sfx}`]?.length ? cb[`answers${sfx}`] : seed[`answers${sfx}`]
     return (
-      <section className="pricing">
+      <section className={cls('pricing')}>
         <Reveal as="div" style={{ maxWidth: 720, margin: '0 auto' }}>
           <E as="h2" className="sec-h" style={{ textAlign: 'center' }} path={path('heading')} value={heading} />
           <div style={{ marginTop: 24, textAlign: 'left' }}>
@@ -124,7 +133,7 @@ export default function CustomBlock({ id, type, lang }) {
 
   // default: plain text block
   return (
-    <section className="pricing">
+    <section className={cls('pricing')}>
       <Reveal as="div" style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
         <E as="h2" className="sec-h" style={{ textAlign: 'center' }} path={path('heading')} value={heading} />
         <Paragraphs id={id} sfx={sfx} path={path} items={cb[`items${sfx}`]} seed={seed} />

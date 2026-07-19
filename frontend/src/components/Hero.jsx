@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { heroImg } from '../data/images'
 import { useContent } from '../context/SiteContentContext'
-import { E, EditableImage } from './Editable'
+import { E, EditableImage, EditableLinkHref, isExternalHref } from './Editable'
 
 export default function Hero({ lang }) {
   const t = useContent()
@@ -9,6 +9,7 @@ export default function Hero({ lang }) {
   const hy = lang === 'hy'
   const p = (b) => `hero.${b}${hy ? 'Hy' : 'En'}`
   const v = (b) => (hy ? c[`${b}Hy`] : c[`${b}En`])
+  const joinHref = c.joinHref || '/register'
 
   return (
     <section className="hero">
@@ -27,7 +28,11 @@ export default function Hero({ lang }) {
         <E as="h1" className="hero-h1" path={p('h1')} value={v('h1')} emphasis />
         <E as="p" className="hero-p" path={p('p')} value={v('p')} emphasis />
 
-        <Link to="/register" className="btn-rose"><E as="span" path={p('join')} value={v('join')} /></Link>
+        <EditableLinkHref path="hero.joinHref" value={joinHref}>
+          {isExternalHref(joinHref)
+            ? <a href={joinHref} target="_blank" rel="noopener noreferrer" className="btn-rose"><E as="span" path={p('join')} value={v('join')} /></a>
+            : <Link to={joinHref} className="btn-rose"><E as="span" path={p('join')} value={v('join')} /></Link>}
+        </EditableLinkHref>
 
         <div className="hero-stats">
           <div className="hstat"><div className="hstat-n">40K</div><E as="div" className="hstat-l" path={p('stat1Label')} value={v('stat1Label')} /></div>

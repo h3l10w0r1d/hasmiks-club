@@ -40,6 +40,7 @@ from app.core.audit import log as audit_log
 from app.core.config import settings
 from app.core.deps import get_current_user, get_current_admin, require_permission, ALL_PERMISSIONS, ROLE_PERMISSIONS, get_user_permissions
 from app.core.payment_log import log_payment_event
+from app.routers.app_settings import add_to_media_library
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -350,7 +351,7 @@ def get_referrals(db: Session = Depends(get_db), _: User = Depends(require_permi
 # ── image upload ──────────────────────────────────────────────────────────────
 
 @router.post("/upload-image")
-async def upload_image(file: UploadFile = File(...), admin: User = Depends(get_current_admin)):
+async def upload_image(file: UploadFile = File(...), admin: User = Depends(get_current_admin), db: Session = Depends(get_db)):
     if not settings.CLOUDINARY_CLOUD_NAME:
         raise HTTPException(status_code=503, detail="Image upload not configured")
     cloudinary.config(
@@ -360,7 +361,9 @@ async def upload_image(file: UploadFile = File(...), admin: User = Depends(get_c
     )
     data = await file.read()
     result = cloudinary.uploader.upload(data, folder="hasmiks-club-admin", resource_type="auto")
-    return {"url": result["secure_url"]}
+    url = result["secure_url"]
+    add_to_media_library(db, url)
+    return {"url": url}
 
 
 # ── events ────────────────────────────────────────────────────────────────────
