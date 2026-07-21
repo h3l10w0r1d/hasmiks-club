@@ -37,6 +37,7 @@ from app.core import ameriabank
 from app.core import email as mailer
 from app.core import notify
 from app.core.audit import log as audit_log
+from app.core.yandex import resolve_map_url
 from app.core.config import settings
 from app.core.deps import get_current_user, get_current_admin, require_permission, ALL_PERMISSIONS, ROLE_PERMISSIONS, get_user_permissions
 from app.core.payment_log import log_payment_event
@@ -667,7 +668,9 @@ def resend_gift_card(
 
 @router.post("/events", response_model=EventOut, status_code=status.HTTP_201_CREATED)
 def create_event(payload: EventCreate, db: Session = Depends(get_db), admin: User = Depends(require_permission('manage_events'))):
-    event = Event(**payload.model_dump())
+    data = payload.model_dump()
+    data["map_url"] = resolve_map_url(data.get("map_url"))
+    event = Event(**data)
     db.add(event)
     audit_log(db, f"create_event: {payload.title}", admin_id=admin.id, entity_type="event")
     db.commit()
@@ -680,7 +683,10 @@ def update_event(event_id: int, payload: EventCreate, db: Session = Depends(get_
     event = db.query(Event).filter(Event.id == event_id).first()
     if not event:
         raise HTTPException(status_code=404, detail="Event not found")
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    data = payload.model_dump(exclude_unset=True)
+    if "map_url" in data:
+        data["map_url"] = resolve_map_url(data["map_url"])
+    for field, value in data.items():
         setattr(event, field, value)
     audit_log(db, f"update_event: {event.title}", admin_id=admin.id, entity_type="event", entity_id=event_id)
     db.commit()
