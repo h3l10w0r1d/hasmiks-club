@@ -241,29 +241,29 @@ export default function EventsPage({ lang = 'en' }) {
         <E as="p" style={styles.sub} path={`events.sub${sfx}`} value={evc.sub} emphasis />
       </div>
 
-      {/* ── upgrade banner for logged-in but inactive users ────────── */}
-      {user && user.membership_status !== 'active' && (
-        <div style={styles.upgradeBanner}>
-          <div>
-            <strong style={{ fontSize: 15 }}>{t.upgradeTitle}</strong>
-            <p style={{ margin: '4px 0 0', fontSize: 13, opacity: 0.85 }}>{t.upgradeDesc}</p>
-          </div>
-          <button
-            style={styles.upgradeBtn}
-            onClick={async () => {
-              setCheckoutLoading(true)
-              try { const { url } = await createCheckout(); window.location.href = url }
-              catch { showToast(t.error, 'error'); setCheckoutLoading(false) }
-            }}
-            disabled={checkoutLoading}
-          >
-            {checkoutLoading ? '…' : t.upgrade}
-          </button>
-        </div>
-      )}
-
       {/* ── events list ─────────────────────────────────────────────── */}
       <div style={styles.container}>
+        {/* upgrade banner for logged-in but inactive users */}
+        {user && user.membership_status !== 'active' && (
+          <div style={styles.upgradeBanner}>
+            <div>
+              <strong style={{ fontSize: 15 }}>{t.upgradeTitle}</strong>
+              <p style={{ margin: '4px 0 0', fontSize: 13, opacity: 0.85 }}>{t.upgradeDesc}</p>
+            </div>
+            <button
+              style={styles.upgradeBtn}
+              onClick={async () => {
+                setCheckoutLoading(true)
+                try { const { url } = await createCheckout(); window.location.href = url }
+                catch { showToast(t.error, 'error'); setCheckoutLoading(false) }
+              }}
+              disabled={checkoutLoading}
+            >
+              {checkoutLoading ? '…' : t.upgrade}
+            </button>
+          </div>
+        )}
+
         {loading && <p style={styles.dim}>{t.loading}</p>}
 
         {!loading && events.length === 0 && (
@@ -555,7 +555,9 @@ const styles = {
     flexWrap: 'wrap',
     background: 'linear-gradient(135deg, #7E3434 0%, #a04040 100%)',
     color: '#fff',
-    padding: '16px 40px',
+    padding: '16px 24px',
+    borderRadius: 14,
+    marginBottom: 24,
   },
   upgradeBtn: {
     padding: '9px 22px',
