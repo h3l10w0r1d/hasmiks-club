@@ -13,7 +13,7 @@ function renderLine(line, keyBase) {
       return <strong key={`${keyBase}-${i}`}>{part.slice(2, -2)}</strong>
     }
     if (part.startsWith('*') && part.endsWith('*')) {
-      return <em key={`${keyBase}-${i}`}>{part.slice(1, -1)}</em>
+      return <em key={`${keyBase}-${i}`} className="hc-featured">{part.slice(1, -1)}</em>
     }
     return <Fragment key={`${keyBase}-${i}`}>{part}</Fragment>
   })

@@ -1904,16 +1904,25 @@ a.ci-row:hover .ci-value{color:var(--rose)}
 .hc-editable:hover { box-shadow: 0 0 0 2px rgba(126,52,52,0.35); }
 .hc-editable:focus { outline: none; box-shadow: 0 0 0 2px #7E3434; background: rgba(126,52,52,0.04); }
 
-/* bold/emphasis toggle on editable text */
+/* "Featured" text — Hasmik's Club's rose accent color, applied via *single
+   asterisks* through RichText.jsx wherever admin-editable copy renders.
+   Headings already had their own `<tag> em{color:var(--rose)}` rules before
+   this class existed; this makes the same look available on body text too. */
+.hc-featured { color: var(--rose); font-style: italic; }
+
+/* bold/featured-color toggle on editable text */
 .hc-emphasis-wrap { position: relative; display: inline; }
-.hc-bold-btn {
+.hc-emphasis-btns {
   position: absolute; top: -10px; right: -10px; z-index: 40;
+  display: inline-flex; gap: 3px; opacity: 0; transition: opacity .12s;
+}
+.hc-emphasis-wrap:hover .hc-emphasis-btns, .hc-emphasis-wrap:focus-within .hc-emphasis-btns { opacity: 1; }
+.hc-bold-btn, .hc-featured-btn {
   display: inline-flex; align-items: center; justify-content: center;
   width: 20px; height: 20px; border-radius: 50%; border: 0;
-  background: #1c1c1e; color: #fff; cursor: pointer; opacity: 0; transition: opacity .12s;
+  background: #1c1c1e; color: #fff; cursor: pointer;
 }
-.hc-emphasis-wrap:hover .hc-bold-btn, .hc-emphasis-wrap:focus-within .hc-bold-btn { opacity: 1; }
-.hc-bold-btn:hover { background: #7E3434; }
+.hc-bold-btn:hover, .hc-featured-btn:hover { background: #7E3434; }
 
 /* CTA button link-destination editor */
 .hc-cta-wrap { position: relative; display: inline-block; }

@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
-import { UploadCloud, Trash2, Link2, Plus, X, Images, Bold } from 'lucide-react'
+import { UploadCloud, Trash2, Link2, Plus, X, Images, Bold, Sparkles } from 'lucide-react'
 import RichText from './RichText'
 import { adminUploadImage, adminGetMediaLibrary, adminDeleteMediaLibraryItem } from '../api/admin'
 import { EDIT_TEXT_MSG, EDIT_IMAGE_MSG, EDIT_FOCUS_MSG, EDIT_LIST_OP_MSG } from '../context/SiteContentContext'
@@ -41,9 +41,13 @@ export function RemoveItemButton({ paths, index }) {
 // `multiline` (defaults to true for <p>) lets Enter insert an actual line
 // break instead of committing/blurring — without it, a paragraph field felt
 // impossible to add a second line to. `emphasis` shows the raw **bold**/*italic*
-// markup while editing (RichText renders it live-site-side) and adds a small
-// Bold button that wraps the current selection — the field must show the real
-// markers while editing, otherwise saving would silently drop them.
+// markup while editing (RichText renders it live-site-side) and adds small
+// Bold/Featured buttons that wrap the current selection — the field must show
+// the real markers while editing, otherwise saving would silently drop them.
+// "Featured" = *single asterisks* = the club's rose accent color (RichText
+// renders it as <em className="hc-featured">), the same treatment already
+// used site-wide on headings — this is the admin-facing way to apply it to
+// any text, not just bold.
 export function E({ as: Tag = 'span', className, style, path, value, emphasis = false, listIndex, multiline }) {
   const ref = useRef(null)
   const focused = useRef(false)
@@ -67,13 +71,13 @@ export function E({ as: Tag = 'span', className, style, path, value, emphasis = 
     if (trim) v = v.replace(/\n+$/, '')
     post({ type: EDIT_TEXT_MSG, path, value: v, listIndex })
   }
-  const toggleBold = () => {
+  const wrapSelection = (marker) => {
     const el = ref.current
     const sel = window.getSelection()
     if (!el || !sel || sel.rangeCount === 0 || !el.contains(sel.anchorNode)) return
     const selected = sel.toString()
     if (!selected) return
-    document.execCommand('insertText', false, `**${selected}**`)
+    document.execCommand('insertText', false, `${marker}${selected}${marker}`)
     send(el)
   }
 
@@ -102,10 +106,16 @@ export function E({ as: Tag = 'span', className, style, path, value, emphasis = 
   return (
     <span className="hc-emphasis-wrap" onClick={(e) => e.stopPropagation()}>
       {field}
-      <button type="button" className="hc-bold-btn" title="Select text, then click to make it bold"
-        onMouseDown={(e) => { e.preventDefault(); toggleBold() }}>
-        <Bold size={12} />
-      </button>
+      <span className="hc-emphasis-btns">
+        <button type="button" className="hc-bold-btn" title="Select text, then click to make it bold"
+          onMouseDown={(e) => { e.preventDefault(); wrapSelection('**') }}>
+          <Bold size={12} />
+        </button>
+        <button type="button" className="hc-featured-btn" title="Select text, then click to give it Hasmik's Club's featured color"
+          onMouseDown={(e) => { e.preventDefault(); wrapSelection('*') }}>
+          <Sparkles size={12} />
+        </button>
+      </span>
     </span>
   )
 }
