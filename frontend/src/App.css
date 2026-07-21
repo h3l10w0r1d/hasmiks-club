@@ -757,6 +757,7 @@ body{font-family:var(--font-serif);background:#fff;color:var(--mocha);overflow-x
 .story-feature--reverse .page-section--card{order:2}
 .story-feature--reverse .story-feature-media{order:1}
 .story-feature-media{display:flex;align-items:center;justify-content:center}
+.story-feature--text-only{grid-template-columns:1fr}
 
 .ig-embed-section{display:flex;justify-content:center}
 .ig-embed-wrap{width:100%;max-width:540px;display:flex;justify-content:center}

@@ -47,8 +47,9 @@ export default function AboutPage({ lang = 'en', setLang }) {
         <div className="page-body about-body">
           {c.sections.map((s, i) => {
             const Icon = SECTION_ICONS[i]
+            const showReel = i < 2 // last 2 sections dropped their reels
             return (
-              <div className={`story-feature${i % 2 === 1 ? ' story-feature--reverse' : ''}`} key={i}>
+              <div className={`story-feature${i % 2 === 1 ? ' story-feature--reverse' : ''}${showReel ? '' : ' story-feature--text-only'}`} key={i}>
                 <section className="page-section--card">
                   <div className="card-icon"><Icon size={22} /></div>
                   <E as="h2" path={`about.s${i + 1}h${sfx}`} value={s.h} emphasis />
@@ -60,13 +61,15 @@ export default function AboutPage({ lang = 'en', setLang }) {
                   ))}
                   <AddItemButton paths={[`about.s${i + 1}p${sfx}`]} label={hy ? 'Ավելացնել պարբերություն' : 'Add paragraph'} />
                 </section>
-                <div className="story-feature-media">
-                  <EditableReel path={`about.s${i + 1}reel`} value={s.reel}>
-                    {/* key by URL so a changed reel fully re-mounts and re-embeds
-                        (Instagram's embed.js won't reprocess an existing embed) */}
-                    <InstagramEmbed key={s.reel} url={s.reel} />
-                  </EditableReel>
-                </div>
+                {showReel && (
+                  <div className="story-feature-media">
+                    <EditableReel path={`about.s${i + 1}reel`} value={s.reel}>
+                      {/* key by URL so a changed reel fully re-mounts and re-embeds
+                          (Instagram's embed.js won't reprocess an existing embed) */}
+                      <InstagramEmbed key={s.reel} url={s.reel} />
+                    </EditableReel>
+                  </div>
+                )}
               </div>
             )
           })}

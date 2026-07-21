@@ -182,7 +182,11 @@ def member_directory(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Active members who opted in to the directory."""
+    """Active members who opted in to the directory. Directory browsing itself
+    is a paid perk — an inactive/never-subscribed account can't view it even
+    though it would see nothing about itself either way."""
+    if current_user.membership_status != "active":
+        raise HTTPException(status_code=403, detail="Active membership required")
     query = db.query(User).filter(
         User.membership_status == "active", User.show_in_directory == True, User.id != current_user.id
     )
@@ -266,10 +270,12 @@ def delete_my_account(db: Session = Depends(get_db), current_user: User = Depend
 
 
 @router.get("/{user_id}", response_model=MemberProfileOut)
-def get_member(user_id: int, db: Session = Depends(get_db), _: User = Depends(get_current_user)):
+def get_member(user_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """A member's public profile: contact links, personal photos, and recent
     activity. Deliberately excludes anything private (email, admin notes,
     permissions, referral code) — see MemberProfileOut."""
+    if current_user.membership_status != "active":
+        raise HTTPException(status_code=403, detail="Active membership required")
     user = (
         db.query(User)
         .filter(User.id == user_id, User.membership_status == "active", User.show_in_directory == True)

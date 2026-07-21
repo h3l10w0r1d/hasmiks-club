@@ -286,11 +286,11 @@ export default function DashboardPage({ lang, setLang }) {
       }).catch(() => {})
       getLibrary().then(setLibrary).catch(() => {})
       getGallery().then(setAlbums).catch(() => {})
-      getMemberDirectory().then(setDirectory).catch(() => {})
+      if (isActive) getMemberDirectory().then(setDirectory).catch(() => {})
     }
     if (tab === 'library') getLibrary().then(setLibrary).catch(() => {})
     if (tab === 'gallery') getGallery().then(setAlbums).catch(() => {})
-    if (tab === 'community') getMemberDirectory().then(setDirectory).catch(() => {})
+    if (tab === 'community' && isActive) getMemberDirectory().then(setDirectory).catch(() => {})
     // forum data is loaded inside the ForumTab component
   }, [tab])
 
@@ -1431,6 +1431,13 @@ export default function DashboardPage({ lang, setLang }) {
               <p style={{ color: '#888', fontSize: 14, marginBottom: 20 }}>
                 {lang === 'hy' ? 'Ծանոթացեք Hasmik\'s Club-ի ակտիվ անդամների հետ' : "Meet the active members of Hasmik's Club"}
               </p>
+              {!isActive ? (
+                <p className="dash-empty">
+                  {lang === 'hy'
+                    ? 'Անդամների ցանկը հասանելի է միայն ակտիվ բաժանորդագրությամբ:'
+                    : 'The member directory is available to active subscribers only.'}
+                </p>
+              ) : <>
               {directory.length > 0 && (
                 <div style={{ position: 'relative', maxWidth: 320, marginBottom: 24 }}>
                   <Search size={16} color="#bbb" style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)' }} />
@@ -1468,6 +1475,7 @@ export default function DashboardPage({ lang, setLang }) {
                   </div>
                 )
               }
+              </>}
             </div>
           )}
 
