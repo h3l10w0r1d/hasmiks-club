@@ -10,6 +10,7 @@ class EventCreate(BaseModel):
     description: Optional[str] = None
     description_hy: Optional[str] = None
     location: str
+    map_url: Optional[str] = None
     event_date: datetime
     max_seats: int = 20
     cover_url: Optional[str] = None
@@ -24,6 +25,7 @@ class EventOut(BaseModel):
     description: Optional[str]
     description_hy: Optional[str]
     location: str
+    map_url: Optional[str] = None
     event_date: datetime
     max_seats: int
     seats_taken: int
@@ -53,6 +55,7 @@ class PublicEventOut(BaseModel):
     description: Optional[str]
     description_hy: Optional[str]
     location: str
+    map_url: Optional[str] = None
     event_date: datetime
     max_seats: int
     seats_available: int

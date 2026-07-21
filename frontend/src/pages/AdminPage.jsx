@@ -151,7 +151,7 @@ const DEFAULT_SETTINGS = {
   gift_price_1m: '', gift_price_3m: '', gift_price_6m: '', gift_price_12m: '',
 }
 
-const EMPTY_EVENT   = { title: '', title_hy: '', description: '', description_hy: '', location: '', event_date: '', max_seats: 20, cover_url: '', ticket_price: '', max_guest_tickets: '' }
+const EMPTY_EVENT   = { title: '', title_hy: '', description: '', description_hy: '', location: '', map_url: '', event_date: '', max_seats: 20, cover_url: '', ticket_price: '', max_guest_tickets: '' }
 const EMPTY_CONTENT = { type: 'recipe', title: '', title_hy: '', description: '', description_hy: '', file_url: '', cover_url: '' }
 
 // Inline image upload helper — shows file button next to URL field
@@ -469,6 +469,7 @@ export default function AdminPage() {
         max_seats: Number(eventForm.max_seats),
         ticket_price: eventForm.ticket_price === '' ? null : Number(eventForm.ticket_price),
         max_guest_tickets: eventForm.max_guest_tickets === '' ? null : Number(eventForm.max_guest_tickets),
+        map_url: eventForm.map_url.trim() === '' ? null : eventForm.map_url.trim(),
       }
       if (editingEvent) {
         const updated = await adminUpdateEvent(editingEvent.id, payload)
@@ -486,7 +487,7 @@ export default function AdminPage() {
     setShowEventForm(true)
     setEventForm({
       title: ev.title || '', title_hy: ev.title_hy || '', description: ev.description || '', description_hy: ev.description_hy || '',
-      location: ev.location || '', event_date: ev.event_date ? ev.event_date.slice(0, 16) : '', max_seats: ev.max_seats, cover_url: ev.cover_url || '',
+      location: ev.location || '', map_url: ev.map_url || '', event_date: ev.event_date ? ev.event_date.slice(0, 16) : '', max_seats: ev.max_seats, cover_url: ev.cover_url || '',
       ticket_price: ev.ticket_price ?? '', max_guest_tickets: ev.max_guest_tickets ?? '',
     })
     window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -1157,6 +1158,9 @@ export default function AdminPage() {
                       <Field label="Title (EN)"><Input value={eventForm.title} onChange={setEF('title')} required /></Field>
                       <Field label="Title (ՀԱՅ)"><Input value={eventForm.title_hy} onChange={setEF('title_hy')} /></Field>
                       <Field label="Location"><Input value={eventForm.location} onChange={setEF('location')} required /></Field>
+                      <Field label="Yandex Maps Link (optional)">
+                        <Input type="url" value={eventForm.map_url} onChange={setEF('map_url')} placeholder="https://yandex.com/maps/…" />
+                      </Field>
                       <Field label="Date & Time"><DateTimePicker value={eventForm.event_date} onChange={v => setEventForm(f => ({ ...f, event_date: v }))} /></Field>
                       <Field label="Max Seats"><Input type="number" value={eventForm.max_seats} onChange={setEF('max_seats')} min={1} required /></Field>
                       <Field label="One-time Ticket Price (blank = members only)">

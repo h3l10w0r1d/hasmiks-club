@@ -46,6 +46,7 @@ const copy = {
     ticketFailed: 'Your ticket payment didn\'t go through — please try again.',
     guestSoldOut: 'One-time tickets are sold out for this event.',
     readMore:     'Read more →',
+    viewOnMap:    'View on map',
   },
   hy: {
     pageTitle:    "Առաջիկա հանդիպումներ — Hasmik's Club",
@@ -73,6 +74,7 @@ const copy = {
     ticketFailed: 'Տոմսի վճարումը չհաջողվեց — խնդրում ենք կրկին փորձել:',
     guestSoldOut: 'Այս միջոցառման մեկանգամյա տոմսերը սպառված են:',
     readMore:     'Ավելին →',
+    viewOnMap:    'Դիտել քարտեզի վրա',
   },
 }
 
@@ -314,6 +316,12 @@ export default function EventsPage({ lang = 'en' }) {
                     <h2 style={styles.cardTitle}>{title}</h2>
                     <div style={styles.meta}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><MapPin size={13} /> {ev.location}</span>
+                      {ev.map_url && (
+                        <a href={ev.map_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                          style={{ color: 'var(--rose, #7E3434)', textDecoration: 'underline', fontSize: 12.5 }}>
+                          {t.viewOnMap}
+                        </a>
+                      )}
                       <span style={{ color: '#ddd' }}>·</span>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><CalendarDays size={13} /> {formatDate(ev.event_date, lang)}</span>
                     </div>

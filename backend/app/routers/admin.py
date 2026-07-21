@@ -53,7 +53,7 @@ def _event_out(event: Event) -> EventOut:
     return EventOut(
         id=event.id, title=event.title, title_hy=event.title_hy,
         description=event.description, description_hy=event.description_hy,
-        location=event.location, event_date=event.event_date,
+        location=event.location, map_url=event.map_url, event_date=event.event_date,
         max_seats=event.max_seats, seats_taken=seats_taken,
         seats_available=max(event.max_seats - seats_taken, 0), user_has_rsvp=False,
         cover_url=event.cover_url,

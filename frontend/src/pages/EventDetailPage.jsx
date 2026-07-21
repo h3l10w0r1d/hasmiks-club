@@ -32,6 +32,7 @@ const copy = {
     buyTicket:    price => `Buy a one-time ticket — ֏${Number(price).toLocaleString()}`,
     guestSoldOut: 'One-time tickets are sold out for this event.',
     past:         'This event has already happened.',
+    viewOnMap:    'View on map',
   },
   hy: {
     notFound:     'Հանդիպումը չի գտնվել',
@@ -52,6 +53,7 @@ const copy = {
     buyTicket:    price => `Գնել մեկանգամյա տոմս — ֏${Number(price).toLocaleString()}`,
     guestSoldOut: 'Այս միջոցառման մեկանգամյա տոմսերը սպառված են:',
     past:         'Այս միջոցառումն արդեն կայացել է:',
+    viewOnMap:    'Դիտել քարտեզի վրա',
   },
 }
 
@@ -211,6 +213,12 @@ export default function EventDetailPage({ lang = 'en' }) {
                 <h1 style={styles.title}>{title}</h1>
                 <div style={styles.meta}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><MapPin size={14} /> {ev.location}</span>
+                  {ev.map_url && (
+                    <a href={ev.map_url} target="_blank" rel="noopener noreferrer"
+                      style={{ color: 'var(--rose, #7E3434)', textDecoration: 'underline', fontSize: 13 }}>
+                      {t.viewOnMap}
+                    </a>
+                  )}
                   <span style={{ color: '#ddd' }}>·</span>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><CalendarDays size={14} /> {formatDate(ev.event_date, lang)}</span>
                 </div>

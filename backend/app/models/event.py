@@ -14,6 +14,9 @@ class Event(Base):
     description = Column(Text, nullable=True)
     description_hy = Column(Text, nullable=True)
     location = Column(String, nullable=False)
+    # Optional Yandex Maps (or any map provider) link — a plain convenience
+    # link, not geocoded/validated, shown as "View on map" next to location.
+    map_url = Column(String, nullable=True)
     event_date = Column(DateTime(timezone=True), nullable=False)
     max_seats = Column(Integer, default=20)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
