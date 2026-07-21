@@ -143,7 +143,7 @@ def rsvp(event_id: int, db: Session = Depends(get_db), current_user: User = Depe
     ).delete()
     rsvp_obj = RSVP(user_id=current_user.id, event_id=event_id)
     db.add(rsvp_obj)
-    notify.push(db, current_user.id, "rsvp", f"You're confirmed for {event.title}!", link="/dashboard?tab=events")
+    notify.push(db, current_user.id, "rsvp", f"You're confirmed for {event.title}!", link="/dashboard?tab=home")
     db.commit()
     db.refresh(rsvp_obj)
     mailer.send_rsvp_confirmation(
@@ -179,7 +179,7 @@ def cancel_rsvp(event_id: int, db: Session = Depends(get_db), current_user: User
             notify.push(
                 db, next_in_line.user_id, "waitlist",
                 f"A spot opened for {event.title} — you're in!",
-                link="/dashboard?tab=events",
+                link="/dashboard?tab=home",
             )
             db.flush()
             if promoted_user:

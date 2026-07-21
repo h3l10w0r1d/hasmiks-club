@@ -196,7 +196,7 @@ def invite_member_to_event(user_id: int, payload: InviteToEventIn, db: Session =
     if len(event.rsvps) >= (event.max_seats or 0):
         raise HTTPException(status_code=400, detail=f"{event.title} is full ({event.max_seats} seats)")
     db.add(RSVP(user_id=user_id, event_id=event.id))
-    notify.push(db, user_id, "rsvp", f"You're invited to {event.title} — see you there!", link="/dashboard?tab=events")
+    notify.push(db, user_id, "rsvp", f"You're invited to {event.title} — see you there!", link="/dashboard?tab=home")
     audit_log(db, f"invite_to_event: {event.title}", admin_id=admin.id, entity_type="user", entity_id=user_id)
     db.commit()
     return {"ok": True, "event_title": event.title}

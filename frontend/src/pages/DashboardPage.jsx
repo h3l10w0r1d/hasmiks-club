@@ -25,6 +25,7 @@ import { sanitizeHtml, stripHtml } from '../utils/sanitizeHtml'
 import NotificationBell from '../components/NotificationBell'
 import OnboardingModal from '../components/OnboardingModal'
 import ConfirmDialog from '../components/ConfirmDialog'
+import DateTile from '../components/EventDateTile'
 // Forum disabled for now — kept for a future re-enable, see all "FORUM (disabled)" markers below.
 // import ForumTab from '../components/ForumTab'
 import MemberProfileModal from '../components/MemberProfileModal'
@@ -34,13 +35,16 @@ import { getCheckinToken } from '../api/events'
 import client from '../api/client'
 import { cldOptimize } from '../utils/cloudinary'
 
-const TABS = ['home', 'profile', 'events', 'library', 'gallery', 'community', 'forum']
-const TAB_ICONS = { home: Home, profile: User, events: CalendarDays, library: BookOpen, gallery: GalleryHorizontal, community: Users, forum: MessageCircle }
+// Events (no longer a separate tab) live directly on Home — see the
+// "Upcoming Events" list there, styled the same way as the public
+// EventsPage.jsx list.
+const TABS = ['home', 'profile', 'library', 'gallery', 'community', 'forum']
+const TAB_ICONS = { home: Home, profile: User, library: BookOpen, gallery: GalleryHorizontal, community: Users, forum: MessageCircle }
 // Mobile bottom nav has limited width — Profile lives behind the top-nav
 // account icon instead, and Gallery is reachable from the Home tab's
 // gallery preview card, so both are dropped from this shorter list.
-// FORUM (disabled): 'forum' removed from this list — was ['home', 'events', 'library', 'community', 'forum']
-const BOTTOM_NAV_TABS = ['home', 'events', 'library', 'community']
+// FORUM (disabled): 'forum' removed from this list — was ['home', 'library', 'community', 'forum']
+const BOTTOM_NAV_TABS = ['home', 'library', 'community']
 
 function HomeHeading({ icon: Icon, children }) {
   return <h3 className="home-heading"><Icon size={17} strokeWidth={1.75} />{children}</h3>
@@ -175,7 +179,6 @@ export default function DashboardPage({ lang, setLang }) {
   const t = {
     home:        lang === 'hy' ? 'Գլխ.' : 'Home',
     profile:     lang === 'hy' ? 'Պրոֆիլ' : 'Profile',
-    events:      lang === 'hy' ? 'Հանդիպումներ' : 'Events',
     library:     lang === 'hy' ? 'Գրադարան' : 'Library',
     community:   lang === 'hy' ? 'Ակումբ' : 'Club',
     signOut:     lang === 'hy' ? 'Ելք' : 'Sign Out',
@@ -198,7 +201,6 @@ export default function DashboardPage({ lang, setLang }) {
     waitlist:    lang === 'hy' ? 'Ցուցակ' : 'Join Waitlist',
     leaveWait:   lang === 'hy' ? 'Ցուցակից հեռացնել' : 'Leave Waitlist',
     waitPos:     lang === 'hy' ? 'Հերթ' : 'Waitlist position',
-    noEvents:    lang === 'hy' ? 'Առայժմ հանդիպումներ չկան' : 'No upcoming events yet',
     noLibrary:   lang === 'hy' ? 'Ձեր գրադարանը դատարկ է' : 'Your library is empty',
     lockedLib:   lang === 'hy' ? 'Կողպված' : 'Locked',
     recipe:      lang === 'hy' ? 'Բաղադրատոմս' : 'Recipe',
@@ -285,14 +287,6 @@ export default function DashboardPage({ lang, setLang }) {
       getLibrary().then(setLibrary).catch(() => {})
       getGallery().then(setAlbums).catch(() => {})
       getMemberDirectory().then(setDirectory).catch(() => {})
-    }
-    if (tab === 'events') {
-      getEvents().then(evs => {
-        setEvents(evs)
-        evs.filter(e => e.seats_available === 0 && !e.user_has_rsvp).forEach(e => {
-          getWaitlistPosition(e.id).then(pos => setWaitlistPositions(p => ({ ...p, [e.id]: pos }))).catch(() => {})
-        })
-      }).catch(() => {})
     }
     if (tab === 'library') getLibrary().then(setLibrary).catch(() => {})
     if (tab === 'gallery') getGallery().then(setAlbums).catch(() => {})
@@ -678,7 +672,7 @@ export default function DashboardPage({ lang, setLang }) {
 
   // Home tab helpers
   const now = new Date()
-  const nextEvent = events.find(ev => new Date(ev.event_date) > now)
+  const upcomingEvents = events.filter(ev => new Date(ev.event_date) > now)
   const unlockedLibrary = library.filter(item => item.is_unlocked)
   const filteredLibrary = library.filter(item => {
     if (libraryType !== 'all' && item.type !== libraryType) return false
@@ -751,7 +745,7 @@ export default function DashboardPage({ lang, setLang }) {
           </div>
           <div className="dash-sidebar-section">
             <span className="dash-sidebar-section-label">{lang === 'hy' ? 'Անձ.' : 'Personal'}</span>
-            {['profile', 'events', 'library'].map(k => {
+            {['profile', 'library'].map(k => {
               const Icon = TAB_ICONS[k]
               return (
                 <button key={k} className={`dash-tab${tab === k ? ' active' : ''}`} onClick={() => changeTab(k)}>
@@ -794,88 +788,111 @@ export default function DashboardPage({ lang, setLang }) {
               <div className="stat-strip">
                 <StatCard icon={CheckCircle2} label={t.status} value={isActive ? t.active : t.inactive} accent={isActive} />
                 <StatCard icon={CalendarDays} label={lang === 'hy' ? 'Հաջորդը' : 'Next Event'}
-                  value={nextEvent ? (getCountdown(nextEvent.event_date, lang) || new Date(nextEvent.event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'short' })) : '—'} />
+                  value={upcomingEvents[0] ? (getCountdown(upcomingEvents[0].event_date, lang) || new Date(upcomingEvents[0].event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'short' })) : '—'} />
                 <StatCard icon={BookOpen} label={t.library} value={unlockedLibrary.length} />
                 <StatCard icon={Users} label={lang === 'hy' ? 'Ակումբ' : 'Club'} value={directory.length} />
               </div>
 
               <div className="home-grid">
               <div className="home-main">
-              {/* Next event card */}
+              {/* Upcoming events — same image-left/content-right layout as the public events page */}
               <div style={{ marginBottom: 32 }}>
-                <HomeHeading icon={CalendarDays}>{lang === 'hy' ? 'Հաջորդ հանդիպումը' : 'Next Event'}</HomeHeading>
-                {nextEvent ? (
-                  <div className={`event-card${nextEvent.user_has_rsvp ? ' rsvpd' : ''}`}>
-                    {nextEvent.cover_url && (
-                      <Link to={`/events/${nextEvent.id}`}>
-                        <img className="event-card-cover" src={cldOptimize(nextEvent.cover_url, { width: 800 })}
-                          alt={lang === 'hy' && nextEvent.title_hy ? nextEvent.title_hy : nextEvent.title} />
-                      </Link>
-                    )}
-                    <div className="event-card-top">
-                      <div>
-                        <Link to={`/events/${nextEvent.id}`} className="event-title" style={{ textDecoration: 'none', color: 'inherit' }}>
-                          {lang === 'hy' && nextEvent.title_hy ? nextEvent.title_hy : nextEvent.title}
-                        </Link>
-                        <div className="event-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} /> {nextEvent.location}</span> ·
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CalendarDays size={13} /> {new Date(nextEvent.event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
-                          {getCountdown(nextEvent.event_date, lang) && (
-                            <span style={{ background: '#fff0f2', color: '#c0394b', borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 600, marginLeft: 4 }}>
-                              {getCountdown(nextEvent.event_date, lang)}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                      <div className="event-seats">
-                        {nextEvent.seats_available > 0
-                          ? <><strong>{nextEvent.seats_available}</strong> {t.seats}</>
-                          : <span className="fully-booked">{t.booked}</span>}
-                      </div>
-                    </div>
-                    {(() => {
-                      const d = lang === 'hy' && nextEvent.description_hy ? nextEvent.description_hy : nextEvent.description
-                      return d && <p className="event-desc">{stripHtml(d)}</p>
-                    })()}
-                    <Link to={`/events/${nextEvent.id}`} style={{ display: 'inline-block', marginBottom: 16, fontSize: 12, fontWeight: 600, color: 'var(--rose)', textDecoration: 'none' }}>
-                      {lang === 'hy' ? 'Մանրամասն →' : 'Details →'}
-                    </Link>
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                      {rsvpDone[nextEvent.id] ? (
-                        <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
-                      ) : nextEvent.user_has_rsvp ? (
-                        <button className="plan-btn plan-btn-outline" onClick={() => handleRsvpClick(nextEvent)}>{t.cancelRsvp}</button>
-                      ) : nextEvent.seats_available > 0 ? (
-                        isActive ? (
-                          <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(nextEvent)}>{t.rsvpBtn}</button>
-                        ) : (
-                          <>
-                            <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Բաժանորդագրվեք՝ գրանցվելու համար' : 'Subscribe to RSVP'}</button>
-                            {nextEvent.ticket_price != null && !(nextEvent.max_guest_tickets != null && nextEvent.guest_seats_taken >= nextEvent.max_guest_tickets) && (
-                              <button
-                                className="plan-btn plan-btn-outline"
-                                disabled={oneTimeTicketLoading === nextEvent.id}
-                                onClick={() => handleBuyOneTimeTicket(nextEvent)}
-                              >
-                                {oneTimeTicketLoading === nextEvent.id
-                                  ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…')
-                                  : (lang === 'hy'
-                                    ? `Գնել մեկանգամյա տոմս — ֏${Number(nextEvent.ticket_price).toLocaleString()}`
-                                    : `Buy a one-time ticket — ֏${Number(nextEvent.ticket_price).toLocaleString()}`)}
-                              </button>
-                            )}
-                          </>
-                        )
-                      ) : null}
-                    </div>
-                  </div>
-                ) : (
+                <HomeHeading icon={CalendarDays}>{lang === 'hy' ? 'Առաջիկա հանդիպումները' : 'Upcoming Events'}</HomeHeading>
+                {rsvpError && <p className="auth-error" style={{ marginBottom: 12 }}>{rsvpError}</p>}
+                {upcomingEvents.length === 0 ? (
                   <div className="home-card">
                     <p style={{ color: '#9b6e6e', fontSize: 14, fontStyle: 'italic', margin: 0 }}>
                       {lang === 'hy' ? 'Առայժմ հանդիպումներ չկան — շուտով կլինեն' : 'No upcoming events — check back soon'}
                     </p>
                   </div>
-                )}
+                ) : groupEventsByDate(upcomingEvents, lang).map(group => (
+                  <div key={group.key} style={{ marginBottom: 20 }}>
+                    <h3 style={{
+                      fontSize: 13, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
+                      color: 'var(--rose)', margin: '0 0 10px', paddingBottom: 6, borderBottom: '1px solid var(--sand)',
+                    }}>
+                      {group.label}
+                    </h3>
+                    {group.events.map(ev => {
+                      const wl = waitlistPositions[ev.id]
+                      const title = lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title
+                      const descRaw = lang === 'hy' && ev.description_hy ? ev.description_hy : ev.description
+                      const desc = descRaw ? stripHtml(descRaw) : ''
+                      return (
+                        <div key={ev.id} className="event-row" style={{ background: '#fff', borderRadius: 16, marginBottom: 14, boxShadow: '0 2px 12px rgba(126,52,52,.07)', border: '1px solid #f5ecee', overflow: 'hidden' }}>
+                          {ev.cover_url && (
+                            <Link to={`/events/${ev.id}`} className="event-row-img">
+                              <img className="event-row-img-el" src={cldOptimize(ev.cover_url, { width: 800 })} alt={title} />
+                              <DateTile iso={ev.event_date} lang={lang} />
+                            </Link>
+                          )}
+                          <div className="event-row-body">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+                              <Link to={`/events/${ev.id}`} className="event-title" style={{ textDecoration: 'none', color: 'inherit' }}>{title}</Link>
+                              <div className="event-seats">
+                                {ev.seats_available > 0
+                                  ? <><strong>{ev.seats_available}</strong> {t.seats}</>
+                                  : <span className="fully-booked">{t.booked}</span>}
+                              </div>
+                            </div>
+                            <div className="event-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', margin: '6px 0' }}>
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} /> {ev.location}</span> ·
+                              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CalendarDays size={13} /> {new Date(ev.event_date).toLocaleTimeString(lang === 'hy' ? 'hy-AM' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                              {getCountdown(ev.event_date, lang) && (
+                                <span style={{ background: '#fff0f2', color: '#c0394b', borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 600, marginLeft: 4 }}>
+                                  {getCountdown(ev.event_date, lang)}
+                                </span>
+                              )}
+                            </div>
+                            {desc && <p className="event-desc">{desc}</p>}
+                            <Link to={`/events/${ev.id}`} style={{ display: 'inline-block', margin: '4px 0 12px', fontSize: 12, fontWeight: 600, color: 'var(--rose)', textDecoration: 'none' }}>
+                              {lang === 'hy' ? 'Մանրամասն →' : 'Details →'}
+                            </Link>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                              {rsvpDone[ev.id] ? (
+                                <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
+                              ) : !isActive ? (
+                                <>
+                                  <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Բաժանորդագրվեք՝ գրանցվելու համար' : 'Subscribe to RSVP'}</button>
+                                  {ev.ticket_price != null && ev.seats_available > 0 && !(ev.max_guest_tickets != null && ev.guest_seats_taken >= ev.max_guest_tickets) && (
+                                    <button
+                                      className="plan-btn plan-btn-outline"
+                                      disabled={oneTimeTicketLoading === ev.id}
+                                      onClick={() => handleBuyOneTimeTicket(ev)}
+                                    >
+                                      {oneTimeTicketLoading === ev.id
+                                        ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…')
+                                        : (lang === 'hy'
+                                          ? `Գնել մեկանգամյա տոմս — ֏${Number(ev.ticket_price).toLocaleString()}`
+                                          : `Buy a one-time ticket — ֏${Number(ev.ticket_price).toLocaleString()}`)}
+                                    </button>
+                                  )}
+                                </>
+                              ) : ev.user_has_rsvp ? (
+                                <button className="plan-btn plan-btn-outline" onClick={() => handleRsvpClick(ev)}>{t.cancelRsvp}</button>
+                              ) : ev.seats_available > 0 ? (
+                                <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(ev)}>{t.rsvpBtn}</button>
+                              ) : (
+                                <button
+                                  className={`plan-btn ${wl?.on_waitlist ? 'plan-btn-outline' : 'plan-btn-fill'}`}
+                                  style={{ background: wl?.on_waitlist ? undefined : '#f39c12', borderColor: '#f39c12', color: wl?.on_waitlist ? '#f39c12' : '#fff' }}
+                                  onClick={() => handleWaitlistClick(ev)}
+                                >
+                                  {wl?.on_waitlist ? t.leaveWait : t.waitlist}
+                                </button>
+                              )}
+                              {wl?.on_waitlist && (
+                                <span style={{ fontSize: 13, color: '#f39c12', fontWeight: 600 }}>
+                                  #{wl.position} {t.waitPos}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                ))}
               </div>
 
               {/* Library preview */}
@@ -1267,105 +1284,6 @@ export default function DashboardPage({ lang, setLang }) {
                   </div>
                 </div>
               </div>
-            </div>
-          )}
-
-          {/* ── EVENTS ── */}
-          {tab === 'events' && (
-            <div className="dash-section">
-              <h2 className="dash-section-title">{t.events}</h2>
-              {rsvpError && <p className="auth-error" style={{ marginBottom: '12px' }}>{rsvpError}</p>}
-              {events.length === 0
-                ? <p className="dash-empty">{t.noEvents}</p>
-                : groupEventsByDate(events, lang).map(group => (
-                  <div key={group.key} style={{ marginBottom: 28 }}>
-                    <h3 style={{
-                      fontSize: 13, fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase',
-                      color: 'var(--rose)', margin: '0 0 12px', paddingBottom: 8, borderBottom: '1px solid var(--sand)',
-                    }}>
-                      {group.label}
-                    </h3>
-                    {group.events.map(ev => {
-                      const wl = waitlistPositions[ev.id]
-                      const countdown = getCountdown(ev.event_date, lang)
-                      return (
-                        <div key={ev.id} className={`event-card${ev.user_has_rsvp ? ' rsvpd' : ''}`}>
-                          {ev.cover_url && (
-                            <img className="event-card-cover" src={cldOptimize(ev.cover_url, { width: 800 })}
-                              alt={lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title} />
-                          )}
-                          <div className="event-card-top">
-                            <div>
-                              <Link to={`/events/${ev.id}`} className="event-title" style={{ textDecoration: 'none', color: 'inherit' }}>{lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title}</Link>
-                              <div className="event-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} /> {ev.location}</span> ·
-                                <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CalendarDays size={13} /> {new Date(ev.event_date).toLocaleTimeString(lang === 'hy' ? 'hy-AM' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
-                                {countdown && (
-                                  <span style={{ background: '#fff0f2', color: '#c0394b', borderRadius: 20, padding: '2px 10px', fontSize: 12, fontWeight: 600, marginLeft: 4 }}>
-                                    {countdown}
-                                  </span>
-                                )}
-                              </div>
-                              {(() => {
-                                const d = lang === 'hy' && ev.description_hy ? ev.description_hy : ev.description
-                                return d && <p className="event-desc">{stripHtml(d)}</p>
-                              })()}
-                              <Link to={`/events/${ev.id}`} style={{ display: 'inline-block', marginTop: 4, fontSize: 12, fontWeight: 600, color: 'var(--rose)', textDecoration: 'none' }}>
-                                {lang === 'hy' ? 'Մանրամասն →' : 'Details →'}
-                              </Link>
-                            </div>
-                            <div className="event-seats">
-                              {ev.seats_available > 0
-                                ? <><strong>{ev.seats_available}</strong> {t.seats}</>
-                                : <span className="fully-booked">{t.booked}</span>}
-                            </div>
-                          </div>
-
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                            {rsvpDone[ev.id] ? (
-                              <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
-                            ) : !isActive ? (
-                              <>
-                                <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Բաժանորդագրվեք՝ գրանցվելու համար' : 'Subscribe to RSVP'}</button>
-                                {ev.ticket_price != null && ev.seats_available > 0 && !(ev.max_guest_tickets != null && ev.guest_seats_taken >= ev.max_guest_tickets) && (
-                                  <button
-                                    className="plan-btn plan-btn-outline"
-                                    disabled={oneTimeTicketLoading === ev.id}
-                                    onClick={() => handleBuyOneTimeTicket(ev)}
-                                  >
-                                    {oneTimeTicketLoading === ev.id
-                                      ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…')
-                                      : (lang === 'hy'
-                                        ? `Գնել մեկանգամյա տոմս — ֏${Number(ev.ticket_price).toLocaleString()}`
-                                        : `Buy a one-time ticket — ֏${Number(ev.ticket_price).toLocaleString()}`)}
-                                  </button>
-                                )}
-                              </>
-                            ) : ev.user_has_rsvp ? (
-                              <button className="plan-btn plan-btn-outline" onClick={() => handleRsvpClick(ev)}>{t.cancelRsvp}</button>
-                            ) : ev.seats_available > 0 ? (
-                              <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(ev)}>{t.rsvpBtn}</button>
-                            ) : (
-                              <button
-                                className={`plan-btn ${wl?.on_waitlist ? 'plan-btn-outline' : 'plan-btn-fill'}`}
-                                style={{ background: wl?.on_waitlist ? undefined : '#f39c12', borderColor: '#f39c12', color: wl?.on_waitlist ? '#f39c12' : '#fff' }}
-                                onClick={() => handleWaitlistClick(ev)}
-                              >
-                                {wl?.on_waitlist ? t.leaveWait : t.waitlist}
-                              </button>
-                            )}
-                            {wl?.on_waitlist && (
-                              <span style={{ fontSize: 13, color: '#f39c12', fontWeight: 600 }}>
-                                #{wl.position} {t.waitPos}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                ))
-              }
             </div>
           )}
 
