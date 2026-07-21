@@ -232,18 +232,6 @@ export default function EventDetailPage({ lang = 'en' }) {
               )}
             </div>
 
-            {mapEmbed && (
-              <iframe
-                src={mapEmbed}
-                title={ev.location}
-                width="100%"
-                height="320"
-                style={styles.mapEmbed}
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              />
-            )}
-
             {desc && (
               <div className="rich-content" style={styles.desc} dangerouslySetInnerHTML={{ __html: sanitizeHtml(desc) }} />
             )}
@@ -295,6 +283,18 @@ export default function EventDetailPage({ lang = 'en' }) {
                   </div>
                 )}
               </div>
+            )}
+
+            {mapEmbed && (
+              <iframe
+                src={mapEmbed}
+                title={ev.location}
+                width="100%"
+                height="320"
+                style={styles.mapEmbed}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
             )}
           </div>
         </div>
