@@ -194,7 +194,7 @@ export default function DashboardPage({ lang, setLang }) {
     savingNow:   lang === 'hy' ? 'Պահպանվում է...' : 'Saving…',
     savedNow:    lang === 'hy' ? 'Պահպանված է ✓' : 'Saved ✓',
     showInDir:   lang === 'hy' ? 'Ցուցադրել ակումբի ցուցակում' : 'Show in club directory',
-    seats:       lang === 'hy' ? 'տեղ մնացել' : 'seats left',
+    seats:       lang === 'hy' ? 'տեղ է մնացել' : 'seats left',
     rsvpBtn:     lang === 'hy' ? 'Գրանցվել' : 'RSVP',
     cancelRsvp:  lang === 'hy' ? 'Չեղարկել' : 'Cancel RSVP',
     booked:      lang === 'hy' ? 'Ամբողջությամբ ամրագրված' : 'Fully booked',
