@@ -207,7 +207,7 @@ export default function DashboardPage({ lang, setLang }) {
     ebook:       lang === 'hy' ? 'Էլ. գիրք' : 'E-Book',
     download:    lang === 'hy' ? 'Բեռնել' : 'Download',
     joinTelegram:lang === 'hy' ? 'Միանալ Telegram խմբին' : 'Join our Telegram group',
-    gallery:     lang === 'hy' ? 'Ֆոտոսրահ' : 'Gallery',
+    gallery:     lang === 'hy' ? 'Լուսանկարներ' : 'Gallery',
     noGallery:   lang === 'hy' ? 'Ֆոտոլբոմներ դեռ չկան' : 'No photo albums yet',
     photos:      lang === 'hy' ? 'լուսանկար' : 'photos',
     viewAlbum:   lang === 'hy' ? 'Տեսնել' : 'View',
@@ -971,7 +971,7 @@ export default function DashboardPage({ lang, setLang }) {
               {/* Gallery preview */}
               {albums.length > 0 && albums[0].cover_url && (
                 <div style={{ marginBottom: 32 }}>
-                  <HomeHeading icon={GalleryHorizontal}>{lang === 'hy' ? 'Ֆոտոսրահ' : 'Gallery'}</HomeHeading>
+                  <HomeHeading icon={GalleryHorizontal}>{lang === 'hy' ? 'Լուսանկարներ' : 'Gallery'}</HomeHeading>
                   <div
                     className="home-clickable"
                     style={{ position: 'relative', borderRadius: 16, overflow: 'hidden', border: '1px solid var(--sand)' }}
