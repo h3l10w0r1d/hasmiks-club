@@ -253,7 +253,7 @@ export default function EventsPage({ lang = 'en' }) {
       {/* ── hero ────────────────────────────────────────────────────── */}
       <div style={styles.hero}>
         <E as="h1" style={styles.h1} path={`events.heading${sfx}`} value={evc.heading} />
-        <E as="p" style={styles.sub} path={`events.sub${sfx}`} value={evc.sub} />
+        <E as="p" style={styles.sub} path={`events.sub${sfx}`} value={evc.sub} emphasis />
       </div>
 
       {/* ── upgrade banner for logged-in but inactive users ────────── */}

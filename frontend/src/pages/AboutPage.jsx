@@ -6,7 +6,7 @@ import GlobalHeader from '../components/GlobalHeader'
 import Footer from '../components/Footer'
 import InstagramEmbed from '../components/InstagramEmbed'
 import { useContent } from '../context/SiteContentContext'
-import { E, EditableReel, installEditGuards } from '../components/Editable'
+import { E, EditableReel, installEditGuards, AddItemButton, RemoveItemButton } from '../components/Editable'
 
 // One icon per section, same order/meaning in both languages.
 const SECTION_ICONS = [Heart, HeartHandshake, Coffee, Compass]
@@ -51,10 +51,14 @@ export default function AboutPage({ lang = 'en', setLang }) {
               <div className={`story-feature${i % 2 === 1 ? ' story-feature--reverse' : ''}`} key={i}>
                 <section className="page-section--card">
                   <div className="card-icon"><Icon size={22} /></div>
-                  <E as="h2" path={`about.s${i + 1}h${sfx}`} value={s.h} />
+                  <E as="h2" path={`about.s${i + 1}h${sfx}`} value={s.h} emphasis />
                   {s.p?.map((para, j) => (
-                    <E as="p" key={j} path={`about.s${i + 1}p${sfx}`} value={para} listIndex={j} />
+                    <div className="hc-item-row" key={j}>
+                      <E as="p" path={`about.s${i + 1}p${sfx}`} value={para} listIndex={j} emphasis />
+                      {s.p.length > 1 && <RemoveItemButton paths={[`about.s${i + 1}p${sfx}`]} index={j} />}
+                    </div>
                   ))}
+                  <AddItemButton paths={[`about.s${i + 1}p${sfx}`]} label={hy ? 'Ավելացնել պարբերություն' : 'Add paragraph'} />
                 </section>
                 <div className="story-feature-media">
                   <EditableReel path={`about.s${i + 1}reel`} value={s.reel}>

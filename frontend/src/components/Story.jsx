@@ -20,11 +20,11 @@ export default function Story({ lang }) {
       <Reveal as="div" className="story-text-col" delay={120}>
         <E as="div" className="sec-tag" path={p('tag')} value={v('tag')} />
         <E as="h2" className="story-h" path={p('h')} value={v('h')} emphasis />
-        <E as="p" className="story-body" path={p('p1')} value={v('p1')} />
-        <E as="p" className="story-body" path={p('p2')} value={v('p2')} />
-        <E as="p" className="story-body" path={p('p3')} value={v('p3')} />
-        <E as="p" className="story-body" path={p('p4')} value={v('p4')} />
-        <E as="p" className="story-closing" path={p('closing')} value={v('closing')} />
+        <E as="p" className="story-body" path={p('p1')} value={v('p1')} emphasis />
+        <E as="p" className="story-body" path={p('p2')} value={v('p2')} emphasis />
+        <E as="p" className="story-body" path={p('p3')} value={v('p3')} emphasis />
+        <E as="p" className="story-body" path={p('p4')} value={v('p4')} emphasis />
+        <E as="p" className="story-closing" path={p('closing')} value={v('closing')} emphasis />
         <E as="div" className="story-sig" path={p('sig')} value={v('sig')} />
       </Reveal>
     </section>

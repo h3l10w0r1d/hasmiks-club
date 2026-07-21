@@ -25,8 +25,8 @@ export default function Community({ lang }) {
       <Reveal as="div" className="community-hd">
         <E as="div" className="sec-tag" style={{ justifyContent: 'center' }} path={p('tag')} value={v('tag')} />
         <E as="h2" className="sec-h" style={{ textAlign: 'center' }} path={p('h')} value={v('h')} emphasis />
-        <E as="p" className="community-sub" path={p('p1')} value={v('p1')} />
-        <E as="p" className="community-sub" path={p('p2')} value={v('p2')} />
+        <E as="p" className="community-sub" path={p('p1')} value={v('p1')} emphasis />
+        <E as="p" className="community-sub" path={p('p2')} value={v('p2')} emphasis />
       </Reveal>
 
       <Reveal as="div" className="community-photo" delay={80}>
@@ -44,7 +44,7 @@ export default function Community({ lang }) {
             <Reveal as="div" className="card" key={i} delay={pos * 90}>
               <div className="card-ico"><Icon size={20} strokeWidth={1.75} /></div>
               <E as="div" className="card-title" path={`community.pts.${i}.title${suffix}`} value={hy ? pt.titleHy : pt.titleEn} />
-              <E as="p" className="card-text" path={`community.pts.${i}.body${suffix}`} value={hy ? pt.bodyHy : pt.bodyEn} />
+              <E as="p" className="card-text" path={`community.pts.${i}.body${suffix}`} value={hy ? pt.bodyHy : pt.bodyEn} emphasis />
             </Reveal>
           )
           if (!IS_EDIT) return card

@@ -21,7 +21,7 @@ export default function Pricing({ lang }) {
       <Reveal as="div">
         <E as="div" className="sec-tag" style={{ justifyContent: 'center' }} path={p('tag')} value={v('tag')} />
         <E as="h2" className="sec-h" style={{ textAlign: 'center', maxWidth: '560px', margin: '0 auto 12px' }} path={p('h')} value={v('h')} emphasis />
-        <E as="p" className="pricing-sub" path={p('sub')} value={v('sub')} />
+        <E as="p" className="pricing-sub" path={p('sub')} value={v('sub')} emphasis />
       </Reveal>
 
       <div className="plans">

@@ -30,7 +30,7 @@ function Paragraphs({ id, sfx, path, items, seed }) {
     <>
       {list.map((text, i) => (
         <div className="hc-item-row" key={i}>
-          <E as="p" className="story-body" path={path('items')} value={text} listIndex={i} />
+          <E as="p" className="story-body" path={path('items')} value={text} listIndex={i} emphasis />
           {items && items.length > 1 && <RemoveItemButton paths={[path('items')]} index={i} />}
         </div>
       ))}
@@ -63,7 +63,7 @@ export default function CustomBlock({ id, type, lang }) {
           </Reveal>
         )}
         <Reveal as="div" className="story-text-col" delay={120}>
-          <E as="h2" className="story-h" path={path('heading')} value={heading} />
+          <E as="h2" className="story-h" path={path('heading')} value={heading} emphasis />
           <Paragraphs id={id} sfx={sfx} path={path} items={cb[`items${sfx}`]} seed={seed} />
         </Reveal>
       </section>
@@ -80,7 +80,7 @@ export default function CustomBlock({ id, type, lang }) {
               <EditableImage src={photo} alt="" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', margin: '0 auto' }} path={`custom.${id}.photo`} />
             </div>
           )}
-          <E as="p" className="story-lead" path={path('quote')} value={cb[`quote${sfx}`] ?? seed[`quote${sfx}`]} />
+          <E as="p" className="story-lead" path={path('quote')} value={cb[`quote${sfx}`] ?? seed[`quote${sfx}`]} emphasis />
           <E as="div" className="story-sig" path={path('name')} value={cb[`name${sfx}`] ?? seed[`name${sfx}`]} />
         </Reveal>
       </section>
@@ -93,7 +93,7 @@ export default function CustomBlock({ id, type, lang }) {
     return (
       <section className={cls('pricing')}>
         <Reveal as="div" style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
-          <E as="h2" className="sec-h" style={{ textAlign: 'center' }} path={path('heading')} value={heading} />
+          <E as="h2" className="sec-h" style={{ textAlign: 'center' }} path={path('heading')} value={heading} emphasis />
           <div className="hero-stats" style={{ justifyContent: 'center', margin: '24px auto 0' }}>
             {numbers.map((num, i) => (
               <div className="hstat hc-item-row" key={i}>
@@ -115,12 +115,12 @@ export default function CustomBlock({ id, type, lang }) {
     return (
       <section className={cls('pricing')}>
         <Reveal as="div" style={{ maxWidth: 720, margin: '0 auto' }}>
-          <E as="h2" className="sec-h" style={{ textAlign: 'center' }} path={path('heading')} value={heading} />
+          <E as="h2" className="sec-h" style={{ textAlign: 'center' }} path={path('heading')} value={heading} emphasis />
           <div style={{ marginTop: 24, textAlign: 'left' }}>
             {questions.map((q, i) => (
               <div className="hc-item-row faq-item" key={i}>
                 <E as="div" className="faq-q" path={path('questions')} value={q} listIndex={i} />
-                <E as="p" className="faq-a" path={path('answers')} value={answers[i] ?? ''} listIndex={i} />
+                <E as="p" className="faq-a" path={path('answers')} value={answers[i] ?? ''} listIndex={i} emphasis />
                 {questions.length > 1 && <RemoveItemButton paths={[path('questions'), path('answers')]} index={i} />}
               </div>
             ))}
@@ -135,7 +135,7 @@ export default function CustomBlock({ id, type, lang }) {
   return (
     <section className={cls('pricing')}>
       <Reveal as="div" style={{ maxWidth: 720, margin: '0 auto', textAlign: 'center' }}>
-        <E as="h2" className="sec-h" style={{ textAlign: 'center' }} path={path('heading')} value={heading} />
+        <E as="h2" className="sec-h" style={{ textAlign: 'center' }} path={path('heading')} value={heading} emphasis />
         <Paragraphs id={id} sfx={sfx} path={path} items={cb[`items${sfx}`]} seed={seed} />
       </Reveal>
     </section>

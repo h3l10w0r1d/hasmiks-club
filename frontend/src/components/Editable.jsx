@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react'
-import { UploadCloud, Trash2, Link2, Plus, X, Images } from 'lucide-react'
+import { UploadCloud, Trash2, Link2, Plus, X, Images, Bold } from 'lucide-react'
 import RichText from './RichText'
 import { adminUploadImage, adminGetMediaLibrary, adminDeleteMediaLibraryItem } from '../api/admin'
 import { EDIT_TEXT_MSG, EDIT_IMAGE_MSG, EDIT_FOCUS_MSG, EDIT_LIST_OP_MSG } from '../context/SiteContentContext'
@@ -36,25 +36,48 @@ export function RemoveItemButton({ paths, index }) {
     </button>
   )
 }
-const stripMarkers = (s) => String(s ?? '').replace(/\*\*/g, '').replace(/\*/g, '')
-
 // Inline-editable text. Uncontrolled (textContent set imperatively) so React
 // re-renders from live preview updates never fight the caret while typing.
-export function E({ as: Tag = 'span', className, style, path, value, emphasis = false, listIndex }) {
+// `multiline` (defaults to true for <p>) lets Enter insert an actual line
+// break instead of committing/blurring — without it, a paragraph field felt
+// impossible to add a second line to. `emphasis` shows the raw **bold**/*italic*
+// markup while editing (RichText renders it live-site-side) and adds a small
+// Bold button that wraps the current selection — the field must show the real
+// markers while editing, otherwise saving would silently drop them.
+export function E({ as: Tag = 'span', className, style, path, value, emphasis = false, listIndex, multiline }) {
   const ref = useRef(null)
   const focused = useRef(false)
+  const isMultiline = multiline ?? (Tag === 'p')
 
   useEffect(() => {
     if (!IS_EDIT || !ref.current || focused.current) return
-    ref.current.textContent = emphasis ? stripMarkers(value) : (value ?? '')
-  }, [value, emphasis])
+    ref.current.textContent = value ?? ''
+  }, [value])
 
   if (!IS_EDIT) {
     return <Tag className={className} style={style}>{emphasis ? <RichText text={value} /> : value}</Tag>
   }
 
-  const send = (el) => post({ type: EDIT_TEXT_MSG, path, value: el.innerText.replace(/\n+$/,''), listIndex })
-  return (
+  // Trailing newlines only get trimmed on blur (final commit) — trimming on
+  // every keystroke would strip the line break the instant a multiline field
+  // gets one (nothing typed after it yet), which is exactly when a live
+  // preview round-trip could clobber it back into the still-focused field.
+  const send = (el, { trim = false } = {}) => {
+    let v = el.innerText
+    if (trim) v = v.replace(/\n+$/, '')
+    post({ type: EDIT_TEXT_MSG, path, value: v, listIndex })
+  }
+  const toggleBold = () => {
+    const el = ref.current
+    const sel = window.getSelection()
+    if (!el || !sel || sel.rangeCount === 0 || !el.contains(sel.anchorNode)) return
+    const selected = sel.toString()
+    if (!selected) return
+    document.execCommand('insertText', false, `**${selected}**`)
+    send(el)
+  }
+
+  const field = (
     <Tag
       ref={ref}
       className={`${className || ''} hc-editable`}
@@ -63,11 +86,27 @@ export function E({ as: Tag = 'span', className, style, path, value, emphasis = 
       suppressContentEditableWarning
       data-hc-path={path}
       onFocus={() => { focused.current = true; post({ type: EDIT_FOCUS_MSG }) }}
-      onBlur={(e) => { focused.current = false; send(e.currentTarget) }}
+      onBlur={(e) => { focused.current = false; send(e.currentTarget, { trim: true }) }}
       onInput={(e) => send(e.currentTarget)}
-      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); e.currentTarget.blur() } }}
+      onKeyDown={(e) => {
+        if (e.key !== 'Enter') return
+        e.preventDefault()
+        if (isMultiline) document.execCommand('insertLineBreak')
+        else e.currentTarget.blur()
+      }}
       onClick={(e) => e.stopPropagation()}
     />
+  )
+
+  if (!emphasis) return field
+  return (
+    <span className="hc-emphasis-wrap" onClick={(e) => e.stopPropagation()}>
+      {field}
+      <button type="button" className="hc-bold-btn" title="Select text, then click to make it bold"
+        onMouseDown={(e) => { e.preventDefault(); toggleBold() }}>
+        <Bold size={12} />
+      </button>
+    </span>
   )
 }
 

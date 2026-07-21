@@ -3,7 +3,7 @@ import { Helmet } from 'react-helmet-async'
 import GlobalHeader from '../components/GlobalHeader'
 import Footer from '../components/Footer'
 import { useContent } from '../context/SiteContentContext'
-import { E, installEditGuards } from '../components/Editable'
+import { E, installEditGuards, AddItemButton, RemoveItemButton } from '../components/Editable'
 
 export default function TermsPage({ lang = 'en', setLang }) {
   useEffect(() => { installEditGuards() }, [])
@@ -35,14 +35,18 @@ export default function TermsPage({ lang = 'en', setLang }) {
 
         <div className="page-body">
           <section className="page-section">
-            <E as="p" path={`terms.intro${sfx}`} value={c.intro} />
+            <E as="p" path={`terms.intro${sfx}`} value={c.intro} emphasis />
           </section>
           {c.sections.map((s, i) => (
             <section className="page-section" key={i}>
-              <E as="h2" path={`terms.sections.${i}.h${sfx}`} value={s.h} />
+              <E as="h2" path={`terms.sections.${i}.h${sfx}`} value={s.h} emphasis />
               {s.p.map((para, j) => (
-                <E as="p" key={j} path={`terms.sections.${i}.p${sfx}`} value={para} listIndex={j} />
+                <div className="hc-item-row" key={j}>
+                  <E as="p" path={`terms.sections.${i}.p${sfx}`} value={para} listIndex={j} emphasis />
+                  {s.p.length > 1 && <RemoveItemButton paths={[`terms.sections.${i}.p${sfx}`]} index={j} />}
+                </div>
               ))}
+              <AddItemButton paths={[`terms.sections.${i}.p${sfx}`]} label={hy ? 'Ավելացնել պարբերություն' : 'Add paragraph'} />
             </section>
           ))}
         </div>

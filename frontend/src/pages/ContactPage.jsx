@@ -80,7 +80,7 @@ export default function ContactPage({ lang = 'en', setLang }) {
       <main className="page-main">
         <header className="page-hero">
           <E as="h1" className="page-title" path={`contact.title${sfx}`} value={c.title} />
-          <E as="p" className="page-sub" path={`contact.sub${sfx}`} value={c.sub} />
+          <E as="p" className="page-sub" path={`contact.sub${sfx}`} value={c.sub} emphasis />
         </header>
 
         <div className="contact-layout">
