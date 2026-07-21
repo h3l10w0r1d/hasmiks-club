@@ -177,7 +177,11 @@ export default function SiteEditor({ flash }) {
         commit()
         for (const path of d.paths || []) {
           const cur = overridesRef.current?.[path] ?? getPath(defaultContent, path)
-          const arr = Array.isArray(cur) ? [...cur] : []
+          // A field that was a plain string before it became a growable list
+          // (or a published override saved back when it still was one) must
+          // become a one-item array here, not an empty one — otherwise the
+          // very first "Add paragraph" click discards the existing text.
+          const arr = Array.isArray(cur) ? [...cur] : (cur ? [cur] : [])
           if (d.op === 'add') arr.push('')
           else if (d.op === 'remove' && typeof d.index === 'number') arr.splice(d.index, 1)
           setRaw(path, arr)
