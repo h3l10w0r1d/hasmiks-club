@@ -158,8 +158,10 @@ const EMPTY_CONTENT = { type: 'recipe', title: '', title_hy: '', description: ''
 function ImageUploadField({ label, value, onChange, onUpload }) {
   const ref = useRef(null)
   const [uploading, setUploading] = useState(false)
-  const handleFile = async (e) => {
-    const file = e.target.files?.[0]
+  const [dragOver, setDragOver] = useState(false)
+  const dragDepth = useRef(0)
+
+  const doUpload = async (file) => {
     if (!file) return
     setUploading(true)
     try {
@@ -168,11 +170,26 @@ function ImageUploadField({ label, value, onChange, onUpload }) {
     } catch { /* ignore */ }
     finally { setUploading(false) }
   }
+  const handleFile = (e) => doUpload(e.target.files?.[0])
+  const handleDrop = (e) => {
+    e.preventDefault()
+    dragDepth.current = 0
+    setDragOver(false)
+    const file = Array.from(e.dataTransfer.files || []).find(f => f.type.startsWith('image/'))
+    if (file) doUpload(file)
+  }
+
   return (
     <div className="flex flex-col gap-1.5">
       <Label>{label}</Label>
-      <div className="flex gap-2">
-        <Input value={value} onChange={e => onChange(e.target.value)} placeholder="https://… or upload →" className="flex-1" />
+      <div
+        className={`flex gap-2 rounded-md transition-colors ${dragOver ? 'ring-2 ring-primary bg-primary/5' : ''}`}
+        onDragOver={(e) => e.preventDefault()}
+        onDragEnter={(e) => { e.preventDefault(); dragDepth.current += 1; setDragOver(true) }}
+        onDragLeave={(e) => { e.preventDefault(); dragDepth.current -= 1; if (dragDepth.current <= 0) setDragOver(false) }}
+        onDrop={handleDrop}
+      >
+        <Input value={value} onChange={e => onChange(e.target.value)} placeholder={dragOver ? 'Drop image to upload…' : 'https://… or upload, or drag & drop an image'} className="flex-1" />
         <Button type="button" variant="outline" size="sm" onClick={() => ref.current?.click()} disabled={uploading}>
           <ImageUp className="h-3.5 w-3.5" />
           {uploading ? '…' : 'Upload'}

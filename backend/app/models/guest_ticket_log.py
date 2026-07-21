@@ -11,7 +11,7 @@ class GuestTicketLog(Base):
     __tablename__ = "guest_ticket_logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    ticket_row_id = Column(Integer, ForeignKey("guest_tickets.id"), nullable=False, index=True)
+    ticket_row_id = Column(Integer, ForeignKey("guest_tickets.id", ondelete="CASCADE"), nullable=False, index=True)
     event = Column(String(40), nullable=False)  # init_payment | verify_callback
     success = Column(Boolean, nullable=False, default=False)
     request_payload = Column(Text, nullable=True)
