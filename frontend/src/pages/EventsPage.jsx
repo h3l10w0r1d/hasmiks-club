@@ -296,44 +296,40 @@ export default function EventsPage({ lang = 'en' }) {
           const descRaw = lang === 'hy' && ev.description_hy ? ev.description_hy : ev.description
           const desc = descRaw ? truncate(stripHtml(descRaw)) : ''
           return (
-            <div key={ev.id} style={{ ...styles.card, cursor: 'pointer' }} onClick={() => navigate(`/events/${ev.id}`)}>
+            <div key={ev.id} className="event-row" style={{ ...styles.card, cursor: 'pointer' }} onClick={() => navigate(`/events/${ev.id}`)}>
               {/* cover image + calendar date tile */}
               {ev.cover_url && (
-                <div style={styles.coverWrap}>
+                <div className="event-row-img">
                   <img
                     src={cldOptimize(ev.cover_url, { width: 800 })}
                     alt={title}
-                    style={styles.coverImg}
+                    className="event-row-img-el"
                   />
                   <DateTile iso={ev.event_date} lang={lang} />
                 </div>
               )}
 
-              <div style={styles.cardBody}>
-                {/* card header */}
-                <div style={styles.cardTop}>
-                  <div style={{ flex: 1 }}>
-                    <h2 style={styles.cardTitle}>{title}</h2>
-                    <div style={styles.meta}>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><MapPin size={13} /> {ev.location}</span>
-                      {ev.map_url && (
-                        <a href={ev.map_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                          style={{ color: 'var(--rose, #7E3434)', textDecoration: 'underline', fontSize: 12.5 }}>
-                          {t.viewOnMap}
-                        </a>
-                      )}
-                      <span style={{ color: '#ddd' }}>·</span>
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><CalendarDays size={13} /> {formatDate(ev.event_date, lang)}</span>
-                    </div>
-                    {desc && <p style={styles.desc}>{desc}</p>}
-                    <Link to={`/events/${ev.id}`} style={styles.readMore} onClick={e => e.stopPropagation()}>{t.readMore}</Link>
-                  </div>
-                  <div style={{ flexShrink: 0, textAlign: 'right' }}>
-                    <SeatsBadge ev={ev} t={t} />
-                  </div>
+              <div className="event-row-body">
+                {/* title + meta + description */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
+                  <h2 style={styles.cardTitle}>{title}</h2>
+                  <SeatsBadge ev={ev} t={t} />
                 </div>
+                <div style={styles.meta}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><MapPin size={13} /> {ev.location}</span>
+                  {ev.map_url && (
+                    <a href={ev.map_url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                      style={{ color: 'var(--rose, #7E3434)', textDecoration: 'underline', fontSize: 12.5 }}>
+                      {t.viewOnMap}
+                    </a>
+                  )}
+                  <span style={{ color: '#ddd' }}>·</span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 5 }}><CalendarDays size={13} /> {formatDate(ev.event_date, lang)}</span>
+                </div>
+                {desc && <p style={styles.desc}>{desc}</p>}
+                <Link to={`/events/${ev.id}`} style={styles.readMore} onClick={e => e.stopPropagation()}>{t.readMore}</Link>
 
-                {/* card footer */}
+                {/* footer: RSVP / ticket actions */}
                 <div style={styles.cardFooter} onClick={e => e.stopPropagation()}>
                   <button
                     style={{ ...bp.style, opacity: busy[ev.id] || bp.disabled ? 0.65 : 1, cursor: busy[ev.id] || bp.disabled ? 'default' : 'pointer' }}
@@ -448,15 +444,6 @@ const styles = {
     border: '1px solid #f5ecee',
     overflow: 'hidden',
   },
-  coverWrap: {
-    position: 'relative',
-  },
-  coverImg: {
-    width: '100%',
-    height: 420,
-    objectFit: 'cover',
-    display: 'block',
-  },
   dateTile: {
     position: 'absolute',
     top: 20,
@@ -485,16 +472,6 @@ const styles = {
     fontWeight: 700,
     padding: '4px 0 6px',
     lineHeight: 1,
-  },
-  cardBody: {
-    padding: '32px 36px 36px',
-  },
-  cardTop: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 20,
-    flexWrap: 'wrap',
   },
   cardTitle: {
     margin: '0 0 8px',

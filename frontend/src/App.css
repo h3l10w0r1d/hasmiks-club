@@ -2043,3 +2043,15 @@ a.ci-row:hover .ci-value{color:var(--rose)}
 .faq-item:last-child { border-bottom: none; }
 .faq-q { font-weight: 600; color: var(--deep, #2c1a1a); margin-bottom: 6px; }
 .faq-a { color: var(--taupe, #786050); line-height: 1.7; margin: 0; }
+
+/* Events list — image-left/content-right row layout */
+.event-row { display: flex; flex-direction: row; align-items: stretch; }
+.event-row-img { position: relative; flex: 0 0 42%; max-width: 440px; }
+.event-row-img-el { width: 100%; height: 100%; min-height: 260px; object-fit: cover; display: block; }
+.event-row-body { flex: 1; min-width: 0; padding: 32px 36px; display: flex; flex-direction: column; justify-content: center; }
+@media (max-width: 720px) {
+  .event-row { flex-direction: column; }
+  .event-row-img { flex: none; max-width: 100%; }
+  .event-row-img-el { height: 220px; min-height: 0; }
+  .event-row-body { padding: 24px; }
+}
