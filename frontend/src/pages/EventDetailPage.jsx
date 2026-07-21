@@ -8,6 +8,7 @@ import { cldOptimize } from '../utils/cloudinary'
 import { getMe } from '../api/members'
 import { createCheckout } from '../api/payments'
 import { sanitizeHtml } from '../utils/sanitizeHtml'
+import { yandexEmbedUrl } from '../utils/yandexMap'
 import GlobalHeader from '../components/GlobalHeader'
 import ConfirmDialog from '../components/ConfirmDialog'
 import GuestCheckoutModal from '../components/GuestCheckoutModal'
@@ -37,7 +38,7 @@ const copy = {
   hy: {
     notFound:     'Հանդիպումը չի գտնվել',
     backToEvents: 'Բոլոր հանդիպումները',
-    seatsLeft:    n => `${n} տեղ`,
+    seatsLeft:    n => `${n} տեղ է մնացել`,
     full:         'Ամբողջությամբ ամրագրված',
     attend:       'Մասնակցել',
     attending:    '✓ Գրանցված',
@@ -186,6 +187,7 @@ export default function EventDetailPage({ lang = 'en' }) {
   const title = lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title
   const desc  = lang === 'hy' && ev.description_hy ? ev.description_hy : ev.description
   const isPast = new Date(ev.event_date) < new Date()
+  const mapEmbed = yandexEmbedUrl(ev.map_url)
 
   return (
     <div style={styles.page}>
@@ -229,6 +231,18 @@ export default function EventDetailPage({ lang = 'en' }) {
                 </span>
               )}
             </div>
+
+            {mapEmbed && (
+              <iframe
+                src={mapEmbed}
+                title={ev.location}
+                width="100%"
+                height="320"
+                style={styles.mapEmbed}
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+              />
+            )}
 
             {desc && (
               <div className="rich-content" style={styles.desc} dangerouslySetInnerHTML={{ __html: sanitizeHtml(desc) }} />
@@ -321,6 +335,7 @@ const styles = {
   title: { margin: '0 0 10px', fontSize: 30, color: '#2c1a1a', fontFamily: "'Cormorant Garamond', 'Noto Sans Armenian', Georgia, serif", fontWeight: 600, lineHeight: 1.2 },
   meta: { display: 'flex', gap: 10, flexWrap: 'wrap', fontSize: 14, color: '#786050', alignItems: 'center' },
   desc: { color: '#4a3a3a', lineHeight: 1.7, fontSize: 16, marginBottom: 28 },
+  mapEmbed: { border: 0, borderRadius: 12, display: 'block', marginBottom: 24 },
   cardFooter: { display: 'flex', alignItems: 'center', gap: 14, paddingTop: 20, borderTop: '1px solid #f5ecee', flexWrap: 'wrap' },
   hint: { fontSize: 14, color: '#786050' },
   badgeOpen: { display: 'inline-block', padding: '4px 12px', borderRadius: 20, background: '#edfaf3', color: '#2a7a50', fontSize: 12, fontWeight: 600, border: '1px solid #c5eddb', flexShrink: 0 },
