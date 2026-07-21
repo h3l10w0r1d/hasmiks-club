@@ -817,7 +817,8 @@ export default function DashboardPage({ lang, setLang }) {
                       const wl = waitlistPositions[ev.id]
                       const title = lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title
                       const descRaw = lang === 'hy' && ev.description_hy ? ev.description_hy : ev.description
-                      const desc = descRaw ? stripHtml(descRaw) : ''
+                      const descFull = descRaw ? stripHtml(descRaw) : ''
+                      const desc = descFull.length > 160 ? `${descFull.slice(0, 160).trim()}…` : descFull
                       return (
                         <div key={ev.id} className="event-row" style={{ background: '#fff', borderRadius: 16, marginBottom: 14, boxShadow: '0 2px 12px rgba(126,52,52,.07)', border: '1px solid #f5ecee', overflow: 'hidden' }}>
                           {ev.cover_url && (
@@ -828,12 +829,18 @@ export default function DashboardPage({ lang, setLang }) {
                           )}
                           <div className="event-row-body">
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap' }}>
-                              <Link to={`/events/${ev.id}`} className="event-title" style={{ textDecoration: 'none', color: 'inherit' }}>{title}</Link>
-                              <div className="event-seats">
-                                {ev.seats_available > 0
-                                  ? <><strong>{ev.seats_available}</strong> {t.seats}</>
-                                  : <span className="fully-booked">{t.booked}</span>}
-                              </div>
+                              <Link to={`/events/${ev.id}`} style={{ textDecoration: 'none', color: '#2c1a1a', fontFamily: "'Cormorant Garamond', 'Noto Sans Armenian', Georgia, serif", fontSize: 22, fontWeight: 600 }}>{title}</Link>
+                              <span style={ev.seats_available > 0 ? {
+                                display: 'inline-block', padding: '4px 10px', borderRadius: 20,
+                                background: '#edfaf3', color: '#2a7a50', fontSize: 12, fontWeight: 600,
+                                border: '1px solid #c5eddb', whiteSpace: 'nowrap',
+                              } : {
+                                display: 'inline-block', padding: '4px 10px', borderRadius: 20,
+                                background: '#fef2f2', color: '#7E3434', fontSize: 12, fontWeight: 600,
+                                border: '1px solid #f5d9d9', whiteSpace: 'nowrap',
+                              }}>
+                                {ev.seats_available > 0 ? `${ev.seats_available} ${t.seats}` : t.booked}
+                              </span>
                             </div>
                             <div className="event-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', margin: '6px 0' }}>
                               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} /> {ev.location}</span> ·
