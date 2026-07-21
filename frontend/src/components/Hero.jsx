@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { heroImg } from '../data/images'
 import { useContent } from '../context/SiteContentContext'
-import { E, EditableImage, EditableLinkHref, isExternalHref } from './Editable'
+import { E, EditableImage, EditableLinkHref, isExternalHref, AddItemButton, RemoveItemButton } from './Editable'
 
 export default function Hero({ lang }) {
   const t = useContent()
@@ -10,6 +10,9 @@ export default function Hero({ lang }) {
   const p = (b) => `hero.${b}${hy ? 'Hy' : 'En'}`
   const v = (b) => (hy ? c[`${b}Hy`] : c[`${b}En`])
   const joinHref = c.joinHref || '/register'
+  // Legacy sites may still have a published override that set this as a
+  // plain string before it became a growable list — normalize either way.
+  const paragraphs = Array.isArray(v('p')) ? v('p') : [v('p')].filter(Boolean)
 
   return (
     <section className="hero">
@@ -26,7 +29,13 @@ export default function Hero({ lang }) {
         </div>
 
         <E as="h1" className="hero-h1" path={p('h1')} value={v('h1')} emphasis />
-        <E as="p" className="hero-p" path={p('p')} value={v('p')} emphasis />
+        {paragraphs.map((text, i) => (
+          <div className="hc-item-row" key={i}>
+            <E as="p" className="hero-p" path={p('p')} value={text} listIndex={i} emphasis />
+            {paragraphs.length > 1 && <RemoveItemButton paths={[p('p')]} index={i} />}
+          </div>
+        ))}
+        <AddItemButton paths={[p('p')]} label={hy ? 'Ավելացնել պարբերություն' : 'Add paragraph'} />
 
         <EditableLinkHref path="hero.joinHref" value={joinHref}>
           {isExternalHref(joinHref)

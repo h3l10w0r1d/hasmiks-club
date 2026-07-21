@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useContent } from '../context/SiteContentContext'
-import { E, IS_EDIT } from './Editable'
+import { E, IS_EDIT, AddItemButton, RemoveItemButton } from './Editable'
 import CardFrame from './CardFrame'
 import { visibleOrder, fullOrder } from '../utils/cardOrder'
 import Reveal from './Reveal'
@@ -13,6 +13,9 @@ export default function Pricing({ lang }) {
   const p = (b) => `pricing.${b}${suffix}`
   const v = (b) => (hy ? c[`${b}Hy`] : c[`${b}En`])
   const planCount = c.plans.length
+  // Legacy sites may still have a published override that set this as a
+  // plain string before it became a growable list — normalize either way.
+  const paragraphs = Array.isArray(v('sub')) ? v('sub') : [v('sub')].filter(Boolean)
   const order = IS_EDIT ? fullOrder(c.__plansOrder, planCount) : visibleOrder(c.__plansOrder, c.__plansHidden, planCount)
   const visSet = IS_EDIT ? visibleOrder(c.__plansOrder, c.__plansHidden, planCount) : null
 
@@ -21,7 +24,13 @@ export default function Pricing({ lang }) {
       <Reveal as="div">
         <E as="div" className="sec-tag" style={{ justifyContent: 'center' }} path={p('tag')} value={v('tag')} />
         <E as="h2" className="sec-h" style={{ textAlign: 'center', maxWidth: '560px', margin: '0 auto 12px' }} path={p('h')} value={v('h')} emphasis />
-        <E as="p" className="pricing-sub" path={p('sub')} value={v('sub')} emphasis />
+        {paragraphs.map((text, i) => (
+          <div className="hc-item-row" key={i}>
+            <E as="p" className="pricing-sub" path={p('sub')} value={text} listIndex={i} emphasis />
+            {paragraphs.length > 1 && <RemoveItemButton paths={[p('sub')]} index={i} />}
+          </div>
+        ))}
+        <AddItemButton paths={[p('sub')]} label={hy ? 'Ավելացնել պարբերություն' : 'Add paragraph'} />
       </Reveal>
 
       <div className="plans">

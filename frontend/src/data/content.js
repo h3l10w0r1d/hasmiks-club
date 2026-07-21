@@ -16,8 +16,8 @@ const t = {
     h1Hy: `Միացիր մի ջերմ ակումբի, որտեղ քեզ *հասկանում են, ընդունում են և սպասում։*`,
     locEn: `Yerevan · Telegram · Every Two Weeks`,
     locHy: `Երևան · Telegram ակումբ · Հանդիպումներ ամեն երկու շաբաթ`,
-    pEn: `For the first time, Armenian women have a place built just for them — for women who are **curious, alive, and refuse to disappear.** A real club gathering face to face every two weeks and staying close on Telegram every day.`,
-    pHy: `Կյանքի ամեն փուլում կնոջը պետք է մի միջավայր, որտեղ կարող է անկեղծ խոսել, նոր մարդկանց ճանաչել, կիսվել իր պատմություններով և պարզապես հաճելի ժամանակ անցկացնել։ Հասմիկի ակումբը ստեղծվում է հենց դրա համար՝ 50+ հայ կանանց համար, ովքեր ուզում են իրենց առօրյայում ավելացնել շփում, ջերմություն և նոր ոգեշնչում։ Այստեղ մենք հանդիպում ենք, լսում իրար և հիշեցնում՝ գեղեցիկ օրերը դեռ շատ են։`,
+    pEn: [`For the first time, Armenian women have a place built just for them — for women who are **curious, alive, and refuse to disappear.** A real club gathering face to face every two weeks and staying close on Telegram every day.`],
+    pHy: [`Կյանքի ամեն փուլում կնոջը պետք է մի միջավայր, որտեղ կարող է անկեղծ խոսել, նոր մարդկանց ճանաչել, կիսվել իր պատմություններով և պարզապես հաճելի ժամանակ անցկացնել։ Հասմիկի ակումբը ստեղծվում է հենց դրա համար՝ 50+ հայ կանանց համար, ովքեր ուզում են իրենց առօրյայում ավելացնել շփում, ջերմություն և նոր ոգեշնչում։ Այստեղ մենք հանդիպում ենք, լսում իրար և հիշեցնում՝ գեղեցիկ օրերը դեռ շատ են։`],
     joinEn: `Join the Club`,
     joinHy: `Միանալ ակումբին`,
     joinHref: `/register`,   // overridable CTA destination — internal path or full https:// URL
@@ -40,10 +40,10 @@ const t = {
     tagHy: `Մեր համայնքը`,
     hEn: `What you get in *the club*.`,
     hHy: `Ինչ կստանաք *ակումբում*։`,
-    p1En: `Hasmik's Club was created for women who want to add warm connection, new friendships, and beautiful days to their everyday life. Here you can meet, talk openly, share life stories, laugh, be heard, and feel that you are not alone.`,
-    p1Hy: `Հասմիկի ակումբը ստեղծվել է այն կանանց համար, ովքեր ուզում են իրենց առօրյայում ավելացնել ջերմ շփում, նոր ծանոթություններ և գեղեցիկ օրեր։ Այստեղ կարելի է հանդիպել, անկեղծ զրուցել, կիսվել կյանքի պատմություններով, ծիծաղել, լսվել և զգալ, որ միայնակ չեք։`,
-    p2En: `This is not just a club. It is a warm circle for women who want to live more openly, actively, and inspired.`,
-    p2Hy: `Սա պարզապես ակումբ չէ։ Սա ջերմ շրջապատ է կանանց համար, ովքեր ուզում են ապրել ավելի բաց, ակտիվ և ոգեշնչված։`,
+    p1En: [`Hasmik's Club was created for women who want to add warm connection, new friendships, and beautiful days to their everyday life. Here you can meet, talk openly, share life stories, laugh, be heard, and feel that you are not alone.`],
+    p1Hy: [`Հասմիկի ակումբը ստեղծվել է այն կանանց համար, ովքեր ուզում են իրենց առօրյայում ավելացնել ջերմ շփում, նոր ծանոթություններ և գեղեցիկ օրեր։ Այստեղ կարելի է հանդիպել, անկեղծ զրուցել, կիսվել կյանքի պատմություններով, ծիծաղել, լսվել և զգալ, որ միայնակ չեք։`],
+    p2En: [`This is not just a club. It is a warm circle for women who want to live more openly, actively, and inspired.`],
+    p2Hy: [`Սա պարզապես ակումբ չէ։ Սա ջերմ շրջապատ է կանանց համար, ովքեր ուզում են ապրել ավելի բաց, ակտիվ և ոգեշնչված։`],
     pts: [
       {
         ico: 'handshake',
@@ -99,8 +99,8 @@ const t = {
     tagHy: `ԱՆԴԱՄԱԿՑՈՒԹՅՈՒՆ`,
     hEn: `Club monthly *membership*`,
     hHy: `Ակումբի ամսական *անդամակցություն*`,
-    subEn: `Choose the package that fits you. Women 50+ choosing themselves every day.`,
-    subHy: `Ընտրիր քո փաթեթը։ 50+ հայ կանայք, ովքեր ամեն օր ընտրում են իրենք իրենց։`,
+    subEn: [`Choose the package that fits you. Women 50+ choosing themselves every day.`],
+    subHy: [`Ընտրիր քո փաթեթը։ 50+ հայ կանայք, ովքեր ամեն օր ընտրում են իրենք իրենց։`],
     perMonthEn: `per month`,
     perMonthHy: `ամսական`,
     popularEn: `Most popular`,
@@ -158,8 +158,8 @@ const t = {
 Let us live them together.`,
     hHy: `Գեղեցիկ օրերը *դեռ շատ են*։
 Եկեք դրանք միասին ապրենք։`,
-    pEn: `Join Hasmik's Club and become part of a warm circle where you are understood, heard, and awaited.`,
-    pHy: `Միացեք Հասմիկի ակումբին և դարձեք մի ջերմ շրջապատի մաս, որտեղ Ձեզ հասկանում են, լսում և սպասում։`,
+    pEn: [`Join Hasmik's Club and become part of a warm circle where you are understood, heard, and awaited.`],
+    pHy: [`Միացեք Հասմիկի ակումբին և դարձեք մի ջերմ շրջապատի մաս, որտեղ Ձեզ հասկանում են, լսում և սպասում։`],
     btnEn: `Join Hasmik's Club`,
     btnHy: `ՄԻԱՆԱԼ ԱԿՈՒՄԲԻՆ`,
     btnHref: `/register`,   // overridable CTA destination — internal path or full https:// URL
