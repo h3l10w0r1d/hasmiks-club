@@ -130,7 +130,7 @@ const TAB_PERMISSION_MAP = {
   site_editor:  'manage_settings',
   content:      'manage_content',
   gallery:      'manage_gallery',
-  moderation:   'manage_members',
+  moderation:   'manage_content',
   analytics:    'view_analytics',
   payments:     'manage_payments',
   one_timers:   'manage_events',

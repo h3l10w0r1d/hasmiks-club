@@ -2,6 +2,7 @@
 All outbound transactional email (via Resend) + Brevo CRM contact/event sync.
 Both talk to their REST APIs directly via httpx — no SDKs needed.
 """
+import html
 import logging
 import threading
 from datetime import datetime, timezone
@@ -238,6 +239,17 @@ _STYLE = """
 """
 
 
+def _e(value: Optional[str]) -> Optional[str]:
+    """Escape a value before it's interpolated into one of these f-string
+    HTML templates. Several of these fields (member full_name, gift
+    giver/recipient names) ultimately trace back to self-service or
+    unauthenticated input (e.g. the public /gift/start endpoint), so
+    without this an attacker could inject arbitrary HTML/links into a
+    transactional email sent to themselves, another member, or a
+    non-member gift recipient."""
+    return html.escape(value) if value else value
+
+
 def _bilingual(hy: str, en: str) -> str:
     """Stack the Armenian version of an email above the English one, separated
     by a thin rule. Every transactional email goes out bilingual (Armenian
@@ -266,6 +278,7 @@ def _wrap(body: str) -> str:
 
 
 def send_welcome(to: str, name: str) -> None:
+    name = _e(name)
     html = _wrap(_bilingual(f"""
     <h2>Բարի գալուստ, {name}! 🌸</h2>
     <p>Ուրախ ենք, որ միացաք Hasmik's Club-ին՝ ջերմ ու մտերմիկ ակումբ, ստեղծված հայ կանանց համար՝ հանդիպելու, շփվելու և մեր ընդհանուր մշակույթը միասին տոնելու։</p>
@@ -285,6 +298,7 @@ def send_welcome(to: str, name: str) -> None:
 
 
 def send_rsvp_confirmation(to: str, name: str, event_title: str, event_date: str, location: str) -> None:
+    name, event_title, location = _e(name), _e(event_title), _e(location)
     html = _wrap(_bilingual(f"""
     <h2>Դուք գրանցված եք, {name}! ✅</h2>
     <p>Ձեր տեղը «<strong>{event_title}</strong>»-ի համար պաշտոնապես ամրագրված է. անհամբեր սպասում ենք ձեզ։</p>
@@ -336,6 +350,7 @@ def qr_image_url(payload: str) -> Optional[str]:
 
 
 def send_guest_verification_code(to: str, name: str, code: str, event_title: str) -> None:
+    name, event_title = _e(name), _e(event_title)
     html = _wrap(_bilingual(f"""
     <h2>Հաստատեք ձեր էլ. հասցեն, {name}</h2>
     <p>Ընդամենը մեկ քայլ է մնացել «<strong>{event_title}</strong>»-ի ձեր տոմսին։ Մուտքագրեք այս 6 նիշանոց կոդը վճարման էջում՝ հաստատելու, որ դա իսկապես դուք եք, և շարունակելու դեպի վճարում.</p>
@@ -355,6 +370,7 @@ def send_guest_verification_code(to: str, name: str, code: str, event_title: str
 
 
 def send_guest_ticket_confirmation(to: str, name: str, event_title: str, event_date: str, location: str, checkin_payload: Optional[str] = None) -> None:
+    name, event_title, location = _e(name), _e(event_title), _e(location)
     qr_html = ""
     if checkin_payload:
         qr_url = qr_image_url(checkin_payload)
@@ -389,6 +405,7 @@ def send_guest_ticket_confirmation(to: str, name: str, event_title: str, event_d
 
 
 def send_rsvp_cancelled(to: str, name: str, event_title: str) -> None:
+    name, event_title = _e(name), _e(event_title)
     html = _wrap(_bilingual(f"""
     <h2>Գրանցումը չեղարկվեց</h2>
     <p>Բարև, {name}։ «<strong>{event_title}</strong>»-ի ձեր գրանցումը չեղարկվել է ըստ ձեր խնդրանքի, և ձեր տեղն ազատվել է խմբի համար։</p>
@@ -404,6 +421,7 @@ def send_rsvp_cancelled(to: str, name: str, event_title: str) -> None:
 
 
 def send_event_reminder(to: str, name: str, event_title: str, event_date: str, location: str) -> None:
+    name, event_title, location = _e(name), _e(event_title), _e(location)
     html = _wrap(_bilingual(f"""
     <h2>Կտեսնվենք վաղը, {name}! 🌺</h2>
     <p>Ընդամենը ընկերական հիշեցում, որ «<strong>{event_title}</strong>»-ը կայանալու է վաղը. անհամբեր սպասում ենք հրաշալի երեկոյի միասին։</p>
@@ -427,6 +445,7 @@ def send_event_reminder(to: str, name: str, event_title: str, event_date: str, l
 
 
 def send_verification(to: str, name: str, verify_url: str) -> None:
+    name = _e(name)
     html = _wrap(_bilingual(f"""
     <h2>Հաստատեք ձեր էլ. հասցեն, {name}։</h2>
     <p>Շնորհակալություն Hasmik's Club-ին միանալու համար։ Նախքան սկսելը՝ խնդրում ենք հաստատել, որ սա իսկապես ձեր էլ. հասցեն է. ընդամենը մեկ սեղմում է պետք։</p>
@@ -442,6 +461,7 @@ def send_verification(to: str, name: str, verify_url: str) -> None:
 
 
 def send_waitlist_joined(to: str, name: str, event_title: str, position: int) -> None:
+    name, event_title = _e(name), _e(event_title)
     html = _wrap(_bilingual(f"""
     <h2>Դուք սպասման ցուցակում եք, {name}։</h2>
     <p>«<strong>{event_title}</strong>»-ն այս պահին լցված է, բայց դուք ապահով տեղում եք՝ սպասման ցուցակի <strong>#{position}</strong> դիրքում։</p>
@@ -455,6 +475,7 @@ def send_waitlist_joined(to: str, name: str, event_title: str, position: int) ->
 
 
 def send_waitlist_promoted(to: str, name: str, event_title: str, event_date: str, location: str) -> None:
+    name, event_title, location = _e(name), _e(event_title), _e(location)
     html = _wrap(_bilingual(f"""
     <h2>Հիանալի նորություն, {name}! Տեղ ազատվեց 🎉</h2>
     <p>«<strong>{event_title}</strong>»-ի համար տեղ ազատվեց, և դուք ավտոմատ տեղափոխվել եք սպասման ցուցակից ու գրանցվել. ձեզնից գործողություն պետք չէ։</p>
@@ -489,6 +510,7 @@ def send_broadcast(to: str, name: str, subject: str, body: str) -> None:
 
 
 def send_telegram_invite(to: str, name: str, invite_url: str) -> None:
+    name = _e(name)
     html = _wrap(_bilingual(f"""
     <h2>Դուք մեզ հետ եք, {name}! 🎉</h2>
     <p>Ձեր Hasmik's Club-ի անդամակցությունն այժմ ակտիվ է՝ բարի գալուստ։ Ամեն օր ակումբին մոտ մնալու լավագույն ձևը մեր փակ Telegram խումբն է, որտեղ անդամները կիսվում են նորություններով, լուսանկարներով և հանդիպումների միջև հավաքներ պլանավորում։</p>
@@ -504,6 +526,7 @@ def send_telegram_invite(to: str, name: str, invite_url: str) -> None:
 
 
 def send_application_received(to: str, name: str) -> None:
+    name = _e(name)
     html = _wrap(_bilingual(f"""
     <h2>Դիմումը ստացվեց, {name}։</h2>
     <p>Շնորհակալ ենք Hasmik's Club-ին միանալու դիմումի համար։ Ձեր դիմումն ապահով հասել է մեր թիմին, և մենք ուշադիր կդիտարկենք այն։</p>
@@ -519,6 +542,7 @@ def send_application_received(to: str, name: str) -> None:
 
 
 def send_application_approved(to: str, name: str) -> None:
+    name = _e(name)
     html = _wrap(_bilingual(f"""
     <h2>Դուք ընդունված եք, {name}! 🌸</h2>
     <p>Hasmik's Club-ին միանալու ձեր դիմումը հաստատվել է՝ բարի գալուստ ակումբ։ Շատ ուրախ ենք, որ մեզ հետ եք։</p>
@@ -536,6 +560,7 @@ def send_application_approved(to: str, name: str) -> None:
 
 
 def send_application_declined(to: str, name: str) -> None:
+    name = _e(name)
     html = _wrap(_bilingual(f"""
     <h2>Շնորհակալություն հետաքրքրության համար, {name}</h2>
     <p>Իսկապես գնահատում ենք, որ ժամանակ հատկացրիք Hasmik's Club-ին դիմելու համար։ Ուշադիր դիտարկումից հետո այս պահին չենք կարող ձեզ տեղ առաջարկել։</p>
@@ -551,6 +576,7 @@ def send_application_declined(to: str, name: str) -> None:
 
 
 def send_password_reset(to: str, name: str, reset_url: str) -> None:
+    name = _e(name)
     html = _wrap(_bilingual(f"""
     <h2>Վերականգնեք ձեր գաղտնաբառը</h2>
     <p>Բարև, {name}։ Ստացել ենք ձեր Hasmik's Club-ի հաշվի գաղտնաբառը վերականգնելու հարցում։ Սեղմեք ստորև՝ նորը ընտրելու համար.</p>
@@ -568,6 +594,7 @@ def send_password_reset(to: str, name: str, reset_url: str) -> None:
 # ── recurring membership billing ───────────────────────────────────────────────
 
 def send_renewal_succeeded(to: str, name: str, amount: float) -> None:
+    name = _e(name)
     html = _wrap(_bilingual(f"""
     <h2>Ամեն ինչ պատրաստ է, {name}! ✅</h2>
     <p>Ձեր Hasmik's Club-ի անդամակցությունը հենց նոր ավտոմատ երկարաձգվեց՝ ձեր քարտից գանձվեց ֏{amount:,.0f}, և ձեր հասանելիությունը շարունակվում է անխափան։</p>
@@ -581,6 +608,7 @@ def send_renewal_succeeded(to: str, name: str, amount: float) -> None:
 
 
 def send_renewal_failed(to: str, name: str, attempts_left: int) -> None:
+    name = _e(name)
     retry_hy = f"{attempts_left} անգամ" if attempts_left != 1 else "1 անգամ"
     html = _wrap(_bilingual(f"""
     <h2>Չկարողացանք երկարաձգել ձեր անդամակցությունը, {name}</h2>
@@ -599,6 +627,7 @@ def send_renewal_failed(to: str, name: str, attempts_left: int) -> None:
 
 
 def send_membership_lapsed(to: str, name: str) -> None:
+    name = _e(name)
     html = _wrap(_bilingual(f"""
     <h2>Ձեր անդամակցությունը դադարեցվել է, {name}</h2>
     <p>Մի քանի փորձից հետո չկարողացանք երկարաձգել ձեր Hasmik's Club-ի անդամակցությունը, ուստի այն այժմ ապակտիվ է։ Ցանկացած պահի սիրով սպասում ենք ձեզ. պարզապես ավելացրեք քարտ ձեր վահանակից՝ վերսկսելու համար։</p>
@@ -616,6 +645,7 @@ def send_membership_lapsed(to: str, name: str) -> None:
 # ── gift cards ──────────────────────────────────────────────────────────────
 
 def send_gift_verification_code(to: str, name: str, code: str, recipient_name: str) -> None:
+    name, recipient_name = _e(name), _e(recipient_name)
     html = _wrap(_bilingual(f"""
     <h2>Հաստատեք ձեր էլ. հասցեն, {name}</h2>
     <p>Ընդամենը մեկ քայլ է մնացել <strong>{recipient_name}</strong>-ին նվեր ուղարկելուն։ Մուտքագրեք այս 6 նիշանոց կոդը վճարման էջում՝ հաստատելու, որ դա իսկապես դուք եք, և շարունակելու դեպի վճարում.</p>
@@ -635,6 +665,7 @@ def send_gift_verification_code(to: str, name: str, code: str, recipient_name: s
 
 
 def send_gift_giver_receipt(to: str, name: str, recipient_name: str, detail_line: str, amount) -> None:
+    name, recipient_name, detail_line = _e(name), _e(recipient_name), _e(detail_line)
     html = _wrap(_bilingual(f"""
     <h2>Ձեր նվերը ճանապարհին է, {name}! 🎁</h2>
     <p>Շնորհակալություն <strong>{recipient_name}</strong>-ին նվեր անելու համար. ձեր վճարումը կատարվել է, և մենք արդեն կապվել ենք նրա հետ՝ մանրամասներով։</p>
@@ -658,6 +689,7 @@ def send_gift_giver_receipt(to: str, name: str, recipient_name: str, detail_line
 
 
 def send_gift_claim_link(to: str, recipient_name: str, giver_name: Optional[str], duration_months: int, claim_url: str) -> None:
+    recipient_name, giver_name = _e(recipient_name), _e(giver_name)
     from_line_en = f"<strong>{giver_name}</strong> has gifted you" if giver_name else "You've been gifted"
     from_line_hy = f"<strong>{giver_name}</strong>-ը ձեզ նվիրել է" if giver_name else "Ձեզ նվիրվել է"
     html = _wrap(_bilingual(f"""
@@ -677,6 +709,7 @@ def send_gift_claim_link(to: str, recipient_name: str, giver_name: Optional[str]
 
 
 def send_gift_applied_existing(to: str, recipient_name: str, giver_name: Optional[str], duration_months: int, expires_at: str) -> None:
+    recipient_name, giver_name = _e(recipient_name), _e(giver_name)
     from_line_en = f"<strong>{giver_name}</strong> has gifted you" if giver_name else "You've been gifted"
     from_line_hy = f"<strong>{giver_name}</strong>-ը ձեզ նվիրել է" if giver_name else "Ձեզ նվիրվել է"
     html = _wrap(_bilingual(f"""
@@ -701,6 +734,7 @@ def send_gift_applied_existing(to: str, recipient_name: str, giver_name: Optiona
 
 def send_gift_tickets(to: str, recipient_name: str, giver_name: Optional[str], tickets: list) -> None:
     """tickets: list of {event_title, event_date, location, qr_url}"""
+    recipient_name, giver_name = _e(recipient_name), _e(giver_name)
     from_line_en = f"<strong>{giver_name}</strong> has gifted you" if giver_name else "You've been gifted"
     from_line_hy = f"<strong>{giver_name}</strong>-ը ձեզ նվիրել է" if giver_name else "Ձեզ նվիրվել է"
     n = len(tickets)
@@ -718,8 +752,8 @@ def send_gift_tickets(to: str, recipient_name: str, giver_name: Optional[str], t
         """ if t.get("qr_url") else ""
         cards += f"""
         <div class="meta">
-          <p style="font-size:16px;font-weight:600;margin-bottom:8px;">{t['event_title']}</p>
-          <p>📍 <strong>Վայր · Location:</strong> {t['location']}</p>
+          <p style="font-size:16px;font-weight:600;margin-bottom:8px;">{_e(t['event_title'])}</p>
+          <p>📍 <strong>Վայր · Location:</strong> {_e(t['location'])}</p>
           <p>🗓 <strong>Ամսաթիվ · Date:</strong> {t['event_date']}</p>
           {qr_html}
         </div>

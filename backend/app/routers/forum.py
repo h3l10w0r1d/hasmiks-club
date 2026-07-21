@@ -257,7 +257,7 @@ def report_target(target_type: str, target_id: int, payload: ReportIn,
 
 @router.get("/reports", response_model=List[ReportOut])
 def list_reports(status: str = "pending", db: Session = Depends(get_db),
-                 _: User = Depends(require_permission('manage_members'))):
+                 _: User = Depends(require_permission('manage_content'))):
     if status not in ("pending", "resolved", "dismissed", "all"):
         raise HTTPException(400, "Invalid status filter")
     query = db.query(ForumReport)
@@ -280,7 +280,7 @@ def list_reports(status: str = "pending", db: Session = Depends(get_db),
 @router.post("/reports/{report_id}/resolve", status_code=204)
 def resolve_report(report_id: int, delete_target: bool = False,
                    db: Session = Depends(get_db),
-                   admin: User = Depends(require_permission('manage_members'))):
+                   admin: User = Depends(require_permission('manage_content'))):
     """Mark a report resolved. Optionally also soft-deletes the reported
     content in the same action (?delete_target=true)."""
     report = db.query(ForumReport).filter(ForumReport.id == report_id).first()
@@ -306,7 +306,7 @@ def resolve_report(report_id: int, delete_target: bool = False,
 
 @router.post("/reports/{report_id}/dismiss", status_code=204)
 def dismiss_report(report_id: int, db: Session = Depends(get_db),
-                   admin: User = Depends(require_permission('manage_members'))):
+                   admin: User = Depends(require_permission('manage_content'))):
     report = db.query(ForumReport).filter(ForumReport.id == report_id).first()
     if not report:
         raise HTTPException(404, "Report not found")
@@ -363,7 +363,7 @@ def delete_topic(topic_id: int, db: Session = Depends(get_db),
                  user: User = Depends(get_current_user)):
     topic = _topic_or_404(db, topic_id)
     from app.core.deps import has_permission
-    if topic.user_id != user.id and not has_permission(user, 'manage_members'):
+    if topic.user_id != user.id and not has_permission(user, 'manage_content'):
         raise HTTPException(403, "Not your topic")
     topic.is_deleted = True
     db.commit()
@@ -376,7 +376,7 @@ def delete_post(post_id: int, db: Session = Depends(get_db),
     if not post:
         raise HTTPException(404, "Post not found")
     from app.core.deps import has_permission
-    if post.user_id != user.id and not has_permission(user, 'manage_members'):
+    if post.user_id != user.id and not has_permission(user, 'manage_content'):
         raise HTTPException(403, "Not your post")
     post.is_deleted = True
     topic = db.query(ForumTopic).filter(ForumTopic.id == post.topic_id).first()
@@ -491,7 +491,7 @@ async def trending_gifs(limit: int = 24, user: User = Depends(get_current_user))
 
 @router.patch("/{topic_id}/pin", status_code=204)
 def pin_topic(topic_id: int, db: Session = Depends(get_db),
-              _: User = Depends(require_permission('manage_members'))):
+              _: User = Depends(require_permission('manage_content'))):
     topic = _topic_or_404(db, topic_id)
     topic.pinned = not topic.pinned
     db.commit()
