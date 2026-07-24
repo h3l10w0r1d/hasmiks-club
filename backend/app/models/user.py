@@ -40,6 +40,11 @@ class User(Base):
     # charges that saved card directly with no re-entry of card details.
     card_holder_id = Column(String(64), unique=True, nullable=True)
     binding_active = Column(Boolean, nullable=False, default=False, server_default='false')
+    # Which membership tier ("1" | "2", see Pricing section) the member is
+    # subscribed at — set from the plan chosen at checkout, read back by the
+    # renewal job so it charges the right price. NULL = predates plan choice,
+    # falls back to the legacy single fixed AMERIABANK_MEMBERSHIP_AMOUNT.
+    membership_plan = Column(String(10), nullable=True)
     next_billing_date = Column(DateTime(timezone=True), nullable=True)
     renewal_attempts = Column(Integer, nullable=False, default=0, server_default='0')
     # Set once, at migration time, only for members who were already active

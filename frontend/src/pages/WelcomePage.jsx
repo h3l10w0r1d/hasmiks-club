@@ -4,7 +4,7 @@ import { Helmet } from 'react-helmet-async'
 import { CheckCircle2 } from 'lucide-react'
 import GlobalHeader from '../components/GlobalHeader'
 import { useAuth } from '../context/AuthContext'
-import { createCheckout } from '../api/payments'
+import { createCheckout, getPublicSettings } from '../api/payments'
 import content from '../data/content'
 
 const copy = {
@@ -29,6 +29,8 @@ export default function WelcomePage({ lang = 'en', setLang }) {
   const navigate = useNavigate()
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [error, setError] = useState('')
+  const [planPrices, setPlanPrices] = useState(null)
+  const [selectedPlan, setSelectedPlan] = useState('1')
 
   const hy = lang === 'hy'
   const t = copy[lang] ?? copy.en
@@ -41,11 +43,15 @@ export default function WelcomePage({ lang = 'en', setLang }) {
     }
   }, [authLoading, user, navigate])
 
+  useEffect(() => {
+    getPublicSettings().then((s) => setPlanPrices(s.membership_plans)).catch(() => {})
+  }, [])
+
   const handleSubscribe = async () => {
     setCheckoutLoading(true)
     setError('')
     try {
-      const { url } = await createCheckout()
+      const { url } = await createCheckout(selectedPlan)
       window.location.href = url
     } catch {
       setError(t.error)
@@ -73,14 +79,39 @@ export default function WelcomePage({ lang = 'en', setLang }) {
 
         <div className="page-body">
           <section className="page-section">
-            <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {c.items.map((item, i) => (
-                <li key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-                  <CheckCircle2 size={18} strokeWidth={1.75} color="var(--rose)" style={{ flexShrink: 0, marginTop: 2 }} />
-                  <span>{hy ? item.hy : item.en}</span>
-                </li>
-              ))}
-            </ul>
+            <p style={{ fontWeight: 600, fontSize: 14, color: 'var(--deep)', marginBottom: 14 }}>
+              {hy ? 'Ընտրեք ձեր փաթեթը' : 'Choose your package'}
+            </p>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 24 }}>
+              {c.plans.map((plan, i) => {
+                const planId = String(i + 1)
+                const selected = selectedPlan === planId
+                const price = planPrices?.[planId]
+                return (
+                  <button key={planId} type="button" onClick={() => setSelectedPlan(planId)}
+                    style={{
+                      textAlign: 'left', cursor: 'pointer', borderRadius: 14, padding: '18px 20px',
+                      border: `2px solid ${selected ? 'var(--rose)' : 'var(--sand, #e5d5d5)'}`,
+                      background: selected ? 'var(--rose-bg, #fdecec)' : '#fff',
+                    }}>
+                    <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--deep)', marginBottom: 4 }}>
+                      {hy ? plan.nameHy : plan.nameEn}
+                    </div>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--rose)', marginBottom: 10 }}>
+                      {price != null ? `֏${Number(price).toLocaleString()}` : `֏${plan.price}`} <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--taupe)' }}>{hy ? c.perMonthHy : c.perMonthEn}</span>
+                    </div>
+                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {(hy ? plan.itemsHy : plan.itemsEn).map((item, j) => (
+                        <li key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13 }}>
+                          <CheckCircle2 size={14} strokeWidth={2} color="var(--rose)" style={{ flexShrink: 0, marginTop: 2 }} />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </button>
+                )
+              })}
+            </div>
           </section>
 
           {error && (

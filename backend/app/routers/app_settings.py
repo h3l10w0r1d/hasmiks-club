@@ -49,6 +49,8 @@ PUBLIC_KEYS = {
     "gift_price_3m",
     "gift_price_6m",
     "gift_price_12m",
+    "membership_plan1_price",
+    "membership_plan2_price",
 }
 
 ALL_KEYS = PUBLIC_KEYS | {

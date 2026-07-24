@@ -14,6 +14,7 @@ class AmeriaPayment(Base):
     order_id = Column(Integer, unique=True, index=True, nullable=True)
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     payment_id = Column(String, nullable=True, index=True)  # returned by InitPayment
+    plan = Column(String(10), nullable=True)  # membership tier ("1" | "2") this attempt charged, if any
     amount = Column(Numeric(12, 2), nullable=False)
     currency = Column(String(3), nullable=False, default="051")
     status = Column(String(20), nullable=False, default="started")

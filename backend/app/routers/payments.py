@@ -1,13 +1,14 @@
-from decimal import Decimal
 from datetime import datetime, timedelta, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import RedirectResponse
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.core import ameriabank
 from app.core import email as mailer
-from app.core.billing import MEMBERSHIP_PERIOD_DAYS, _card_holder_id
+from app.core.billing import MEMBERSHIP_PERIOD_DAYS, VALID_PLANS, _card_holder_id, plan_amount
 from app.core.config import settings
 from app.core.deps import get_current_user
 from app.core.payment_log import log_payment_event
@@ -20,17 +21,27 @@ router = APIRouter(prefix="/payments", tags=["payments"])
 LANG_MAP = {"en": "en", "hy": "am", "ru": "ru"}
 
 
+class CheckoutIn(BaseModel):
+    # Membership tier ("1" | "2", see the Pricing section) chosen at the
+    # Subscribe/Update-card button. None only for pre-plan-choice code paths;
+    # the frontend always sends the member's picked (or existing) plan.
+    plan: Optional[str] = None
+
+
 @router.post("/create-checkout")
 def create_checkout(
+    body: CheckoutIn = CheckoutIn(),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
     if not (settings.AMERIABANK_CLIENT_ID and settings.AMERIABANK_USERNAME and settings.AMERIABANK_PASSWORD):
         raise HTTPException(status_code=503, detail="Ameriabank is not configured")
+    if body.plan is not None and body.plan not in VALID_PLANS:
+        raise HTTPException(status_code=422, detail=f"plan must be one of {VALID_PLANS}")
 
-    amount = Decimal(str(settings.AMERIABANK_TEST_AMOUNT if settings.AMERIABANK_TEST_MODE else settings.AMERIABANK_MEMBERSHIP_AMOUNT))
+    amount = plan_amount(db, body.plan)
 
-    row = AmeriaPayment(user_id=current_user.id, amount=amount, currency=settings.AMERIABANK_CURRENCY, status="started")
+    row = AmeriaPayment(user_id=current_user.id, plan=body.plan, amount=amount, currency=settings.AMERIABANK_CURRENCY, status="started")
     db.add(row)
     db.commit()
     db.refresh(row)
@@ -134,6 +145,11 @@ async def payment_callback(request: Request, db: Session = Depends(get_db)):
                     user.next_billing_date = datetime.now(timezone.utc) + timedelta(days=MEMBERSHIP_PERIOD_DAYS)
                     user.renewal_attempts = 0
                     user.card_required_by = None
+                    # Remember which tier they paid for so the renewal job
+                    # charges the same price next time. A checkout with no
+                    # plan (legacy path) leaves whatever plan they already had.
+                    if row.plan is not None:
+                        user.membership_plan = row.plan
                     # BindingID only comes back if the bank actually registered
                     # the card under our CardHolderID — some cards/issuers don't
                     # support it. If it's missing, this payment still counts

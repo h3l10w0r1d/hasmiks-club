@@ -538,10 +538,16 @@ export default function DashboardPage({ lang, setLang }) {
     })
   }
 
-  const handleSubscribe = async () => {
+  // Generic "Subscribe" prompts scattered around the dashboard (RSVP gate,
+  // forum gate, etc.) send the member to /welcome to actually pick a plan —
+  // passing a real plan id here is reserved for the billing card's own
+  // inline picker, which stays in place instead of navigating away.
+  const handleSubscribe = async (plan) => {
+    const chosenPlan = typeof plan === 'string' ? plan : null
+    if (!chosenPlan) { navigate('/welcome'); return }
     setCheckoutLoading(true)
     try {
-      const { url } = await createCheckout()
+      const { url } = await createCheckout(chosenPlan)
       window.location.href = url
     } catch {
       setMsg(lang === 'hy' ? 'Չհաջողվեց սկսել վճարումը: Փորձե՛ք կրկին:' : 'Could not start checkout. Please try again.')
@@ -1077,7 +1083,7 @@ export default function DashboardPage({ lang, setLang }) {
                       )}
                       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                         <button
-                          onClick={handleSubscribe}
+                          onClick={() => handleSubscribe(user.membership_plan || '1')}
                           disabled={checkoutLoading}
                           title={lang === 'hy' ? 'Կվերաձևակերպի ընթացիկ ժամանակաշրջանը նոր քարտով' : 'Renews the current period now on a new card'}
                           style={{ background: 'none', border: '1px solid var(--rose)', borderRadius: 8, padding: '7px 14px', cursor: checkoutLoading ? 'default' : 'pointer', fontSize: 12.5, color: 'var(--rose)', opacity: checkoutLoading ? 0.6 : 1 }}

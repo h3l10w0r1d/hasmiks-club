@@ -149,6 +149,7 @@ const DEFAULT_SETTINGS = {
   club_instagram: '', club_location: '', club_email: '', club_phone: '',
   welcome_email_body: '', event_reminder_body: '', email_footer: '',
   gift_price_1m: '', gift_price_3m: '', gift_price_6m: '', gift_price_12m: '',
+  membership_plan1_price: '', membership_plan2_price: '',
 }
 
 const EMPTY_EVENT   = { title: '', title_hy: '', description: '', description_hy: '', location: '', map_url: '', event_date: '', max_seats: 20, cover_url: '', ticket_price: '', max_guest_tickets: '' }
@@ -1804,6 +1805,23 @@ export default function AdminPage() {
                         <Field label="Telegram Invite URL (for member dashboard)">
                           <Input value={settingsForm.telegram_invite_url} onChange={e => setSettingsForm(f => ({ ...f, telegram_invite_url: e.target.value }))} placeholder="https://t.me/+…" />
                         </Field>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm">Membership Plans</CardTitle>
+                        <CardDescription>The two tiers a member picks between at Subscribe (matches the Pricing section's "Package 1"/"Package 2" cards). Leave blank to use the shipped defaults (֏15,000 / ֏25,000).</CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-2 gap-4">
+                          <Field label="Package 1 — monthly (֏)">
+                            <Input type="number" value={settingsForm.membership_plan1_price} onChange={e => setSettingsForm(f => ({ ...f, membership_plan1_price: e.target.value }))} placeholder="15000" />
+                          </Field>
+                          <Field label="Package 2 — monthly (֏)">
+                            <Input type="number" value={settingsForm.membership_plan2_price} onChange={e => setSettingsForm(f => ({ ...f, membership_plan2_price: e.target.value }))} placeholder="25000" />
+                          </Field>
+                        </div>
                       </CardContent>
                     </Card>
 

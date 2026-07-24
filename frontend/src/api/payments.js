@@ -1,7 +1,7 @@
 import client from './client'
 
-export const createCheckout = () =>
-  client.post('/payments/create-checkout').then((r) => r.data)
+export const createCheckout = (plan) =>
+  client.post('/payments/create-checkout', { plan: plan ?? null }).then((r) => r.data)
 
 export const cancelAutoRenew = () =>
   client.post('/payments/cancel-auto-renew').then((r) => r.data)

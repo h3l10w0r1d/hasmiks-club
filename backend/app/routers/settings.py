@@ -44,6 +44,13 @@ def public_settings(db: Session = Depends(get_db)):
             "6": float(_db_setting(db, "gift_price_6m", "") or monthly * 6),
             "12": float(_db_setting(db, "gift_price_12m", "") or monthly * 12),
         },
+        # Membership plan tiers a member picks between at Subscribe — see the
+        # Pricing section for the matching marketing copy. Falls back to the
+        # section's shipped defaults until the admin sets a price explicitly.
+        "membership_plans": {
+            "1": float(_db_setting(db, "membership_plan1_price", "") or 15000),
+            "2": float(_db_setting(db, "membership_plan2_price", "") or 25000),
+        },
     }
 
 

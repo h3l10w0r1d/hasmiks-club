@@ -18,6 +18,7 @@ from app.core import email as mailer
 from app.core.config import settings
 from app.core.payment_log import log_payment_event
 from app.models.ameria_payment import AmeriaPayment
+from app.models.app_setting import AppSetting
 from app.models.user import User
 
 logger = logging.getLogger(__name__)
@@ -26,6 +27,12 @@ MEMBERSHIP_PERIOD_DAYS = 30
 RETRY_INTERVAL_DAYS = 3
 MAX_RENEWAL_ATTEMPTS = 3  # ~9 days of retrying (3, 3, 3) before lapsing
 
+# Fallback prices if the admin hasn't set membership_plan{1,2}_price in
+# Settings yet — match the Pricing section's current shipped defaults so a
+# freshly-deployed site isn't stuck at ֏0 before an admin configures them.
+VALID_PLANS = ("1", "2")
+_PLAN_FALLBACK_PRICE = {"1": 15000.0, "2": 25000.0}
+
 
 def _card_holder_id(user_id: int) -> str:
     """Must match payments.py's _card_holder_id exactly — both sides need to
@@ -33,8 +40,20 @@ def _card_holder_id(user_id: int) -> str:
     return f"hc-user-{user_id}"
 
 
-def _membership_amount() -> Decimal:
-    return Decimal(str(settings.AMERIABANK_TEST_AMOUNT if settings.AMERIABANK_TEST_MODE else settings.AMERIABANK_MEMBERSHIP_AMOUNT))
+def plan_amount(db, plan: str | None) -> Decimal:
+    """The monthly charge for a membership tier ("1" | "2", see the Pricing
+    section) — admin-configured via Settings (membership_plan{N}_price),
+    falling back to the shipped defaults if not yet set. `plan=None` (a
+    member who predates plan choice, or a payment made before this feature)
+    falls back to the legacy single fixed AMERIABANK_MEMBERSHIP_AMOUNT. Test
+    mode overrides everything with the bank's required test amount."""
+    if settings.AMERIABANK_TEST_MODE:
+        return Decimal(str(settings.AMERIABANK_TEST_AMOUNT))
+    if plan in VALID_PLANS:
+        row = db.query(AppSetting).filter(AppSetting.key == f"membership_plan{plan}_price").first()
+        raw = row.value if row and row.value else ""
+        return Decimal(str(float(raw) if raw else _PLAN_FALLBACK_PRICE[plan]))
+    return Decimal(str(settings.AMERIABANK_MEMBERSHIP_AMOUNT))
 
 
 def process_due_members(db) -> None:
@@ -75,8 +94,8 @@ def _process_one(db, user: User, now: datetime) -> None:
 
 
 def _attempt_charge(db, user: User, now: datetime) -> None:
-    amount = _membership_amount()
-    row = AmeriaPayment(user_id=user.id, amount=amount, currency=settings.AMERIABANK_CURRENCY, status="started")
+    amount = plan_amount(db, user.membership_plan)
+    row = AmeriaPayment(user_id=user.id, plan=user.membership_plan, amount=amount, currency=settings.AMERIABANK_CURRENCY, status="started")
     db.add(row)
     db.commit()
     db.refresh(row)
