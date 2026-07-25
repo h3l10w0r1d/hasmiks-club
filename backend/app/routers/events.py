@@ -34,6 +34,46 @@ def _paid_guest_count(event: Event) -> int:
     return sum(1 for g in event.guest_tickets if g.status in ameriabank.PAID_STATUSES)
 
 
+# How many events a member may RSVP to in a single calendar month, keyed by
+# membership_plan ("1" | "2" — see the Pricing section). A member with no
+# plan on file (predates plan choice) is deliberately left uncapped rather
+# than retroactively restricted to a number they never agreed to.
+MONTHLY_RSVP_LIMITS = {"1": 1, "2": 2}
+
+
+def _month_bounds(dt: datetime) -> tuple[datetime, datetime]:
+    start = dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    end = start.replace(year=start.year + 1, month=1) if start.month == 12 else start.replace(month=start.month + 1)
+    return start, end
+
+
+def _rsvp_count_for_month(db: Session, user_id: int, event_date: datetime) -> int:
+    """How many events this member is already RSVP'd to in the calendar
+    month containing `event_date` — bucketed by each event's OWN date, not
+    by when the RSVP was created, so a February sign-up for a March event
+    counts against March."""
+    start, end = _month_bounds(event_date)
+    return (
+        db.query(RSVP)
+        .join(Event, RSVP.event_id == Event.id)
+        .filter(RSVP.user_id == user_id, Event.event_date >= start, Event.event_date < end)
+        .count()
+    )
+
+
+def _check_monthly_rsvp_limit(db: Session, user: User, event: Event) -> None:
+    limit = MONTHLY_RSVP_LIMITS.get(user.membership_plan)
+    if limit is None:
+        return
+    if _rsvp_count_for_month(db, user.id, event.event_date) >= limit:
+        month_name = event.event_date.strftime("%B")
+        plural = "s" if limit != 1 else ""
+        raise HTTPException(
+            status_code=409,
+            detail=f"Your plan allows {limit} event{plural} per month, and you've already used that for {month_name}",
+        )
+
+
 def _serialize_event(event: Event, user_id: int) -> EventOut:
     guest_seats_taken = _paid_guest_count(event)
     seats_taken = len(event.rsvps) + guest_seats_taken
@@ -136,6 +176,7 @@ def rsvp(event_id: int, db: Session = Depends(get_db), current_user: User = Depe
     existing = db.query(RSVP).filter(RSVP.user_id == current_user.id, RSVP.event_id == event_id).first()
     if existing:
         raise HTTPException(status_code=409, detail="Already RSVP'd")
+    _check_monthly_rsvp_limit(db, current_user, event)
     # Remove from waitlist if they were on it
     db.query(EventWaitlist).filter(
         EventWaitlist.user_id == current_user.id,
@@ -164,16 +205,28 @@ def cancel_rsvp(event_id: int, db: Session = Depends(get_db), current_user: User
     db.delete(rsvp_obj)
     db.flush()
 
-    # Promote first person on waitlist
+    # Promote the first waitlisted person who isn't already at their plan's
+    # monthly RSVP cap for this event's month — skip over (but leave on the
+    # waitlist, untouched) anyone who is, so a capped-out member doesn't
+    # block the next eligible person in line.
     if event:
-        next_in_line = (
+        next_in_line = None
+        promoted_user = None
+        for candidate in (
             db.query(EventWaitlist)
             .filter(EventWaitlist.event_id == event_id)
             .order_by(EventWaitlist.created_at)
-            .first()
-        )
+            .all()
+        ):
+            candidate_user = db.query(User).filter(User.id == candidate.user_id).first()
+            if not candidate_user:
+                continue
+            limit = MONTHLY_RSVP_LIMITS.get(candidate_user.membership_plan)
+            if limit is not None and _rsvp_count_for_month(db, candidate_user.id, event.event_date) >= limit:
+                continue
+            next_in_line, promoted_user = candidate, candidate_user
+            break
         if next_in_line:
-            promoted_user = db.query(User).filter(User.id == next_in_line.user_id).first()
             db.delete(next_in_line)
             db.add(RSVP(user_id=next_in_line.user_id, event_id=event_id))
             notify.push(
