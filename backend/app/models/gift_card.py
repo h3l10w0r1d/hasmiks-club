@@ -39,6 +39,7 @@ class GiftCard(Base):
 
     gift_type = Column(String(20), nullable=False)  # membership | events
     duration_months = Column(Integer, nullable=True)  # membership only: 1 | 3 | 6 | 12
+    plan = Column(String(10), nullable=True)  # membership only: "1" | "2" (see billing.VALID_PLANS); NULL = legacy flat price
     event_selections_json = Column(String, nullable=True)  # events only: JSON [{"event_id":1,"quantity":2}, ...]
 
     amount = Column(Numeric(12, 2), nullable=False)

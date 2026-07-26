@@ -148,7 +148,6 @@ const DEFAULT_SETTINGS = {
   membership_price_display: '', club_description: '',
   club_instagram: '', club_location: '', club_email: '', club_phone: '',
   welcome_email_body: '', event_reminder_body: '', email_footer: '',
-  gift_price_1m: '', gift_price_3m: '', gift_price_6m: '', gift_price_12m: '',
   membership_plan1_price: '', membership_plan2_price: '',
 }
 
@@ -1811,7 +1810,7 @@ export default function AdminPage() {
                     <Card>
                       <CardHeader>
                         <CardTitle className="text-sm">Membership Plans</CardTitle>
-                        <CardDescription>The two tiers a member picks between at Subscribe (matches the Pricing section's "Package 1"/"Package 2" cards). Leave blank to use the shipped defaults (֏15,000 / ֏25,000).</CardDescription>
+                        <CardDescription>The two tiers a member picks between at Subscribe (matches the Pricing section's "Package 1"/"Package 2" cards). Also used to price gifted memberships (monthly rate × gift duration). Leave blank to use the shipped defaults (֏15,000 / ֏25,000).</CardDescription>
                       </CardHeader>
                       <CardContent className="space-y-4">
                         <div className="grid grid-cols-2 gap-4">
@@ -1820,29 +1819,6 @@ export default function AdminPage() {
                           </Field>
                           <Field label="Package 2 — monthly (֏)">
                             <Input type="number" value={settingsForm.membership_plan2_price} onChange={e => setSettingsForm(f => ({ ...f, membership_plan2_price: e.target.value }))} placeholder="25000" />
-                          </Field>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="text-sm">Gift Membership Pricing</CardTitle>
-                        <CardDescription>Leave a tier blank to default to the monthly rate × months, with no bundle discount.</CardDescription>
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <Field label="1 month (֏)">
-                            <Input type="number" value={settingsForm.gift_price_1m} onChange={e => setSettingsForm(f => ({ ...f, gift_price_1m: e.target.value }))} placeholder="40000" />
-                          </Field>
-                          <Field label="3 months (֏)">
-                            <Input type="number" value={settingsForm.gift_price_3m} onChange={e => setSettingsForm(f => ({ ...f, gift_price_3m: e.target.value }))} placeholder="120000" />
-                          </Field>
-                          <Field label="6 months (֏)">
-                            <Input type="number" value={settingsForm.gift_price_6m} onChange={e => setSettingsForm(f => ({ ...f, gift_price_6m: e.target.value }))} placeholder="240000" />
-                          </Field>
-                          <Field label="12 months (֏)">
-                            <Input type="number" value={settingsForm.gift_price_12m} onChange={e => setSettingsForm(f => ({ ...f, gift_price_12m: e.target.value }))} placeholder="480000" />
                           </Field>
                         </div>
                       </CardContent>

@@ -20,6 +20,7 @@ class GiftStartIn(BaseModel):
     anonymous: bool = False
     gift_type: str  # membership | events
     duration_months: Optional[int] = None  # required when gift_type == membership
+    plan: Optional[str] = None  # required when gift_type == membership ("1" | "2")
     event_selections: Optional[List[GiftEventSelection]] = None  # required when gift_type == events
     lang_pref: Optional[str] = "en"
 
@@ -42,6 +43,7 @@ class GiftInfoOut(BaseModel):
     giver_name: Optional[str] = None  # omitted when the gift was sent anonymously
     gift_type: str
     duration_months: Optional[int] = None
+    plan: Optional[str] = None
     already_redeemed: bool
     recipient_has_account: bool
 
@@ -61,6 +63,7 @@ class GiftCardOut(BaseModel):
     anonymous: bool
     gift_type: str
     duration_months: Optional[int] = None
+    plan: Optional[str] = None
     amount: Decimal
     status: str
     email_verified: bool

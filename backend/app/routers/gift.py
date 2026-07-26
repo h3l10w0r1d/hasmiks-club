@@ -13,7 +13,6 @@ from app.models.event import Event
 from app.models.user import User
 from app.models.gift_card import GiftCard
 from app.models.guest_ticket import GuestTicket
-from app.models.app_setting import AppSetting
 from app.schemas.gift import (
     GiftStartIn, GiftVerifyIn, GiftCheckoutIn, GiftStartOut, GiftInfoOut,
     GiftClaimPasswordIn, GiftCardOut,
@@ -22,6 +21,7 @@ from app.schemas.user import TokenOut, UserOut
 from app.core.deps import get_current_user
 from app.core import ameriabank
 from app.core import email as mailer
+from app.core.billing import VALID_PLANS, plan_amount
 from app.core.config import settings
 from app.core.payment_log import log_gift_event
 from app.core.security import hash_password, create_access_token
@@ -43,26 +43,16 @@ def _paid_guest_count(event: Event) -> int:
     return sum(1 for g in event.guest_tickets if g.status in ameriabank.PAID_STATUSES)
 
 
-def _db_setting(db: Session, key: str, fallback: str = "") -> str:
-    row = db.query(AppSetting).filter(AppSetting.key == key).first()
-    return row.value if row and row.value else fallback
-
-
-def _gift_membership_price(db: Session, months: int) -> Decimal:
-    override = _db_setting(db, f"gift_price_{months}m", "")
-    if override:
-        return Decimal(override)
-    return Decimal(str(settings.AMERIABANK_MEMBERSHIP_AMOUNT)) * months
-
-
 def _validate_gift_request(db: Session, payload: GiftStartIn) -> tuple[Decimal, str]:
     """Returns (amount, human-readable description). Raises HTTPException on
     any validation failure. Read-only — does not touch the DB."""
     if payload.gift_type == "membership":
         if payload.duration_months not in MEMBERSHIP_DURATIONS:
             raise HTTPException(status_code=400, detail="duration_months must be 1, 3, 6, or 12")
-        amount = _gift_membership_price(db, payload.duration_months)
-        return amount, f"{payload.duration_months}-month Hasmik's Club membership gift"
+        if payload.plan not in VALID_PLANS:
+            raise HTTPException(status_code=400, detail="plan must be '1' or '2'")
+        amount = plan_amount(db, payload.plan) * payload.duration_months
+        return amount, f"{payload.duration_months}-month Hasmik's Club membership gift (plan {payload.plan})"
 
     if payload.gift_type == "events":
         if not payload.event_selections:
@@ -108,6 +98,7 @@ def gift_start(payload: GiftStartIn, db: Session = Depends(get_db)):
         giver_name=payload.giver_name, giver_email=giver_email, giver_phone=payload.giver_phone,
         recipient_name=payload.recipient_name, recipient_email=recipient_email, recipient_phone=payload.recipient_phone,
         anonymous=payload.anonymous, gift_type=payload.gift_type, duration_months=payload.duration_months,
+        plan=payload.plan if payload.gift_type == "membership" else None,
         event_selections_json=json.dumps([s.model_dump() for s in payload.event_selections]) if payload.event_selections else None,
         amount=amount, currency=settings.AMERIABANK_CURRENCY, status="unverified",
         verification_code=_gen_code(), verification_sent_at=datetime.now(timezone.utc),
@@ -236,6 +227,8 @@ def _deliver_membership_gift(db: Session, gift: GiftCard) -> None:
         base = now if not existing.membership_expires_at else max(now, existing.membership_expires_at.replace(tzinfo=timezone.utc))
         existing.membership_status = "active"
         existing.membership_expires_at = base + timedelta(days=30 * gift.duration_months)
+        if gift.plan:
+            existing.membership_plan = gift.plan
         gift.applied_to_user_id = existing.id
         gift.redeemed = True
         gift.redeemed_at = now
@@ -361,6 +354,7 @@ def gift_claim_info(token: str, db: Session = Depends(get_db)):
         giver_name=None if gift.anonymous else gift.giver_name,
         gift_type=gift.gift_type,
         duration_months=gift.duration_months,
+        plan=gift.plan,
         already_redeemed=gift.redeemed,
         recipient_has_account=recipient_has_account,
     )
@@ -383,6 +377,7 @@ def gift_claim_password(token: str, payload: GiftClaimPasswordIn, db: Session = 
         is_verified=True,  # possession of the unique emailed claim link is proof of ownership
         membership_status="active",
         membership_expires_at=now + timedelta(days=30 * gift.duration_months),
+        membership_plan=gift.plan,
     )
     db.add(user)
     db.commit()
@@ -416,6 +411,8 @@ def gift_claim_apply(token: str, db: Session = Depends(get_db), current_user: Us
     base = now if not current_user.membership_expires_at else max(now, current_user.membership_expires_at.replace(tzinfo=timezone.utc))
     current_user.membership_status = "active"
     current_user.membership_expires_at = base + timedelta(days=30 * gift.duration_months)
+    if gift.plan:
+        current_user.membership_plan = gift.plan
     if not current_user.phone and gift.recipient_phone:
         current_user.phone = gift.recipient_phone
 

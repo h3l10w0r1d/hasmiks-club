@@ -45,10 +45,6 @@ PUBLIC_KEYS = {
     "club_location",
     "club_email",
     "club_phone",
-    "gift_price_1m",
-    "gift_price_3m",
-    "gift_price_6m",
-    "gift_price_12m",
     "membership_plan1_price",
     "membership_plan2_price",
 }
