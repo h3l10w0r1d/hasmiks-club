@@ -32,7 +32,7 @@ export default function CountryPhoneInput({ lang = 'en', country, onCountryChang
 
   const selected = country || COUNTRIES[0]
 
-  const inputStyle = { border: '1px solid #DDD0BA', borderRadius: 8, padding: '12px 14px', fontSize: 16, fontFamily: 'inherit', color: '#180C04' }
+  const inputStyle = { border: '1px solid #DDD0BA', borderRadius: 8, padding: '12px 14px', fontSize: 16, fontFamily: 'inherit', color: '#180C04', boxSizing: 'border-box' }
 
   return (
     <div>
