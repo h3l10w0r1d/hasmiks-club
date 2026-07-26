@@ -28,7 +28,7 @@ export default function Footer({ lang = 'en' }) {
     linksTitle: f[`linksTitle${sfx}`],
     contactTitle: f[`contactTitle${sfx}`],
     home: f[`home${sfx}`], events: f[`events${sfx}`], about: f[`about${sfx}`],
-    contact: f[`contact${sfx}`], terms: f[`terms${sfx}`],
+    contact: f[`contact${sfx}`], gift: f[`gift${sfx}`], terms: f[`terms${sfx}`],
     copy: f[`copy${sfx}`],
   }
 
@@ -52,6 +52,7 @@ export default function Footer({ lang = 'en' }) {
             <Link to="/events"><E as="span" path={`footer.events${sfx}`} value={t.events} /></Link>
             <Link to="/about"><E as="span" path={`footer.about${sfx}`} value={t.about} /></Link>
             <Link to="/contact"><E as="span" path={`footer.contact${sfx}`} value={t.contact} /></Link>
+            <Link to="/gift"><E as="span" path={`footer.gift${sfx}`} value={t.gift} /></Link>
             <Link to="/terms"><E as="span" path={`footer.terms${sfx}`} value={t.terms} /></Link>
           </nav>
         </div>

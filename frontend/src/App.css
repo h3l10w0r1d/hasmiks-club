@@ -870,7 +870,12 @@ a.ci-row:hover .ci-value{color:var(--rose)}
 }
 @media(max-width:560px){
   .cards{grid-template-columns:1fr}
-  .hero-stats .hstat{padding:12px 16px}
+  /* Below this width three stats no longer fit on one line — flex-wrap alone
+     left a stray right-border from the wrapped row poking into the row below.
+     Stack them full-width instead, with a bottom divider between rows. */
+  .hero-stats{flex-direction:column;flex-wrap:nowrap;align-self:stretch}
+  .hero-stats .hstat{padding:12px 16px;border-right:none;border-bottom:1px solid var(--sand);width:100%;box-sizing:border-box}
+  .hero-stats .hstat:last-child{border-bottom:none}
 }
 
 /* ═══════════════════════════════════════

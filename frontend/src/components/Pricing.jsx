@@ -65,6 +65,13 @@ export default function Pricing({ lang }) {
           )
         })}
       </div>
+
+      <Reveal as="div" className="pricing-gift-teaser" style={{ textAlign: 'center', marginTop: 32 }}>
+        <E as="p" className="pricing-sub" path={p('giftTeaser')} value={v('giftTeaser')} emphasis />
+        <Link to="/gift" className="plan-btn-outline" style={{ display: 'inline-block', marginTop: 10, padding: '10px 22px', borderRadius: 999 }}>
+          <E as="span" path={p('giftLink')} value={v('giftLink')} />
+        </Link>
+      </Reveal>
     </section>
   )
 }

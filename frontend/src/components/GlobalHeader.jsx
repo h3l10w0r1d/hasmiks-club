@@ -51,6 +51,7 @@ export default function GlobalHeader({ lang = 'hy', setLang }) {
       <Link to="/events"  className={`gh-link${isActive('/events')  ? ' gh-link--active' : ''}`} onClick={close}><E as="span" path={`nav.events${sfx}`} value={nav[`events${sfx}`]} /></Link>
       <Link to="/about"   className={`gh-link${isActive('/about')   ? ' gh-link--active' : ''}`} onClick={close}><E as="span" path={`nav.about${sfx}`} value={nav[`about${sfx}`]} /></Link>
       <Link to="/contact" className={`gh-link${isActive('/contact') ? ' gh-link--active' : ''}`} onClick={close}><E as="span" path={`nav.contact${sfx}`} value={nav[`contact${sfx}`]} /></Link>
+      <Link to="/gift" className={`gh-link${isActive('/gift') ? ' gh-link--active' : ''}`} onClick={close}><E as="span" path={`nav.gift${sfx}`} value={nav[`gift${sfx}`]} /></Link>
       {extraPages.map((pg) => {
         const path = `/p/${pg.slug}`
         const label = (lang === 'hy' ? pg.navHy : pg.navEn) || (lang === 'hy' ? pg.titleHy : pg.titleEn) || pg.slug
