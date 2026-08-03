@@ -96,6 +96,11 @@ export const adminRestoreSiteContentHistory = (index)   => client.post(`/admin/s
 export const adminGetMediaLibrary     = ()           => client.get('/admin/settings/media-library').then(r => r.data)
 export const adminDeleteMediaLibraryItem = (url)     => client.delete('/admin/settings/media-library', { params: { url } }).then(r => r.data)
 
+// credit packages (admin-configurable tiers, replacing the old fixed
+// plan-1/plan-2 subscription pricing)
+export const adminGetPackages         = ()           => client.get('/admin/settings/packages').then(r => r.data)
+export const adminSavePackages        = (packages)   => client.put('/admin/settings/packages', packages).then(r => r.data)
+
 // roles & permissions
 export const adminGetRoles            = ()           => client.get('/admin/roles').then(r => r.data)
 export const adminUpdateRole          = (userId, payload) => client.put(`/admin/roles/${userId}`, payload).then(r => r.data)

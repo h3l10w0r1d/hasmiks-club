@@ -6,9 +6,9 @@ Keys: telegram_invite_url, require_approval, welcome_email_body,
 """
 import json
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, List
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Body, Depends, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -29,12 +29,15 @@ LAYOUT_KEY = "__layout"
 PAGES_KEY = "__pages"           # admin-created pages beyond the fixed set — see _validate_pages
 MEDIA_LIBRARY_KEY = "media_library"                 # reusable image picker: JSON list of URLs
 SITE_CONTENT_HISTORY_KEY = "site_content_history"   # JSON list of {content, publishedAt}, newest first
+PACKAGES_CONFIG_KEY = "packages_config"             # admin-configurable credit-pack tiers — JSON list, see _validate_packages
 # Guardrails so a malformed or oversized payload can't be persisted.
 MAX_OVERRIDE_ENTRIES = 500
 MAX_VALUE_LEN = 8000
 MAX_LAYOUT_SECTIONS = 50
 MAX_MEDIA_LIBRARY_ITEMS = 200
 MAX_HISTORY_ENTRIES = 20
+MAX_PACKAGES = 20
+MAX_PACKAGE_ITEMS = 20
 
 PUBLIC_KEYS = {
     "telegram_invite_url",
@@ -45,11 +48,18 @@ PUBLIC_KEYS = {
     "club_location",
     "club_email",
     "club_phone",
+}
+
+# SUPERSEDED — the old two-fixed-tier subscription pricing (see
+# app/core/billing.py). Kept in ALL_KEYS (not PUBLIC_KEYS) only because the
+# admin Settings UI still has the legacy card guarded off rather than
+# deleted; no longer read by any live checkout/gift path.
+_LEGACY_PLAN_PRICE_KEYS = {
     "membership_plan1_price",
     "membership_plan2_price",
 }
 
-ALL_KEYS = PUBLIC_KEYS | {
+ALL_KEYS = PUBLIC_KEYS | _LEGACY_PLAN_PRICE_KEYS | {
     "welcome_email_body",
     "event_reminder_body",
     "email_footer",
@@ -330,6 +340,90 @@ def delete_media_library_item(
     items = [u for u in _read_json_list(db, MEDIA_LIBRARY_KEY) if u != url]
     _set(db, MEDIA_LIBRARY_KEY, json.dumps(items, ensure_ascii=False))
     return items
+
+
+# ── Packages (credit packs) ───────────────────────────────────────────────
+def _validate_packages(value: Any) -> list:
+    """Admin-configurable credit-pack tiers, replacing the old fixed plan-1/
+    plan-2 subscription pricing. A plain JSON list — no relational integrity
+    needed here since purchases (MemberPackage) snapshot every field they
+    care about at purchase time, so editing/deleting an entry here never
+    retroactively changes credits a member already has."""
+    if not isinstance(value, list):
+        raise HTTPException(422, "packages must be a list")
+    if len(value) > MAX_PACKAGES:
+        raise HTTPException(422, f"Too many packages (max {MAX_PACKAGES})")
+    clean = []
+    for item in value:
+        if not isinstance(item, dict) or not isinstance(item.get("id"), str) or not item["id"]:
+            raise HTTPException(422, "Each package needs a non-empty string id")
+        try:
+            event_count = int(item.get("eventCount"))
+            price = float(item.get("price"))
+        except (TypeError, ValueError):
+            raise HTTPException(422, "eventCount and price must be numbers")
+        if event_count < 1:
+            raise HTTPException(422, "eventCount must be at least 1")
+        if price < 0:
+            raise HTTPException(422, "price must not be negative")
+        validity_days = item.get("validityDays")
+        if validity_days is not None:
+            try:
+                validity_days = int(validity_days)
+            except (TypeError, ValueError):
+                raise HTTPException(422, "validityDays must be an integer or null")
+            if validity_days < 1:
+                raise HTTPException(422, "validityDays must be at least 1 (or null for no expiry)")
+        badge = item.get("badge")
+        if badge not in (None, "popular", "best_value"):
+            raise HTTPException(422, "badge must be null, 'popular', or 'best_value'")
+        items_en = item.get("itemsEn") or []
+        items_hy = item.get("itemsHy") or []
+        if not isinstance(items_en, list) or not isinstance(items_hy, list):
+            raise HTTPException(422, "itemsEn/itemsHy must be lists of strings")
+        if len(items_en) > MAX_PACKAGE_ITEMS or len(items_hy) > MAX_PACKAGE_ITEMS:
+            raise HTTPException(422, f"Too many bullet items (max {MAX_PACKAGE_ITEMS})")
+        clean.append({
+            "id": item["id"],
+            "nameEn": str(item.get("nameEn") or ""),
+            "nameHy": str(item.get("nameHy") or ""),
+            "eventCount": event_count,
+            "price": price,
+            "validityDays": validity_days,
+            "telegramAccess": bool(item.get("telegramAccess", False)),
+            "badge": badge,
+            "itemsEn": [str(v) for v in items_en],
+            "itemsHy": [str(v) for v in items_hy],
+            "active": bool(item.get("active", True)),
+            "sortOrder": int(item.get("sortOrder", 0)) if isinstance(item.get("sortOrder"), (int, float)) else 0,
+        })
+    return clean
+
+
+def get_packages_config(db: Session) -> list:
+    """Raw (unfiltered) package list — callers that need only the public,
+    active/sorted subset (Pricing section, checkout) should filter/sort
+    themselves; admin callers want the raw list including inactive ones."""
+    return _read_json_list(db, PACKAGES_CONFIG_KEY)
+
+
+@router.get("/packages")
+def get_admin_packages(
+    db: Session = Depends(get_db),
+    _: User = Depends(require_permission('manage_settings')),
+) -> list:
+    return get_packages_config(db)
+
+
+@router.put("/packages")
+def update_admin_packages(
+    body: List[dict] = Body(...),
+    db: Session = Depends(get_db),
+    _: User = Depends(require_permission('manage_settings')),
+) -> list:
+    clean = _validate_packages(body)
+    _set(db, PACKAGES_CONFIG_KEY, json.dumps(clean, ensure_ascii=False))
+    return clean
 
 
 # Declared last so the literal /site-content routes above win over this

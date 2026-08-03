@@ -191,19 +191,21 @@ def is_paid(details: dict) -> bool:
 
 def next_order_id(db) -> int:
     """Next Ameriabank OrderID, unique across membership payments, one-time
-    guest tickets, AND gift cards — Ameriabank requires order IDs to be
-    globally unique regardless of which local table they're tracked in, so
-    this can't just be "highest row id in one table + offset" once several
-    tables draw from the same namespace."""
+    guest tickets, gift cards, AND credit packages — Ameriabank requires
+    order IDs to be globally unique regardless of which local table they're
+    tracked in, so this can't just be "highest row id in one table + offset"
+    once several tables draw from the same namespace."""
     from sqlalchemy import func as sa_func
     from app.models.ameria_payment import AmeriaPayment
     from app.models.guest_ticket import GuestTicket
     from app.models.gift_card import GiftCard
+    from app.models.member_package import MemberPackage
 
     max_membership = db.query(sa_func.max(AmeriaPayment.order_id)).scalar() or 0
     max_guest = db.query(sa_func.max(GuestTicket.order_id)).scalar() or 0
     max_gift = db.query(sa_func.max(GiftCard.order_id)).scalar() or 0
-    next_id = max(max_membership, max_guest, max_gift, settings.AMERIABANK_ORDER_ID_START - 1) + 1
+    max_package = db.query(sa_func.max(MemberPackage.order_id)).scalar() or 0
+    next_id = max(max_membership, max_guest, max_gift, max_package, settings.AMERIABANK_ORDER_ID_START - 1) + 1
     if settings.AMERIABANK_TEST_MODE and next_id > settings.AMERIABANK_ORDER_ID_END:
         raise AmeriaBankError(
             "Ameriabank test OrderID range exhausted — request a new range from "

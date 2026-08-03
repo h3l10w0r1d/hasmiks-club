@@ -1,4 +1,10 @@
-"""Recurring membership billing — renewal charges and the failed-payment
+"""SUPERSEDED — the recurring-subscription model this file implements was
+replaced by one-time credit packages (see app/routers/packages.py). No
+longer imported or scheduled anywhere (main.py's "membership_renewals" job
+registration is commented out); kept in full, unmodified, as a rollback
+reference rather than deleted.
+
+Recurring membership billing — renewal charges and the failed-payment
 dunning cycle, both driven by the same daily scheduled job (see main.py).
 
 Two situations feed into the same cycle:

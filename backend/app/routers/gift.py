@@ -13,6 +13,7 @@ from app.models.event import Event
 from app.models.user import User
 from app.models.gift_card import GiftCard
 from app.models.guest_ticket import GuestTicket
+from app.models.member_package import MemberPackage
 from app.schemas.gift import (
     GiftStartIn, GiftVerifyIn, GiftCheckoutIn, GiftStartOut, GiftInfoOut,
     GiftClaimPasswordIn, GiftCardOut,
@@ -21,10 +22,10 @@ from app.schemas.user import TokenOut, UserOut
 from app.core.deps import get_current_user
 from app.core import ameriabank
 from app.core import email as mailer
-from app.core.billing import VALID_PLANS, plan_amount
 from app.core.config import settings
 from app.core.payment_log import log_gift_event
 from app.core.security import hash_password, create_access_token
+from app.routers.app_settings import get_packages_config
 
 router = APIRouter(prefix="/gift", tags=["gift"])
 
@@ -32,7 +33,20 @@ LANG_MAP = {"en": "en", "hy": "am", "ru": "ru"}
 CODE_EXPIRY_MINUTES = 10
 RESEND_COOLDOWN_SECONDS = 60
 MAX_VERIFICATION_ATTEMPTS = 5
-MEMBERSHIP_DURATIONS = (1, 3, 6, 12)
+# SUPERSEDED — membership gifts used to be duration+plan based (a fixed
+# number of months at plan-1/plan-2 pricing). Replaced by gifting a credit
+# package (see _find_gift_package below). Kept as a rollback reference.
+# MEMBERSHIP_DURATIONS = (1, 3, 6, 12)
+
+
+def _find_gift_package(db: Session, package_key: str):
+    for p in sorted(
+        (p for p in get_packages_config(db) if p.get("active", True)),
+        key=lambda p: p.get("sortOrder", 0),
+    ):
+        if p["id"] == package_key:
+            return p
+    return None
 
 
 def _gen_code() -> str:
@@ -47,12 +61,22 @@ def _validate_gift_request(db: Session, payload: GiftStartIn) -> tuple[Decimal, 
     """Returns (amount, human-readable description). Raises HTTPException on
     any validation failure. Read-only — does not touch the DB."""
     if payload.gift_type == "membership":
-        if payload.duration_months not in MEMBERSHIP_DURATIONS:
-            raise HTTPException(status_code=400, detail="duration_months must be 1, 3, 6, or 12")
-        if payload.plan not in VALID_PLANS:
-            raise HTTPException(status_code=400, detail="plan must be '1' or '2'")
-        amount = plan_amount(db, payload.plan) * payload.duration_months
-        return amount, f"{payload.duration_months}-month Hasmik's Club membership gift (plan {payload.plan})"
+        # SUPERSEDED — used to validate duration_months (1/3/6/12) + plan
+        # ("1"|"2") and price as plan_amount(plan) * duration_months. Gifting
+        # now delivers a credit package instead of extending a duration.
+        # if payload.duration_months not in MEMBERSHIP_DURATIONS:
+        #     raise HTTPException(status_code=400, detail="duration_months must be 1, 3, 6, or 12")
+        # if payload.plan not in VALID_PLANS:
+        #     raise HTTPException(status_code=400, detail="plan must be '1' or '2'")
+        # amount = plan_amount(db, payload.plan) * payload.duration_months
+        # return amount, f"{payload.duration_months}-month Hasmik's Club membership gift (plan {payload.plan})"
+        if not payload.package_key:
+            raise HTTPException(status_code=400, detail="package_key is required")
+        package = _find_gift_package(db, payload.package_key)
+        if not package:
+            raise HTTPException(status_code=404, detail="This package is no longer available — please refresh and try again.")
+        amount = Decimal(str(package["price"]))
+        return amount, f"{package['nameEn']} — Hasmik's Club package gift"
 
     if payload.gift_type == "events":
         if not payload.event_selections:
@@ -94,11 +118,17 @@ def gift_start(payload: GiftStartIn, db: Session = Depends(get_db)):
     recipient_email = payload.recipient_email.strip().lower()
     amount, description = _validate_gift_request(db, payload)
 
+    # SUPERSEDED — new gift rows no longer set duration_months/plan (see
+    # _validate_gift_request); the columns stay populated only on gift rows
+    # issued before the switch to credit packages.
+    package = _find_gift_package(db, payload.package_key) if payload.gift_type == "membership" else None
     gift = GiftCard(
         giver_name=payload.giver_name, giver_email=giver_email, giver_phone=payload.giver_phone,
         recipient_name=payload.recipient_name, recipient_email=recipient_email, recipient_phone=payload.recipient_phone,
-        anonymous=payload.anonymous, gift_type=payload.gift_type, duration_months=payload.duration_months,
-        plan=payload.plan if payload.gift_type == "membership" else None,
+        anonymous=payload.anonymous, gift_type=payload.gift_type,
+        package_key=package["id"] if package else None,
+        package_event_count=package["eventCount"] if package else None,
+        package_validity_days=package.get("validityDays") if package else None,
         event_selections_json=json.dumps([s.model_dump() for s in payload.event_selections]) if payload.event_selections else None,
         amount=amount, currency=settings.AMERIABANK_CURRENCY, status="unverified",
         verification_code=_gen_code(), verification_sent_at=datetime.now(timezone.utc),
@@ -219,29 +249,54 @@ def gift_checkout(gift_id: int, payload: GiftCheckoutIn, db: Session = Depends(g
     return {"url": ameriabank.payment_page_url(gift.payment_id, lang)}
 
 
+def _create_member_package_for_gift(db: Session, gift: GiftCard, user: User) -> MemberPackage:
+    """Credits a recipient with the gifted package. status="deposited" (a
+    PAID_STATUSES value) since the gift's own Ameriabank payment already
+    cleared — order_id/payment_id are deliberately left unset here, since
+    the actual charge is tracked on the GiftCard row itself, not this one."""
+    package = _find_gift_package(db, gift.package_key) if gift.package_key else None
+    row = MemberPackage(
+        user_id=user.id,
+        package_key=gift.package_key,
+        name_en=package["nameEn"] if package else "Gift package",
+        name_hy=package["nameHy"] if package else "Նվեր փաթեթ",
+        event_count=gift.package_event_count or 1,
+        credits_remaining=gift.package_event_count or 1,
+        validity_days=gift.package_validity_days,
+        expires_at=(
+            datetime.now(timezone.utc) + timedelta(days=gift.package_validity_days)
+            if gift.package_validity_days else None
+        ),
+        amount=gift.amount, currency=gift.currency, status="deposited",
+    )
+    db.add(row)
+    return row
+
+
 def _deliver_membership_gift(db: Session, gift: GiftCard) -> None:
     existing = db.query(User).filter(User.email == gift.recipient_email).first()
     giver_name = None if gift.anonymous else gift.giver_name
+    package = _find_gift_package(db, gift.package_key) if gift.package_key else None
+    package_name = package["nameEn"] if package else "Package"
+    # SUPERSEDED — used to extend membership_expires_at by 30*duration_months
+    # days and set membership_plan. Gifting now delivers a MemberPackage
+    # (credits) instead of extending a duration.
     if existing:
         now = datetime.now(timezone.utc)
-        base = now if not existing.membership_expires_at else max(now, existing.membership_expires_at.replace(tzinfo=timezone.utc))
         existing.membership_status = "active"
-        existing.membership_expires_at = base + timedelta(days=30 * gift.duration_months)
-        if gift.plan:
-            existing.membership_plan = gift.plan
+        _create_member_package_for_gift(db, gift, existing)
         gift.applied_to_user_id = existing.id
         gift.redeemed = True
         gift.redeemed_at = now
         db.commit()
         mailer.send_gift_applied_existing(
-            existing.email, existing.full_name, giver_name, gift.duration_months,
-            existing.membership_expires_at.strftime("%B %d, %Y"),
+            existing.email, existing.full_name, giver_name, gift.package_event_count or 1, package_name,
         )
     else:
         gift.redemption_token = secrets.token_urlsafe(32)
         db.commit()
         claim_url = f"{settings.GIFT_CLAIM_BASE_URL}/{gift.redemption_token}"
-        mailer.send_gift_claim_link(gift.recipient_email, gift.recipient_name, giver_name, gift.duration_months, claim_url)
+        mailer.send_gift_claim_link(gift.recipient_email, gift.recipient_name, giver_name, gift.package_event_count or 1, claim_url, package_name)
 
 
 def _deliver_events_gift(db: Session, gift: GiftCard) -> None:
@@ -328,7 +383,7 @@ async def gift_callback(request: Request, db: Session = Depends(get_db)):
                 if is_success:
                     if gift.gift_type == "membership":
                         _deliver_membership_gift(db, gift)
-                        detail_line = f"{gift.duration_months}-month membership for {gift.recipient_name}"
+                        detail_line = f"{gift.package_event_count or 1}-credit package for {gift.recipient_name}"
                     else:
                         _deliver_events_gift(db, gift)
                         detail_line = f"Event ticket(s) for {gift.recipient_name}"
@@ -349,12 +404,13 @@ def gift_claim_info(token: str, db: Session = Depends(get_db)):
     if not gift:
         raise HTTPException(status_code=404, detail="This gift link is invalid")
     recipient_has_account = db.query(User).filter(User.email == gift.recipient_email).first() is not None
+    package = _find_gift_package(db, gift.package_key) if gift.package_key else None
     return GiftInfoOut(
         recipient_name=gift.recipient_name,
         giver_name=None if gift.anonymous else gift.giver_name,
         gift_type=gift.gift_type,
-        duration_months=gift.duration_months,
-        plan=gift.plan,
+        package_event_count=gift.package_event_count,
+        package_name=package["nameEn"] if package else None,
         already_redeemed=gift.redeemed,
         recipient_has_account=recipient_has_account,
     )
@@ -371,25 +427,27 @@ def gift_claim_password(token: str, payload: GiftClaimPasswordIn, db: Session = 
         raise HTTPException(status_code=409, detail="An account already exists for this email — please log in instead")
 
     now = datetime.now(timezone.utc)
+    # SUPERSEDED — used to set membership_expires_at/membership_plan directly
+    # from the gift's duration/plan. Claiming now creates the account with no
+    # expiry of its own, then credits a MemberPackage below.
     user = User(
         email=gift.recipient_email, password_hash=hash_password(payload.password),
         full_name=gift.recipient_name, phone=gift.recipient_phone,
         is_verified=True,  # possession of the unique emailed claim link is proof of ownership
         membership_status="active",
-        membership_expires_at=now + timedelta(days=30 * gift.duration_months),
-        membership_plan=gift.plan,
     )
     db.add(user)
     db.commit()
     db.refresh(user)
 
+    _create_member_package_for_gift(db, gift, user)
     gift.applied_to_user_id = user.id
     gift.redeemed = True
     gift.redeemed_at = now
     db.commit()
 
     mailer.sync_member_to_brevo(db, user)
-    mailer.track_event_async(user.email, "gift_claimed", {"duration_months": gift.duration_months})
+    mailer.track_event_async(user.email, "gift_claimed", {"event_count": gift.package_event_count})
 
     token_str = create_access_token(str(user.id))
     return TokenOut(access_token=token_str, user=UserOut.model_validate(user))
@@ -408,14 +466,13 @@ def gift_claim_apply(token: str, db: Session = Depends(get_db), current_user: Us
         raise HTTPException(status_code=400, detail="This gift has already been claimed")
 
     now = datetime.now(timezone.utc)
-    base = now if not current_user.membership_expires_at else max(now, current_user.membership_expires_at.replace(tzinfo=timezone.utc))
+    # SUPERSEDED — used to extend membership_expires_at/set membership_plan.
+    # Claiming now just credits a MemberPackage below.
     current_user.membership_status = "active"
-    current_user.membership_expires_at = base + timedelta(days=30 * gift.duration_months)
-    if gift.plan:
-        current_user.membership_plan = gift.plan
     if not current_user.phone and gift.recipient_phone:
         current_user.phone = gift.recipient_phone
 
+    _create_member_package_for_gift(db, gift, current_user)
     gift.applied_to_user_id = current_user.id
     gift.redeemed = True
     gift.redeemed_at = now
@@ -423,7 +480,7 @@ def gift_claim_apply(token: str, db: Session = Depends(get_db), current_user: Us
     db.refresh(current_user)
 
     mailer.sync_member_to_brevo(db, current_user)
-    mailer.track_event_async(current_user.email, "gift_claimed", {"duration_months": gift.duration_months})
+    mailer.track_event_async(current_user.email, "gift_claimed", {"event_count": gift.package_event_count})
 
     token_str = create_access_token(str(current_user.id))
     return TokenOut(access_token=token_str, user=UserOut.model_validate(current_user))

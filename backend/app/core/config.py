@@ -72,6 +72,11 @@ class Settings(BaseSettings):
     AMERIABANK_GIFT_SUCCESS_URL: str = "https://www.hasmiksclub.am/gift"
     AMERIABANK_GIFT_CANCEL_URL: str = "https://www.hasmiksclub.am/gift"
     GIFT_CLAIM_BASE_URL: str = "https://www.hasmiksclub.am/gift/claim"
+    # Credit packages — redirect-checkout path only (a bound-card repeat
+    # purchase is an instant server-side charge with no redirect at all).
+    AMERIABANK_PACKAGE_BACK_URL: str = "https://hasmiks-club.onrender.com/packages/callback"
+    AMERIABANK_PACKAGE_SUCCESS_URL: str = "https://www.hasmiksclub.am/dashboard"
+    AMERIABANK_PACKAGE_CANCEL_URL: str = "https://www.hasmiksclub.am/dashboard"
 
     class Config:
         env_file = ".env"

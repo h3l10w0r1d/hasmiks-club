@@ -48,6 +48,7 @@ import {
   adminUploadGalleryPhoto,
   adminBroadcast, adminExportCsv, adminGetAuditLog,
   adminGetSettings, adminSaveSettings,
+  adminGetPackages, adminSavePackages,
   adminGetRoles, adminUpdateRole,
   adminGetPayments, adminRefreshPayment, adminRefundPayment, adminCancelPayment, adminGetPaymentLogs,
   adminGetGuestTickets, adminGetGuestTicketLogs,
@@ -142,6 +143,11 @@ const TAB_PERMISSION_MAP = {
 }
 
 const EMPTY_ALBUM = { title: '', description: '', event_id: '', cover_url: '' }
+
+// SUPERSEDED — the fixed two-tier "Membership Plans" pricing card was
+// replaced by the dynamic "Packages" card below. Flip to true to bring the
+// legacy UI back (its state/save logic is untouched, just not rendered).
+const SHOW_LEGACY_MEMBERSHIP_PLANS_UI = false
 
 const DEFAULT_SETTINGS = {
   telegram_invite_url: '', require_approval: 'false',
@@ -292,6 +298,8 @@ export default function AdminPage() {
   const [adminSettings,  setAdminSettings]  = useState(DEFAULT_SETTINGS)
   const [settingsForm,   setSettingsForm]   = useState(DEFAULT_SETTINGS)
   const [savingSettings, setSavingSettings] = useState(false)
+  const [packagesForm,   setPackagesForm]   = useState([])
+  const [savingPackages, setSavingPackages] = useState(false)
 
   const [referrals, setReferrals] = useState([])
 
@@ -382,6 +390,7 @@ export default function AdminPage() {
         const s = await adminGetSettings()
         setAdminSettings(s)
         setSettingsForm({ ...DEFAULT_SETTINGS, ...s })
+        setPackagesForm(await adminGetPackages())
       }
     } catch { flash('Failed to load data', true) }
     finally { setLoad(t, false) }
@@ -718,6 +727,42 @@ export default function AdminPage() {
       flash('Settings saved')
     } catch { flash('Failed to save settings', true) }
     finally { setSavingSettings(false) }
+  }
+
+  // ── packages ──
+  const newPackageId = () => `pkg_${Math.random().toString(16).slice(2)}${Date.now().toString(16)}`
+  const addPackage = () => {
+    setPackagesForm(list => [...list, {
+      id: newPackageId(), nameEn: '', nameHy: '', eventCount: 1, price: 0,
+      validityDays: null, telegramAccess: false, badge: null,
+      itemsEn: [], itemsHy: [], active: true, sortOrder: list.length,
+    }])
+  }
+  const updatePackage = (id, patch) => {
+    setPackagesForm(list => list.map(p => p.id === id ? { ...p, ...patch } : p))
+  }
+  const removePackage = (id) => {
+    setPackagesForm(list => list.filter(p => p.id !== id))
+  }
+  const movePackage = (id, dir) => {
+    setPackagesForm(list => {
+      const i = list.findIndex(p => p.id === id)
+      const j = i + dir
+      if (i < 0 || j < 0 || j >= list.length) return list
+      const next = [...list]
+      ;[next[i], next[j]] = [next[j], next[i]]
+      return next.map((p, idx) => ({ ...p, sortOrder: idx }))
+    })
+  }
+  const handleSavePackages = async (e) => {
+    e?.preventDefault()
+    setSavingPackages(true)
+    try {
+      const saved = await adminSavePackages(packagesForm.map((p, idx) => ({ ...p, sortOrder: idx })))
+      setPackagesForm(saved)
+      flash('Packages saved')
+    } catch { flash('Failed to save packages', true) }
+    finally { setSavingPackages(false) }
   }
 
   // ── broadcast ──
@@ -1807,19 +1852,103 @@ export default function AdminPage() {
                       </CardContent>
                     </Card>
 
+                    {/* SUPERSEDED — the two fixed subscription tiers below were replaced
+                        by the dynamic credit-package list (see the "Packages" card below).
+                        Guarded off rather than deleted. */}
+                    {SHOW_LEGACY_MEMBERSHIP_PLANS_UI && (
+                      <Card>
+                        <CardHeader>
+                          <CardTitle className="text-sm">Membership Plans</CardTitle>
+                          <CardDescription>The two tiers a member picks between at Subscribe (matches the Pricing section's "Package 1"/"Package 2" cards). Also used to price gifted memberships (monthly rate × gift duration). Leave blank to use the shipped defaults (֏15,000 / ֏25,000).</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <Field label="Package 1 — monthly (֏)">
+                              <Input type="number" value={settingsForm.membership_plan1_price} onChange={e => setSettingsForm(f => ({ ...f, membership_plan1_price: e.target.value }))} placeholder="15000" />
+                            </Field>
+                            <Field label="Package 2 — monthly (֏)">
+                              <Input type="number" value={settingsForm.membership_plan2_price} onChange={e => setSettingsForm(f => ({ ...f, membership_plan2_price: e.target.value }))} placeholder="25000" />
+                            </Field>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    )}
+
                     <Card>
                       <CardHeader>
-                        <CardTitle className="text-sm">Membership Plans</CardTitle>
-                        <CardDescription>The two tiers a member picks between at Subscribe (matches the Pricing section's "Package 1"/"Package 2" cards). Also used to price gifted memberships (monthly rate × gift duration). Leave blank to use the shipped defaults (֏15,000 / ֏25,000).</CardDescription>
+                        <CardTitle className="text-sm">Packages</CardTitle>
+                        <CardDescription>
+                          The credit packages sold on the Pricing section and gifted via /gift — add, remove, and reorder tiers freely.
+                          Each is a one-time purchase for a set number of event credits, optionally expiring after N days (leave blank for no expiry).
+                        </CardDescription>
                       </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <Field label="Package 1 — monthly (֏)">
-                            <Input type="number" value={settingsForm.membership_plan1_price} onChange={e => setSettingsForm(f => ({ ...f, membership_plan1_price: e.target.value }))} placeholder="15000" />
-                          </Field>
-                          <Field label="Package 2 — monthly (֏)">
-                            <Input type="number" value={settingsForm.membership_plan2_price} onChange={e => setSettingsForm(f => ({ ...f, membership_plan2_price: e.target.value }))} placeholder="25000" />
-                          </Field>
+                      <CardContent>
+                        {/* A <div>, not a <form> — this card lives inside the page's
+                            outer Settings <form> (handleSaveSettings), and HTML forms
+                            cannot nest; Save below calls handleSavePackages directly. */}
+                        <div className="space-y-4">
+                          {packagesForm.map((pkg, i) => (
+                            <div key={pkg.id} className="rounded-lg border p-4 space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-medium text-muted-foreground">Package {i + 1}</span>
+                                <div className="flex items-center gap-1">
+                                  <Button type="button" variant="ghost" size="sm" disabled={i === 0} onClick={() => movePackage(pkg.id, -1)}>↑</Button>
+                                  <Button type="button" variant="ghost" size="sm" disabled={i === packagesForm.length - 1} onClick={() => movePackage(pkg.id, 1)}>↓</Button>
+                                  <Button type="button" variant="ghost" size="sm" onClick={() => removePackage(pkg.id)}>Remove</Button>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <Field label="Name (EN)"><Input value={pkg.nameEn} onChange={e => updatePackage(pkg.id, { nameEn: e.target.value })} placeholder="Package 4" /></Field>
+                                <Field label="Name (ՀԱՅ)"><Input value={pkg.nameHy} onChange={e => updatePackage(pkg.id, { nameHy: e.target.value })} placeholder="Փաթեթ 4" /></Field>
+                              </div>
+                              <div className="grid grid-cols-3 gap-3">
+                                <Field label="Event credits">
+                                  <Input type="number" min="1" value={pkg.eventCount} onChange={e => updatePackage(pkg.id, { eventCount: Number(e.target.value) })} />
+                                </Field>
+                                <Field label="Price (֏)">
+                                  <Input type="number" min="0" value={pkg.price} onChange={e => updatePackage(pkg.id, { price: Number(e.target.value) })} />
+                                </Field>
+                                <Field label="Validity (days, blank = never expires)">
+                                  <Input type="number" min="1" value={pkg.validityDays ?? ''} onChange={e => updatePackage(pkg.id, { validityDays: e.target.value === '' ? null : Number(e.target.value) })} placeholder="90" />
+                                </Field>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <Field label="Badge">
+                                  <select
+                                    className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                    value={pkg.badge ?? ''}
+                                    onChange={e => updatePackage(pkg.id, { badge: e.target.value || null })}
+                                  >
+                                    <option value="">None</option>
+                                    <option value="popular">Most popular</option>
+                                    <option value="best_value">Best value</option>
+                                  </select>
+                                </Field>
+                                <div className="flex items-end gap-4 pb-1.5">
+                                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="checkbox" className="h-4 w-4 accent-primary cursor-pointer" checked={pkg.telegramAccess} onChange={e => updatePackage(pkg.id, { telegramAccess: e.target.checked })} />
+                                    Telegram access
+                                  </label>
+                                  <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="checkbox" className="h-4 w-4 accent-primary cursor-pointer" checked={pkg.active} onChange={e => updatePackage(pkg.id, { active: e.target.checked })} />
+                                    Active (shown publicly)
+                                  </label>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <Field label="Bullet items (EN, one per line)">
+                                  <Textarea rows={3} value={(pkg.itemsEn || []).join('\n')} onChange={e => updatePackage(pkg.id, { itemsEn: e.target.value.split('\n').filter(Boolean) })} />
+                                </Field>
+                                <Field label="Bullet items (ՀԱՅ, one per line)">
+                                  <Textarea rows={3} value={(pkg.itemsHy || []).join('\n')} onChange={e => updatePackage(pkg.id, { itemsHy: e.target.value.split('\n').filter(Boolean) })} />
+                                </Field>
+                              </div>
+                            </div>
+                          ))}
+                          <div className="flex items-center gap-2">
+                            <Button type="button" variant="outline" onClick={addPackage}>Add package</Button>
+                            <Button type="button" disabled={savingPackages} onClick={handleSavePackages}>{savingPackages ? 'Saving…' : 'Save Packages'}</Button>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>

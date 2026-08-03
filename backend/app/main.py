@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
-from app.routers import auth, members, events, content, admin, analytics, notifications, gallery, forum, payments, push, gift
+from app.routers import auth, members, events, content, admin, analytics, notifications, gallery, forum, payments, push, gift, packages
 from app.routers import settings as settings_router
 from app.routers import app_settings as app_settings_router
 from app.core.config import settings
@@ -15,7 +15,9 @@ from app.database import SessionLocal
 from app.models.user import User
 from app.models.event import Event
 from app.core import email as mailer
-from app.core import billing
+# SUPERSEDED — billing.py's recurring-renewal job is no longer scheduled
+# (see _process_membership_renewals below and packages.router in its place).
+# from app.core import billing
 
 # Error tracking — a no-op unless SENTRY_DSN is configured. Must run before the
 # FastAPI app is constructed so its ASGI middleware gets instrumented too.
@@ -111,15 +113,18 @@ async def _expire_gifted_memberships() -> None:
         db.close()
 
 
-async def _process_membership_renewals() -> None:
-    """Daily: charges due renewals via Ameriabank card binding, and runs the
-    same retry/lapse cycle for existing members whose card-migration deadline
-    has passed. See app/core/billing.py for the actual logic."""
-    db = SessionLocal()
-    try:
-        billing.process_due_members(db)
-    finally:
-        db.close()
+# SUPERSEDED — recurring renewals no longer exist under the credit-package
+# model (see app/routers/packages.py); kept as a rollback reference, not
+# scheduled below (see lifespan()).
+# async def _process_membership_renewals() -> None:
+#     """Daily: charges due renewals via Ameriabank card binding, and runs the
+#     same retry/lapse cycle for existing members whose card-migration deadline
+#     has passed. See app/core/billing.py for the actual logic."""
+#     db = SessionLocal()
+#     try:
+#         billing.process_due_members(db)
+#     finally:
+#         db.close()
 
 
 @asynccontextmanager
@@ -128,7 +133,9 @@ async def lifespan(app: FastAPI):
     scheduler.add_job(_send_event_reminders, IntervalTrigger(hours=1), id="event_reminders", replace_existing=True)
     scheduler.add_job(_flag_no_shows, IntervalTrigger(hours=1), id="no_show_flags", replace_existing=True)
     scheduler.add_job(_expire_gifted_memberships, IntervalTrigger(hours=1), id="expire_gifted_memberships", replace_existing=True)
-    scheduler.add_job(_process_membership_renewals, IntervalTrigger(hours=24), id="membership_renewals", replace_existing=True)
+    # SUPERSEDED — no more recurring renewals to process under the
+    # credit-package model, see _process_membership_renewals above.
+    # scheduler.add_job(_process_membership_renewals, IntervalTrigger(hours=24), id="membership_renewals", replace_existing=True)
     scheduler.start()
     yield
     scheduler.shutdown()
@@ -158,9 +165,13 @@ app.include_router(settings_router.router)
 app.include_router(app_settings_router.router)
 app.include_router(gallery.router)
 app.include_router(forum.router)
-app.include_router(payments.router)
+# SUPERSEDED — recurring-subscription checkout, replaced by packages.router
+# below. Router import (payments, in the `from app.routers import ...` line
+# above) is left in place so this line round-trips cleanly if ever restored.
+# app.include_router(payments.router)
 app.include_router(push.router)
 app.include_router(gift.router)
+app.include_router(packages.router)
 
 
 @app.get("/health")

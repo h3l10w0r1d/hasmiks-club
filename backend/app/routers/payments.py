@@ -1,3 +1,9 @@
+# SUPERSEDED — this router implemented recurring-subscription checkout,
+# replaced by one-time credit packages (see app/routers/packages.py). No
+# longer registered in main.py (app.include_router(payments.router) is
+# commented out); kept in full, unmodified, as a rollback reference rather
+# than deleted.
+
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 

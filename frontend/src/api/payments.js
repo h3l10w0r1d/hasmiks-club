@@ -1,10 +1,13 @@
 import client from './client'
 
-export const createCheckout = (plan) =>
-  client.post('/payments/create-checkout', { plan: plan ?? null }).then((r) => r.data)
-
-export const cancelAutoRenew = () =>
-  client.post('/payments/cancel-auto-renew').then((r) => r.data)
+// SUPERSEDED — recurring-subscription checkout, replaced by one-time
+// credit packages (see api/packages.js). The backend router these hit is
+// no longer registered; kept as a rollback reference, not deleted.
+// export const createCheckout = (plan) =>
+//   client.post('/payments/create-checkout', { plan: plan ?? null }).then((r) => r.data)
+//
+// export const cancelAutoRenew = () =>
+//   client.post('/payments/cancel-auto-renew').then((r) => r.data)
 
 export const getPublicSettings = () =>
   client.get('/settings/public').then((r) => r.data)

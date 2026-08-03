@@ -27,6 +27,15 @@ class User(Base):
     full_name = Column(String, nullable=False)
     photo_url = Column(String, nullable=True)
     lang_pref = Column(String, default="en")
+    # Since the switch to one-time credit packages, this is a ONE-WAY flag:
+    # set to "active" on a member's first successful package purchase (see
+    # packages.py) and never auto-cleared again — there's no more recurring
+    # renewal job to lapse it. Forum/directory access, once earned, persists
+    # even after all credits expire; RSVP eligibility is gated separately by
+    # actual credit balance (see packages._credits_available), not by this
+    # field. (Legacy note: under the old recurring-subscription model this
+    # did flip back to inactive/past_due on a failed/missed renewal — see
+    # SUPERSEDED app/core/billing.py.)
     membership_status = Column(String, default=MembershipStatus.inactive)
     # Set only for gift-card-granted memberships (see GiftCard) — a scheduled
     # job lapses membership_status back to inactive once this passes. Regular
@@ -34,23 +43,23 @@ class User(Base):
     # subscription, see payments.py's payment_callback).
     membership_expires_at = Column(DateTime(timezone=True), nullable=True)
 
-    # Recurring membership billing (Ameriabank vPOS "binding" transactions —
-    # see app/core/ameriabank.py). A member's first successful payment
-    # registers a binding under card_holder_id; every subsequent renewal
-    # charges that saved card directly with no re-entry of card details.
+    # Card-on-file (Ameriabank vPOS "binding" transactions — see
+    # app/core/ameriabank.py). A member's first package purchase with no
+    # existing binding registers one under card_holder_id; a later package
+    # purchase while binding_active is set charges that saved card directly
+    # (packages.py's instant-charge path) instead of redirecting through
+    # Ameriabank's hosted checkout again. No longer drives any *automatic*
+    # recurring charge — packages are one-time by nature.
     card_holder_id = Column(String(64), unique=True, nullable=True)
     binding_active = Column(Boolean, nullable=False, default=False, server_default='false')
-    # Which membership tier ("1" | "2", see Pricing section) the member is
-    # subscribed at — set from the plan chosen at checkout, read back by the
-    # renewal job so it charges the right price. NULL = predates plan choice,
-    # falls back to the legacy single fixed AMERIABANK_MEMBERSHIP_AMOUNT.
+    # SUPERSEDED — recurring-subscription fields, unused since the switch to
+    # credit packages. Kept (not dropped) as a rollback reference and because
+    # historical AmeriaPayment/renewal rows still refer to a member's plan at
+    # the time. See app/core/billing.py (also superseded) for the code that
+    # used to read/write these.
     membership_plan = Column(String(10), nullable=True)
     next_billing_date = Column(DateTime(timezone=True), nullable=True)
     renewal_attempts = Column(Integer, nullable=False, default=0, server_default='0')
-    # Set once, at migration time, only for members who were already active
-    # with no card on file — gives them a window to add one before the same
-    # past_due/lapse rules that apply to a real failed renewal start applying
-    # to them too. Cleared the moment a card is actually added.
     card_required_by = Column(DateTime(timezone=True), nullable=True)
 
     # JSON object {type: {"in_app": bool, "push": bool}} — missing type/channel

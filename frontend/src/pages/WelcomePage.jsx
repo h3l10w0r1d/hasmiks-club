@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { CheckCircle2 } from 'lucide-react'
 import GlobalHeader from '../components/GlobalHeader'
+import PackagePicker from '../components/PackagePicker'
 import { useAuth } from '../context/AuthContext'
-import { createCheckout, getPublicSettings } from '../api/payments'
+import { getPublicPackages, checkoutPackage } from '../api/packages'
 import content from '../data/content'
 
 const copy = {
@@ -29,8 +29,8 @@ export default function WelcomePage({ lang = 'en', setLang }) {
   const navigate = useNavigate()
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [error, setError] = useState('')
-  const [planPrices, setPlanPrices] = useState(null)
-  const [selectedPlan, setSelectedPlan] = useState('1')
+  const [packages, setPackages] = useState([])
+  const [selectedPackage, setSelectedPackage] = useState(null)
 
   const hy = lang === 'hy'
   const t = copy[lang] ?? copy.en
@@ -44,15 +44,28 @@ export default function WelcomePage({ lang = 'en', setLang }) {
   }, [authLoading, user, navigate])
 
   useEffect(() => {
-    getPublicSettings().then((s) => setPlanPrices(s.membership_plans)).catch(() => {})
+    getPublicPackages().then((list) => {
+      setPackages(list)
+      setSelectedPackage((prev) => prev ?? list[0]?.id ?? null)
+    }).catch(() => {})
   }, [])
 
-  const handleSubscribe = async () => {
+  const handleBuy = async () => {
+    if (!selectedPackage) return
     setCheckoutLoading(true)
     setError('')
     try {
-      const { url } = await createCheckout(selectedPlan)
-      window.location.href = url
+      const result = await checkoutPackage(selectedPackage, lang)
+      if (result.mode === 'redirect') {
+        window.location.href = result.url
+        return
+      }
+      if (result.success) {
+        navigate('/dashboard', { replace: true })
+      } else {
+        setError(result.message || t.error)
+        setCheckoutLoading(false)
+      }
     } catch {
       setError(t.error)
       setCheckoutLoading(false)
@@ -82,35 +95,8 @@ export default function WelcomePage({ lang = 'en', setLang }) {
             <p style={{ fontWeight: 600, fontSize: 14, color: 'var(--deep)', marginBottom: 14 }}>
               {hy ? 'Ընտրեք ձեր փաթեթը' : 'Choose your package'}
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14, marginBottom: 24 }}>
-              {c.plans.map((plan, i) => {
-                const planId = String(i + 1)
-                const selected = selectedPlan === planId
-                const price = planPrices?.[planId]
-                return (
-                  <button key={planId} type="button" onClick={() => setSelectedPlan(planId)}
-                    style={{
-                      textAlign: 'left', cursor: 'pointer', borderRadius: 14, padding: '18px 20px',
-                      border: `2px solid ${selected ? 'var(--rose)' : 'var(--sand, #e5d5d5)'}`,
-                      background: selected ? 'var(--rose-bg, #fdecec)' : '#fff',
-                    }}>
-                    <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--deep)', marginBottom: 4 }}>
-                      {hy ? plan.nameHy : plan.nameEn}
-                    </div>
-                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--rose)', marginBottom: 10 }}>
-                      {price != null ? `֏${Number(price).toLocaleString()}` : `֏${plan.price}`} <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--taupe)' }}>{hy ? c.perMonthHy : c.perMonthEn}</span>
-                    </div>
-                    <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      {(hy ? plan.itemsHy : plan.itemsEn).map((item, j) => (
-                        <li key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13 }}>
-                          <CheckCircle2 size={14} strokeWidth={2} color="var(--rose)" style={{ flexShrink: 0, marginTop: 2 }} />
-                          <span>{item}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </button>
-                )
-              })}
+            <div style={{ marginBottom: 24 }}>
+              <PackagePicker packages={packages} selected={selectedPackage} onSelect={setSelectedPackage} lang={lang} />
             </div>
           </section>
 
@@ -122,8 +108,8 @@ export default function WelcomePage({ lang = 'en', setLang }) {
 
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, marginTop: 32 }}>
             <button
-              onClick={handleSubscribe}
-              disabled={checkoutLoading}
+              onClick={handleBuy}
+              disabled={checkoutLoading || !selectedPackage}
               className="page-cta"
               style={{ border: 'none', cursor: checkoutLoading ? 'default' : 'pointer', opacity: checkoutLoading ? 0.7 : 1, marginTop: 0 }}
             >

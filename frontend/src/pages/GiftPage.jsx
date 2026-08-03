@@ -4,11 +4,11 @@ import { Helmet } from 'react-helmet-async'
 import { Gift, Plus, Minus } from 'lucide-react'
 import GlobalHeader from '../components/GlobalHeader'
 import CountryPhoneInput from '../components/CountryPhoneInput'
+import PackagePicker from '../components/PackagePicker'
 import { COUNTRIES } from '../data/countries'
 import { getPublicEvents } from '../api/events'
-import { getPublicSettings } from '../api/payments'
+import { getPublicPackages } from '../api/packages'
 import { giftStart, giftResendCode, giftVerify, giftCheckout } from '../api/gift'
-import content from '../data/content'
 
 const copy = {
   en: {
@@ -26,9 +26,7 @@ const copy = {
     giftTypeSection: 'What would you like to gift?',
     typeMembership: 'A membership',
     typeEvents: 'Event ticket(s)',
-    planLabel: 'Which package?',
-    durationLabel: 'How long?',
-    months: n => `${n} month${n === 1 ? '' : 's'}`,
+    packageLabel: 'Which package?',
     eventsLabel: 'Pick one or more events',
     noEvents: 'No events with one-time tickets available right now.',
     qty: 'qty',
@@ -65,9 +63,7 @@ const copy = {
     giftTypeSection: 'Ի՞նչ եք ցանկանում նվիրել',
     typeMembership: 'Անդամակցություն',
     typeEvents: 'Միջոցառման տոմս(եր)',
-    planLabel: 'Ո՞ր փաթեթը',
-    durationLabel: 'Որքա՞ն ժամանակով',
-    months: n => `${n} ամիս`,
+    packageLabel: 'Ո՞ր փաթեթը',
     eventsLabel: 'Ընտրեք մեկ կամ մի քանի միջոցառում',
     noEvents: 'Այս պահին մեկանգամյա տոմսերով միջոցառումներ չկան:',
     qty: 'քանակ',
@@ -91,8 +87,6 @@ const copy = {
   },
 }
 
-const DURATIONS = [1, 3, 6, 12]
-
 export default function GiftPage({ lang = 'en' }) {
   const t = copy[lang] ?? copy.en
   const [searchParams, setSearchParams] = useSearchParams()
@@ -108,12 +102,10 @@ export default function GiftPage({ lang = 'en' }) {
   const [recipientPhoneNum, setRecipientPhoneNum] = useState('')
   const [anonymous, setAnonymous] = useState(false)
   const [giftType, setGiftType] = useState('membership')
-  const [selectedPlan, setSelectedPlan] = useState('1')
-  const [durationMonths, setDurationMonths] = useState(1)
+  const [packages, setPackages] = useState([])
+  const [selectedPackageKey, setSelectedPackageKey] = useState(null)
   const [events, setEvents] = useState([])
   const [cart, setCart] = useState({}) // { [eventId]: quantity }
-  const [planPrices, setPlanPrices] = useState(null)
-  const plans = content.pricing.plans
 
   const [giftId, setGiftId] = useState(null)
   const [code, setCode] = useState('')
@@ -129,7 +121,10 @@ export default function GiftPage({ lang = 'en' }) {
 
   useEffect(() => {
     getPublicEvents().then(list => setEvents(list.filter(ev => ev.ticket_price != null && !ev.is_full))).catch(() => {})
-    getPublicSettings().then(s => { if (s.membership_plans) setPlanPrices(s.membership_plans) }).catch(() => {})
+    getPublicPackages().then(list => {
+      setPackages(list)
+      setSelectedPackageKey(prev => prev ?? list[0]?.id ?? null)
+    }).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -152,9 +147,8 @@ export default function GiftPage({ lang = 'en' }) {
   }).filter(Boolean)
 
   const eventsTotal = eventCartLines.reduce((sum, l) => sum + Number(l.event.ticket_price) * l.quantity, 0)
-  const planMonthly = planPrices?.[selectedPlan] ?? Number(plans[Number(selectedPlan) - 1]?.price?.replace(/,/g, '')) ?? 0
-  const membershipTotal = planMonthly * durationMonths
-  const total = giftType === 'membership' ? membershipTotal : eventsTotal
+  const selectedPackage = packages.find(pkg => pkg.id === selectedPackageKey)
+  const total = giftType === 'membership' ? (selectedPackage?.price ?? 0) : eventsTotal
 
   const setQty = (eventId, delta) => {
     setCart(c => {
@@ -174,6 +168,10 @@ export default function GiftPage({ lang = 'en' }) {
       setError(t.selectAtLeastOne)
       return
     }
+    if (giftType === 'membership' && !selectedPackageKey) {
+      setError(t.genericError)
+      return
+    }
     setSubmitting(true)
     try {
       const payload = {
@@ -184,8 +182,7 @@ export default function GiftPage({ lang = 'en' }) {
         anonymous, gift_type: giftType, lang_pref: lang,
       }
       if (giftType === 'membership') {
-        payload.duration_months = durationMonths
-        payload.plan = selectedPlan
+        payload.package_key = selectedPackageKey
       } else {
         payload.event_selections = eventCartLines.map(l => ({ event_id: l.event.id, quantity: l.quantity }))
       }
@@ -332,41 +329,8 @@ export default function GiftPage({ lang = 'en' }) {
 
                 {giftType === 'membership' ? (
                   <div style={{ marginTop: 16 }}>
-                    <p style={styles.smallLabel}>{t.planLabel}</p>
-                    <div style={styles.planGrid}>
-                      {plans.map((plan, i) => {
-                        const planId = String(i + 1)
-                        const selected = selectedPlan === planId
-                        const price = planPrices?.[planId]
-                        return (
-                          <button
-                            key={planId} type="button" onClick={() => setSelectedPlan(planId)}
-                            style={selected ? styles.planCardActive : styles.planCard}
-                          >
-                            <div style={{ fontWeight: 700, fontSize: 14, color: '#180C04' }}>
-                              {lang === 'hy' ? plan.nameHy : plan.nameEn}
-                            </div>
-                            <div style={{ fontSize: 15, fontWeight: 700, color: '#7E3434' }}>
-                              ֏{Number(price != null ? price : plan.price.replace(/,/g, '')).toLocaleString()}
-                              <span style={{ fontSize: 11, fontWeight: 600, color: '#786050' }}> /{lang === 'hy' ? 'ամիս' : 'mo'}</span>
-                            </div>
-                          </button>
-                        )
-                      })}
-                    </div>
-
-                    <p style={{ ...styles.smallLabel, marginTop: 16 }}>{t.durationLabel}</p>
-                    <div style={styles.durationRow}>
-                      {DURATIONS.map(m => (
-                        <button
-                          key={m} type="button" onClick={() => setDurationMonths(m)}
-                          style={durationMonths === m ? styles.durationBtnActive : styles.durationBtn}
-                        >
-                          <span style={{ fontWeight: 700 }}>{t.months(m)}</span>
-                          <span style={{ fontSize: 12, opacity: 0.8 }}>֏{Number(planMonthly * m).toLocaleString()}</span>
-                        </button>
-                      ))}
-                    </div>
+                    <p style={styles.smallLabel}>{t.packageLabel}</p>
+                    <PackagePicker packages={packages} selected={selectedPackageKey} onSelect={setSelectedPackageKey} lang={lang} />
                   </div>
                 ) : (
                   <div style={{ marginTop: 16 }}>
@@ -441,12 +405,6 @@ const styles = {
   typeToggle: { display: 'flex', gap: 8 },
   typeBtn: { flex: 1, padding: '12px 14px', borderRadius: 10, border: '1px solid #DDD0BA', background: '#fff', color: '#786050', fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' },
   typeBtnActive: { flex: 1, padding: '12px 14px', borderRadius: 10, border: '1px solid #7E3434', background: '#7E3434', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' },
-  planGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8 },
-  planCard: { display: 'flex', flexDirection: 'column', gap: 4, textAlign: 'left', padding: '12px 14px', borderRadius: 10, border: '1px solid #DDD0BA', background: '#fff', cursor: 'pointer', fontFamily: 'inherit' },
-  planCardActive: { display: 'flex', flexDirection: 'column', gap: 4, textAlign: 'left', padding: '12px 14px', borderRadius: 10, border: '1px solid #7E3434', background: '#FBF0EE', cursor: 'pointer', fontFamily: 'inherit' },
-  durationRow: { display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 },
-  durationBtn: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '12px 6px', borderRadius: 10, border: '1px solid #DDD0BA', background: '#fff', color: '#786050', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 },
-  durationBtnActive: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: '12px 6px', borderRadius: 10, border: '1px solid #7E3434', background: '#FBF0EE', color: '#7E3434', cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 },
   eventRow: { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', border: '1px solid #EEE3D0', borderRadius: 10 },
   qtyControl: { display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 },
   qtyBtn: { width: 28, height: 28, borderRadius: 8, border: '1px solid #DDD0BA', background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#7E3434' },

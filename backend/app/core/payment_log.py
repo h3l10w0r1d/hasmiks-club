@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 from app.models.ameria_payment_log import AmeriaPaymentLog
 from app.models.guest_ticket_log import GuestTicketLog
 from app.models.gift_card_log import GiftCardLog
+from app.models.member_package_log import MemberPackageLog
 
 
 def log_payment_event(
@@ -47,6 +48,27 @@ def log_guest_ticket_event(
     ameria_payments.id, not something log_payment_event's FK can point at."""
     db.add(GuestTicketLog(
         ticket_row_id=ticket_row_id,
+        event=event,
+        success=success,
+        request_payload=json.dumps(request_payload, default=str) if request_payload else None,
+        response_payload=json.dumps(response_payload, default=str) if response_payload is not None else None,
+    ))
+    db.commit()
+
+
+def log_package_event(
+    db: Session,
+    member_package_id: int,
+    event: str,
+    *,
+    request_payload: Optional[dict] = None,
+    response_payload=None,
+    success: bool,
+) -> None:
+    """Same as log_payment_event/log_guest_ticket_event/log_gift_event, but
+    for credit-package purchases."""
+    db.add(MemberPackageLog(
+        member_package_id=member_package_id,
         event=event,
         success=success,
         request_payload=json.dumps(request_payload, default=str) if request_payload else None,

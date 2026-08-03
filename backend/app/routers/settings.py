@@ -8,6 +8,7 @@ from app.core.deps import get_current_user
 from app.database import get_db
 from app.models.app_setting import AppSetting
 from app.models.user import User
+from app.routers.app_settings import get_packages_config
 
 router = APIRouter(prefix="/settings", tags=["settings"])
 
@@ -35,13 +36,21 @@ def public_settings(db: Session = Depends(get_db)):
         "club_location": _db_setting(db, "club_location", ""),
         "club_email": _db_setting(db, "club_email", ""),
         "club_phone": _db_setting(db, "club_phone", ""),
-        # Membership plan tiers a member picks between at Subscribe — see the
-        # Pricing section for the matching marketing copy. Falls back to the
-        # section's shipped defaults until the admin sets a price explicitly.
-        "membership_plans": {
-            "1": float(_db_setting(db, "membership_plan1_price", "") or 15000),
-            "2": float(_db_setting(db, "membership_plan2_price", "") or 25000),
-        },
+        # SUPERSEDED — the old two-fixed-tier subscription pricing a member
+        # picked between at Subscribe. No longer read by any live checkout
+        # or gift path since the switch to credit packages (see "packages"
+        # below); left commented as a rollback reference rather than removed.
+        # "membership_plans": {
+        #     "1": float(_db_setting(db, "membership_plan1_price", "") or 15000),
+        #     "2": float(_db_setting(db, "membership_plan2_price", "") or 25000),
+        # },
+        # Credit-pack tiers a member picks between when buying or gifting —
+        # see the Pricing section / admin Packages settings for the matching
+        # marketing copy and price configuration.
+        "packages": sorted(
+            (p for p in get_packages_config(db) if p.get("active", True)),
+            key=lambda p: p.get("sortOrder", 0),
+        ),
     }
 
 

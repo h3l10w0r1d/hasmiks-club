@@ -7,7 +7,6 @@ import { getPublicEvents, getEvents, rsvp, cancelRsvp } from '../api/events'
 import { cldOptimize } from '../utils/cloudinary'
 import { stripHtml } from '../utils/sanitizeHtml'
 import { getMe } from '../api/members'
-import { createCheckout } from '../api/payments'
 import GlobalHeader from '../components/GlobalHeader'
 import ConfirmDialog from '../components/ConfirmDialog'
 import GuestCheckoutModal from '../components/GuestCheckoutModal'
@@ -34,9 +33,9 @@ const copy = {
     // CTA copy when unauthenticated
     memberOnly:   'Members can RSVP instantly. Sign in or join to attend.',
     // CTA copy when no subscription
-    upgradeTitle: 'Active membership required',
-    upgradeDesc:  'Subscribe to get instant access to all events.',
-    upgrade:      'Subscribe now',
+    upgradeTitle: 'A package is required',
+    upgradeDesc:  'Buy a package to get instant access to all events.',
+    upgrade:      'Buy a package',
     // toast
     rsvpSuccess:  'You\'re in! Check your email for details.',
     cancelSuccess:'RSVP cancelled.',
@@ -64,9 +63,9 @@ const copy = {
     joinClub:     'Գրանցվել',
     loading:      'Բեռնվում է…',
     memberOnly:   'Անդամները կարող են անմիջապես գրանցվել: Մուտք գործե՛ք կամ գրանցվե՛ք:',
-    upgradeTitle: 'Ակտիվ անդամակցություն պահանջվում է',
-    upgradeDesc:  'Բաժանորդագրվե՛ք՝ բոլոր հանդիպումներին մասնակցելու համար:',
-    upgrade:      'Բաժանորդագրվել',
+    upgradeTitle: 'Անհրաժեշտ է փաթեթ',
+    upgradeDesc:  'Գնե՛ք փաթեթ՝ բոլոր հանդիպումներին անմիջապես մասնակցելու համար:',
+    upgrade:      'Գնել փաթեթ',
     rsvpSuccess:  'Գրանցված եք: Ստուգե՛ք ձեր էլ. փոստը:',
     cancelSuccess:'Գրանցումը չեղարկված է:',
     error:        'Ինչ-որ բան սխալ գնաց — խնդրում ենք կրկին փորձել:',
@@ -116,7 +115,6 @@ export default function EventsPage({ lang = 'en' }) {
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState({})          // { [eventId]: true } during RSVP calls
   const [toast, setToast] = useState(null)       // { msg, type }
-  const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [confirmCancel, setConfirmCancel] = useState(null) // event to confirm-cancel, or null
   const [guestModalEvent, setGuestModalEvent] = useState(null) // event to buy a one-time ticket for, or null
 
@@ -170,16 +168,9 @@ export default function EventsPage({ lang = 'en' }) {
       navigate('/login', { state: { from: '/events' } })
       return
     }
-    // No active subscription → send to Ameriabank checkout
+    // No package purchased yet → send to the package picker
     if (user.membership_status !== 'active') {
-      setCheckoutLoading(true)
-      try {
-        const { url } = await createCheckout()
-        window.location.href = url
-      } catch {
-        showToast(t.error, 'error')
-        setCheckoutLoading(false)
-      }
+      navigate('/welcome')
       return
     }
     // Already attending → confirm before cancelling (a mis-tap here loses your spot)
@@ -250,16 +241,8 @@ export default function EventsPage({ lang = 'en' }) {
               <strong style={{ fontSize: 15 }}>{t.upgradeTitle}</strong>
               <p style={{ margin: '4px 0 0', fontSize: 13, opacity: 0.85 }}>{t.upgradeDesc}</p>
             </div>
-            <button
-              style={styles.upgradeBtn}
-              onClick={async () => {
-                setCheckoutLoading(true)
-                try { const { url } = await createCheckout(); window.location.href = url }
-                catch { showToast(t.error, 'error'); setCheckoutLoading(false) }
-              }}
-              disabled={checkoutLoading}
-            >
-              {checkoutLoading ? '…' : t.upgrade}
+            <button style={styles.upgradeBtn} onClick={() => navigate('/welcome')}>
+              {t.upgrade}
             </button>
           </div>
         )}

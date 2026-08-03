@@ -688,19 +688,21 @@ def send_gift_giver_receipt(to: str, name: str, recipient_name: str, detail_line
     send_async(to, name, "Ձեր նվերի անդորրագիրը · Your gift receipt — Hasmik's Club", html)
 
 
-def send_gift_claim_link(to: str, recipient_name: str, giver_name: Optional[str], duration_months: int, claim_url: str) -> None:
-    recipient_name, giver_name = _e(recipient_name), _e(giver_name)
+def send_gift_claim_link(to: str, recipient_name: str, giver_name: Optional[str], event_count: int, claim_url: str, package_name: str = "") -> None:
+    recipient_name, giver_name, package_name = _e(recipient_name), _e(giver_name), _e(package_name)
     from_line_en = f"<strong>{giver_name}</strong> has gifted you" if giver_name else "You've been gifted"
     from_line_hy = f"<strong>{giver_name}</strong>-ը ձեզ նվիրել է" if giver_name else "Ձեզ նվիրվել է"
+    pkg_hy = f" ({package_name})" if package_name else ""
+    pkg_en = f" ({package_name})" if package_name else ""
     html = _wrap(_bilingual(f"""
     <h2>Ձեզ համար նվեր կա, {recipient_name}! 🎁</h2>
-    <p>{from_line_hy} <strong>{duration_months} ամիս</strong> Hasmik's Club-ի անդամակցություն՝ ջերմ ու մտերմիկ ակումբ հայ կանանց համար։</p>
+    <p>{from_line_hy} <strong>{event_count} միջոցառման քարտ{pkg_hy}</strong> Hasmik's Club-ից՝ ջերմ ու մտերմիկ ակումբ հայ կանանց համար։</p>
     <p>Ստացեք այն ստորև՝ գաղտնաբառ ընտրելով, կամ Google-ով կամ Telegram-ով շարունակելով. կպահանջվի մեկ րոպեից պակաս։</p>
     <a href="{claim_url}" class="btn">Ստանալ իմ նվերը</a>
     <p class="small">Այս հղումը միայն ձերն է. կիսվելու կարիք չկա։</p>
     """, f"""
     <h2>A gift for you, {recipient_name}! 🎁</h2>
-    <p>{from_line_en} <strong>{duration_months} month{'s' if duration_months != 1 else ''}</strong> of Hasmik's Club membership — a warm, intimate club for Armenian women.</p>
+    <p>{from_line_en} <strong>{event_count} event credit{'s' if event_count != 1 else ''}{pkg_en}</strong> at Hasmik's Club — a warm, intimate club for Armenian women.</p>
     <p>Claim it below by setting a password, or continuing with Google or Telegram — takes less than a minute.</p>
     <a href="{claim_url}" class="btn">Claim my gift</a>
     <p class="small">This link is yours alone — no need to share it with anyone.</p>
@@ -708,24 +710,20 @@ def send_gift_claim_link(to: str, recipient_name: str, giver_name: Optional[str]
     send_async(to, recipient_name, "Դուք ստացել եք նվեր · You've received a gift — Hasmik's Club 🎁", html)
 
 
-def send_gift_applied_existing(to: str, recipient_name: str, giver_name: Optional[str], duration_months: int, expires_at: str) -> None:
-    recipient_name, giver_name = _e(recipient_name), _e(giver_name)
+def send_gift_applied_existing(to: str, recipient_name: str, giver_name: Optional[str], event_count: int, package_name: str = "") -> None:
+    recipient_name, giver_name, package_name = _e(recipient_name), _e(giver_name), _e(package_name)
     from_line_en = f"<strong>{giver_name}</strong> has gifted you" if giver_name else "You've been gifted"
     from_line_hy = f"<strong>{giver_name}</strong>-ը ձեզ նվիրել է" if giver_name else "Ձեզ նվիրվել է"
+    pkg_hy = f" ({package_name})" if package_name else ""
+    pkg_en = f" ({package_name})" if package_name else ""
     html = _wrap(_bilingual(f"""
     <h2>Ձեզ համար նվեր կա, {recipient_name}! 🎁</h2>
-    <p>{from_line_hy} <strong>{duration_months} ամիս</strong> Hasmik's Club-ի անդամակցություն, և քանի որ դուք արդեն հաշիվ ունեք, այն արդեն ակտիվ է. գործողություն պետք չէ։</p>
-    <div class="meta">
-      <p><strong>Ակտիվ է մինչև՝</strong> {expires_at}</p>
-    </div>
+    <p>{from_line_hy} <strong>{event_count} միջոցառման քարտ{pkg_hy}</strong> Hasmik's Club-ից, և քանի որ դուք արդեն հաշիվ ունեք, դրանք արդեն ավելացված են ձեր հաշվին. գործողություն պետք չէ։</p>
     <a href="https://www.hasmiksclub.am/dashboard" class="btn">Դեպի իմ վահանակ</a>
     <p class="signoff">Ջերմությամբ՝<br><strong>Hasmik's Club-ի թիմը</strong></p>
     """, f"""
     <h2>A gift for you, {recipient_name}! 🎁</h2>
-    <p>{from_line_en} <strong>{duration_months} month{'s' if duration_months != 1 else ''}</strong> of Hasmik's Club membership, and since you already have an account, it's already active — no action needed.</p>
-    <div class="meta">
-      <p><strong>Active until:</strong> {expires_at}</p>
-    </div>
+    <p>{from_line_en} <strong>{event_count} event credit{'s' if event_count != 1 else ''}{pkg_en}</strong> at Hasmik's Club, and since you already have an account, they've already been added to it — no action needed.</p>
     <a href="https://www.hasmiksclub.am/dashboard" class="btn">Go to my dashboard</a>
     <p class="signoff">With warmth,<br><strong>The Hasmik's Club team</strong></p>
     """))

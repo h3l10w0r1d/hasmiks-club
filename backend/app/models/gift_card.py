@@ -38,8 +38,16 @@ class GiftCard(Base):
     anonymous = Column(Boolean, nullable=False, default=False, server_default='false')
 
     gift_type = Column(String(20), nullable=False)  # membership | events
+    # SUPERSEDED — membership gifts used to be duration+plan based (a fixed
+    # number of months at plan-1/plan-2 pricing). Kept, unused by new rows,
+    # for historical gift rows issued before the switch to credit packages.
     duration_months = Column(Integer, nullable=True)  # membership only: 1 | 3 | 6 | 12
     plan = Column(String(10), nullable=True)  # membership only: "1" | "2" (see billing.VALID_PLANS); NULL = legacy flat price
+    # membership gifts now deliver a credit pack instead — snapshot of the
+    # packages_config entry at purchase time, same shape as MemberPackage's.
+    package_key = Column(String(64), nullable=True)
+    package_event_count = Column(Integer, nullable=True)
+    package_validity_days = Column(Integer, nullable=True)  # NULL = never expires
     event_selections_json = Column(String, nullable=True)  # events only: JSON [{"event_id":1,"quantity":2}, ...]
 
     amount = Column(Numeric(12, 2), nullable=False)

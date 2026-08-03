@@ -1,23 +1,51 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
+import { Star, Crown, Check } from 'lucide-react'
 import { useContent } from '../context/SiteContentContext'
-import { E, IS_EDIT, AddItemButton, RemoveItemButton } from './Editable'
-import CardFrame from './CardFrame'
-import { visibleOrder, fullOrder } from '../utils/cardOrder'
+import { E, AddItemButton, RemoveItemButton } from './Editable'
+import { getPublicPackages } from '../api/packages'
 import Reveal from './Reveal'
+
+const copy = {
+  en: {
+    perEvent: (n) => `֏${n.toLocaleString()} / event`,
+    savings: (n) => `Savings: ֏${n.toLocaleString()}`,
+    neverExpires: 'No expiry',
+    validMonths: (n) => `Valid for ${n} month${n === 1 ? '' : 's'}`,
+    validDays: (n) => `Valid for ${n} day${n === 1 ? '' : 's'}`,
+    telegramIncluded: 'Access to the private Telegram club',
+    popular: 'Most popular',
+    bestValue: 'Best value',
+  },
+  hy: {
+    perEvent: (n) => `֏${n.toLocaleString()} / միջոցառում`,
+    savings: (n) => `Խնայողություն՝ ֏${n.toLocaleString()}`,
+    neverExpires: 'Ժամկետ չունի',
+    validMonths: (n) => `Գործում է ${n} ամիս`,
+    validDays: (n) => `Գործում է ${n} օր`,
+    telegramIncluded: 'Փակ Telegram ակումբի հասանելիություն',
+    popular: 'Ամենապահանջված',
+    bestValue: 'Ամենաշահեկ',
+  },
+}
 
 export default function Pricing({ lang }) {
   const t = useContent()
   const c = t.pricing
   const hy = lang === 'hy'
+  const tr = copy[lang] ?? copy.en
   const suffix = hy ? 'Hy' : 'En'
   const p = (b) => `pricing.${b}${suffix}`
   const v = (b) => (hy ? c[`${b}Hy`] : c[`${b}En`])
-  const planCount = c.plans.length
-  // Legacy sites may still have a published override that set this as a
-  // plain string before it became a growable list — normalize either way.
   const paragraphs = Array.isArray(v('sub')) ? v('sub') : [v('sub')].filter(Boolean)
-  const order = IS_EDIT ? fullOrder(c.__plansOrder, planCount) : visibleOrder(c.__plansOrder, c.__plansHidden, planCount)
-  const visSet = IS_EDIT ? visibleOrder(c.__plansOrder, c.__plansHidden, planCount) : null
+
+  const [packages, setPackages] = useState([])
+
+  useEffect(() => {
+    getPublicPackages().then(setPackages).catch(() => setPackages([]))
+  }, [])
+
+  const basePerEvent = packages.find((pkg) => pkg.eventCount === 1)?.price ?? null
 
   return (
     <section className="pricing" id="pricing">
@@ -34,34 +62,41 @@ export default function Pricing({ lang }) {
       </Reveal>
 
       <div className="plans">
-        {order.map((i, pos) => {
-          const plan = c.plans[i]
-          const isHidden = visSet && !visSet.includes(i)
-          const planCard = (
-            <Reveal as="div" className={`plan${plan.popular ? ' hero-plan' : ''}`} key={i} delay={120 + pos * 90}>
-              {plan.popular && (
-                <E as="div" className="plan-badge" path={p('popular')} value={v('popular')} />
+        {packages.map((pkg, pos) => {
+          const perEvent = pkg.eventCount > 0 ? Math.round(pkg.price / pkg.eventCount) : pkg.price
+          const savings = basePerEvent != null && pkg.eventCount > 1 ? basePerEvent * pkg.eventCount - pkg.price : 0
+          const items = hy ? pkg.itemsHy : pkg.itemsEn
+          return (
+            <Reveal as="div" className={`plan${pkg.badge ? ' hero-plan' : ''}`} key={pkg.id} delay={120 + pos * 90}>
+              {pkg.badge && (
+                <div className="plan-badge">
+                  {pkg.badge === 'popular' ? <Star size={13} /> : <Crown size={13} />}
+                  {pkg.badge === 'popular' ? tr.popular : tr.bestValue}
+                </div>
               )}
-              <E as="div" className="plan-name" path={`pricing.plans.${i}.name${suffix}`} value={hy ? plan.nameHy : plan.nameEn} />
-              <div className="plan-price"><sup>֏</sup><E as="span" path={`pricing.plans.${i}.price`} value={plan.price} /></div>
-              <E as="div" className="plan-mo" path={p('perMonth')} value={v('perMonth')} />
+              <div className="plan-name">{hy ? pkg.nameHy : pkg.nameEn}</div>
+              <div className="plan-price"><sup>֏</sup>{Number(pkg.price).toLocaleString()}</div>
+              <div className="plan-mo">{pkg.eventCount} {hy ? 'մասնակցություն' : `event${pkg.eventCount === 1 ? '' : 's'}`}</div>
+              {pkg.eventCount > 1 && <div className="plan-per-event">{tr.perEvent(perEvent)}</div>}
               <div className="plan-hero-div"></div>
               <ul className="plan-list">
-                {(hy ? plan.itemsHy : plan.itemsEn).map((item, j) => (
-                  <E as="li" key={j} path={`pricing.plans.${i}.items${suffix}`} value={item} listIndex={j} />
+                {items.map((item, j) => (
+                  <li key={j}><Check size={14} />{item}</li>
                 ))}
+                {pkg.telegramAccess && <li><Check size={14} />{tr.telegramIncluded}</li>}
+                {savings > 0 && <li><Check size={14} />{tr.savings(savings)}</li>}
               </ul>
-              <Link to="/register" className={`plan-btn ${plan.popular ? 'plan-btn-fill' : 'plan-btn-outline'}`}>
-                <E as="span" path={p('btn')} value={v('btn')} />
+              <div className="plan-validity">
+                {pkg.validityDays == null
+                  ? tr.neverExpires
+                  : pkg.validityDays % 30 === 0
+                    ? tr.validMonths(pkg.validityDays / 30)
+                    : tr.validDays(pkg.validityDays)}
+              </div>
+              <Link to="/register" className={`plan-btn ${pkg.badge ? 'plan-btn-fill' : 'plan-btn-outline'}`}>
+                {v('btn')}
               </Link>
             </Reveal>
-          )
-          if (!IS_EDIT) return planCard
-          return (
-            <CardFrame key={i} orderPath="pricing.__plansOrder" hiddenPath="pricing.__plansHidden" itemCount={planCount}
-              index={i} canLeft={order.indexOf(i) > 0} canRight={order.indexOf(i) < order.length - 1} dimmed={isHidden}>
-              {planCard}
-            </CardFrame>
           )
         })}
       </div>

@@ -18,7 +18,9 @@ import { useAuth } from '../context/AuthContext'
 import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum, addProfilePhoto, deleteProfilePhoto, getMemberProfile, unlinkTelegram, exportMyData, deleteMyAccount } from '../api/members'
 import { getEvents, rsvp, cancelRsvp, joinWaitlist, leaveWaitlist, getWaitlistPosition, memberGuestTicketCheckout } from '../api/events'
 import { getLibrary } from '../api/content'
-import { getMemberSettings, createCheckout, cancelAutoRenew } from '../api/payments'
+import { getMemberSettings } from '../api/payments'
+import { getMyPackages, getPublicPackages, checkoutPackage, removeCard } from '../api/packages'
+import PackagePicker from '../components/PackagePicker'
 import { getNotificationPreferences, updateNotificationPreferences } from '../api/notifications'
 import { refreshToken as apiRefresh } from '../api/auth'
 import { sanitizeHtml, stripHtml } from '../utils/sanitizeHtml'
@@ -154,6 +156,8 @@ export default function DashboardPage({ lang, setLang }) {
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [oneTimeTicketLoading, setOneTimeTicketLoading] = useState(null) // eventId currently checking out, or null
   const [telegramUrl, setTelegramUrl] = useState('')
+  const [myPackages, setMyPackages] = useState({ packages: [], credits_available: 0 })
+  const [buyablePackages, setBuyablePackages] = useState([])
   const [photoUploading, setPhotoUploading] = useState(false)
   const [selectedContent, setSelectedContent] = useState(null)
   const [readerOpen, setReaderOpen] = useState(false)
@@ -257,6 +261,8 @@ export default function DashboardPage({ lang, setLang }) {
       if (!fresh.onboarding_completed) setShowOnboarding(true)
     }).catch(() => {})
     getMemberSettings().then(s => { if (alive) setTelegramUrl(s.telegram_invite_url || '') }).catch(() => {})
+    getMyPackages().then(p => { if (alive) setMyPackages(p) }).catch(() => {})
+    getPublicPackages().then(p => { if (alive) setBuyablePackages(p) }).catch(() => {})
     return () => { alive = false }
   }, [])
 
@@ -538,41 +544,55 @@ export default function DashboardPage({ lang, setLang }) {
     })
   }
 
-  // Generic "Subscribe" prompts scattered around the dashboard (RSVP gate,
-  // forum gate, etc.) send the member to /welcome to actually pick a plan —
-  // passing a real plan id here is reserved for the billing card's own
-  // inline picker, which stays in place instead of navigating away.
-  const handleSubscribe = async (plan) => {
-    const chosenPlan = typeof plan === 'string' ? plan : null
-    if (!chosenPlan) { navigate('/welcome'); return }
+  // Generic "buy a package" prompts scattered around the dashboard (RSVP
+  // gate, forum gate, etc.) send the member to /welcome to pick a package —
+  // buying a specific one inline (the package-status card's own picker)
+  // uses handleBuyPackage below instead of navigating away.
+  const handleSubscribe = () => navigate('/welcome')
+
+  const [buyPickerOpen, setBuyPickerOpen] = useState(false)
+  const [buyPackageKey, setBuyPackageKey] = useState(null)
+  const handleBuyPackage = async (packageKey) => {
     setCheckoutLoading(true)
     try {
-      const { url } = await createCheckout(chosenPlan)
-      window.location.href = url
+      const result = await checkoutPackage(packageKey, lang)
+      if (result.mode === 'redirect') {
+        window.location.href = result.url
+        return
+      }
+      if (result.success) {
+        const fresh = await getMe()
+        setUser(fresh)
+        setMyPackages(await getMyPackages())
+        setBuyPickerOpen(false)
+      } else {
+        setMsg(result.message || (lang === 'hy' ? 'Վճարումը չհաջողվեց: Փորձե՛ք կրկին:' : 'The payment failed. Please try again.'))
+      }
     } catch {
       setMsg(lang === 'hy' ? 'Չհաջողվեց սկսել վճարումը: Փորձե՛ք կրկին:' : 'Could not start checkout. Please try again.')
+    } finally {
       setCheckoutLoading(false)
     }
   }
 
-  const [cancelRenewLoading, setCancelRenewLoading] = useState(false)
-  const handleCancelAutoRenew = () => {
+  const [removeCardLoading, setRemoveCardLoading] = useState(false)
+  const handleRemoveCard = () => {
     setConfirmDialog({
-      title: lang === 'hy' ? 'Անջատե՞լ ինքնավերականգնումը' : 'Turn off auto-renew?',
+      title: lang === 'hy' ? 'Հեռացնե՞լ պահված քարտը' : 'Remove saved card?',
       body: lang === 'hy'
-        ? 'Ձեր անդամակցությունը կմնա ակտիվ մինչև ընթացիկ ժամանակաշրջանի ավարտը, բայց այլևս ավտոմատ չի վերականգնվի:'
-        : "Your membership stays active until the current period ends, but won't renew automatically after that.",
-      confirmLabel: lang === 'hy' ? 'Անջատել' : 'Turn off',
+        ? 'Հաջորդ գնումը կպահանջի կրկին անցնել վճարման էջով:'
+        : "Your next package purchase will go through the payment page again instead of charging instantly.",
+      confirmLabel: lang === 'hy' ? 'Հեռացնել' : 'Remove',
       onConfirm: async () => {
-        setCancelRenewLoading(true)
+        setRemoveCardLoading(true)
         try {
-          await cancelAutoRenew()
+          await removeCard()
           const fresh = await getMe()
           setUser(fresh)
         } catch {
-          setMsg(lang === 'hy' ? 'Չհաջողվեց անջատել: Փորձե՛ք կրկին:' : 'Could not turn off auto-renew. Please try again.')
+          setMsg(lang === 'hy' ? 'Չհաջողվեց հեռացնել: Փորձե՛ք կրկին:' : 'Could not remove the card. Please try again.')
         } finally {
-          setCancelRenewLoading(false)
+          setRemoveCardLoading(false)
         }
       },
     })
@@ -620,58 +640,51 @@ export default function DashboardPage({ lang, setLang }) {
   }
 
   const isActive = user.membership_status === 'active'
+  // SUPERSEDED — 'past_due' was a recurring-billing state (a renewal charge
+  // failed); packages are one-time purchases, so it's never set by new
+  // checkouts. Left readable for any legacy account still carrying it.
   const isPastDue = user.membership_status === 'past_due'
-  const paymentFailed = searchParams.get('payment') === 'failed'
+  const packageFailed = searchParams.get('package') === 'failed'
+  const creditsAvailable = myPackages.credits_available
 
-  // Ghost view: approved accounts that skipped or haven't completed payment can
-  // still browse the dashboard, but aren't visible in the directory, can't post
-  // in the forum, and can't RSVP to events (all enforced server-side too) until
-  // they subscribe. This banner is their one persistent, always-visible path
-  // back to checkout — shown on every tab, not a full-page block. past_due
-  // (an auto-renewal charge failed, or the card-migration deadline lapsed)
-  // gets the same banner shape with different copy — a real prior member,
-  // not someone who was never subscribed.
+  // Ghost view: approved accounts that haven't bought a package yet can
+  // still browse the dashboard, but aren't visible in the directory, can't
+  // post in the forum, and can't RSVP to events (all enforced server-side
+  // too) until they buy one. This banner is their one persistent,
+  // always-visible path back to checkout — shown on every tab, not a
+  // full-page block.
   const membershipBanner = !isActive && (
     <div style={{
       display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap',
-      background: (paymentFailed || isPastDue) ? '#fdecea' : '#fff8f5',
-      border: `1px solid ${(paymentFailed || isPastDue) ? '#f3c6c0' : '#f5ddd0'}`,
+      background: packageFailed ? '#fdecea' : '#fff8f5',
+      border: `1px solid ${packageFailed ? '#f3c6c0' : '#f5ddd0'}`,
       borderRadius: 14, padding: '16px 20px', marginBottom: 28,
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <CreditCard size={22} strokeWidth={1.5} color={(paymentFailed || isPastDue) ? '#c0392b' : 'var(--rose)'} style={{ flexShrink: 0 }} />
+        <CreditCard size={22} strokeWidth={1.5} color={packageFailed ? '#c0392b' : 'var(--rose)'} style={{ flexShrink: 0 }} />
         <div>
-          <p style={{ fontSize: 14, fontWeight: 700, color: (paymentFailed || isPastDue) ? '#c0392b' : '#2c1a1a', margin: 0 }}>
-            {isPastDue
-              ? (lang === 'hy' ? 'Ձեր վերջին վճարումը չհաջողվեց' : 'Your last payment failed')
-              : paymentFailed
-                ? (lang === 'hy' ? 'Վերջին վճարման փորձը չհաջողվեց' : 'Your last payment attempt failed')
-                : (lang === 'hy' ? 'Դուք դիտում եք որպես հյուր' : "You're browsing as a guest")}
+          <p style={{ fontSize: 14, fontWeight: 700, color: packageFailed ? '#c0392b' : '#2c1a1a', margin: 0 }}>
+            {packageFailed
+              ? (lang === 'hy' ? 'Վերջին վճարման փորձը չհաջողվեց' : 'Your last payment attempt failed')
+              : (lang === 'hy' ? 'Դուք դիտում եք որպես հյուր' : "You're browsing as a guest")}
           </p>
           <p style={{ fontSize: 12.5, color: '#8a746a', margin: '2px 0 0' }}>
-            {isPastDue
-              ? (lang === 'hy' ? 'Թարմացրե՛ք ձեր քարտը՝ անդամակցությունը շարունակելու համար:' : 'Update your card to keep your membership active.')
-              : paymentFailed
-                ? (lang === 'hy' ? 'Կրկին փորձեք, կամ կապվեք մեզ հետ, եթե խնդիրը կրկնվում է:' : 'Try again, or contact us if this keeps happening.')
-                : (lang === 'hy'
-                    ? 'Բաժանորդագրվեք՝ ֆորումում գրելու, հանդիպումներին գրանցվելու և ակումբին տեսանելի լինելու համար:'
-                    : 'Subscribe to post in the forum, RSVP to gatherings, and be visible to the club.')}
+            {packageFailed
+              ? (lang === 'hy' ? 'Կրկին փորձեք, կամ կապվեք մեզ հետ, եթե խնդիրը կրկնվում է:' : 'Try again, or contact us if this keeps happening.')
+              : (lang === 'hy'
+                  ? 'Գնեք փաթեթ՝ ֆորումում գրելու, հանդիպումներին գրանցվելու և ակումբին տեսանելի լինելու համար:'
+                  : 'Buy a package to post in the forum, RSVP to gatherings, and be visible to the club.')}
           </p>
           {msg && <p style={{ fontSize: 12.5, color: '#c0392b', margin: '4px 0 0' }}>{msg}</p>}
         </div>
       </div>
       <button
         onClick={handleSubscribe}
-        disabled={checkoutLoading}
-        style={{ background: '#c0394b', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 22px', cursor: checkoutLoading ? 'default' : 'pointer', fontSize: 13, fontWeight: 700, letterSpacing: '0.02em', opacity: checkoutLoading ? 0.7 : 1, whiteSpace: 'nowrap', flexShrink: 0 }}
+        style={{ background: '#c0394b', color: '#fff', border: 'none', borderRadius: 10, padding: '10px 22px', cursor: 'pointer', fontSize: 13, fontWeight: 700, letterSpacing: '0.02em', whiteSpace: 'nowrap', flexShrink: 0 }}
       >
-        {checkoutLoading
-          ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…')
-          : isPastDue
-            ? (lang === 'hy' ? 'Թարմացնել քարտը' : 'Update Card')
-            : paymentFailed
-              ? (lang === 'hy' ? 'Կրկին փորձել' : 'Try Again')
-              : (lang === 'hy' ? 'Բաժանորդագրվել' : 'Subscribe Now')}
+        {packageFailed
+          ? (lang === 'hy' ? 'Կրկին փորձել' : 'Try Again')
+          : (lang === 'hy' ? 'Գնել փաթեթ' : 'Buy a Package')}
       </button>
     </div>
   )
@@ -866,7 +879,7 @@ export default function DashboardPage({ lang, setLang }) {
                                 <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
                               ) : !isActive ? (
                                 <>
-                                  <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Բաժանորդագրվեք՝ գրանցվելու համար' : 'Subscribe to RSVP'}</button>
+                                  <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Գնեք փաթեթ՝ գրանցվելու համար' : 'Buy a package to RSVP'}</button>
                                   {ev.ticket_price != null && ev.seats_available > 0 && !(ev.max_guest_tickets != null && ev.guest_seats_taken >= ev.max_guest_tickets) && (
                                     <button
                                       className="plan-btn plan-btn-outline"
@@ -883,6 +896,8 @@ export default function DashboardPage({ lang, setLang }) {
                                 </>
                               ) : ev.user_has_rsvp ? (
                                 <button className="plan-btn plan-btn-outline" onClick={() => handleRsvpClick(ev)}>{t.cancelRsvp}</button>
+                              ) : creditsAvailable <= 0 ? (
+                                <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Գնեք փաթեթ՝ գրանցվելու համար' : 'Buy a package to RSVP'}</button>
                               ) : ev.seats_available > 0 ? (
                                 <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(ev)}>{t.rsvpBtn}</button>
                               ) : (
@@ -1056,64 +1071,60 @@ export default function DashboardPage({ lang, setLang }) {
                 </a>
               )}
 
-              {(isActive || isPastDue) && (
+              {isActive && (
                 <div style={{ background: '#fff', border: '1px solid #f0dde0', borderRadius: 14, padding: '16px 20px', marginBottom: 24 }}>
                   <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--deep)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CreditCard size={15} /> {lang === 'hy' ? 'Վճարումներ' : 'Billing'}
+                    <CreditCard size={15} /> {lang === 'hy' ? 'Փաթեթներ' : 'Packages'}
                   </p>
 
-                  {user.card_required_by && !user.binding_active && (
-                    <p style={{ fontSize: 12.5, color: '#c0392b', background: '#fdecea', border: '1px solid #f3c6c0', borderRadius: 8, padding: '8px 12px', marginBottom: 12 }}>
-                      {lang === 'hy'
-                        ? `Խնդրում ենք ավելացնել քարտ մինչև ${new Date(user.card_required_by).toLocaleDateString('hy-AM')}, հակառակ դեպքում անդամակցությունը կդադարի:`
-                        : `Please add a card by ${new Date(user.card_required_by).toLocaleDateString('en-GB')} to keep your membership from lapsing.`}
+                  <p style={{ fontSize: 13, color: '#555', margin: '0 0 4px' }}>
+                    {lang === 'hy' ? 'Հասանելի մասնակցություններ՝ ' : 'Credits available: '}
+                    <strong style={{ color: creditsAvailable > 0 ? '#2e7d32' : '#c0392b' }}>{creditsAvailable}</strong>
+                  </p>
+                  {myPackages.packages.filter(p => p.credits_remaining > 0).map(p => (
+                    <p key={p.id} style={{ fontSize: 12.5, color: '#888', margin: '0 0 4px' }}>
+                      {lang === 'hy' ? p.name_hy : p.name_en} — {p.credits_remaining} {lang === 'hy' ? 'մասնակցություն' : 'left'}
+                      {p.expires_at && ` · ${lang === 'hy' ? 'ավարտ՝' : 'expires'} ${new Date(p.expires_at).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB')}`}
                     </p>
-                  )}
+                  ))}
 
-                  {user.binding_active ? (
-                    <>
-                      <p style={{ fontSize: 13, color: '#555', margin: '0 0 4px' }}>
-                        {lang === 'hy' ? 'Ինքնավերականգնում՝ ' : 'Auto-renew: '}<strong style={{ color: '#2e7d32' }}>{lang === 'hy' ? 'Միացված' : 'On'}</strong>
-                      </p>
-                      {user.next_billing_date && (
-                        <p style={{ fontSize: 12.5, color: '#888', margin: '0 0 12px' }}>
-                          {lang === 'hy' ? 'Հաջորդ վճարումը՝ ' : 'Next billing date: '}
-                          {new Date(user.next_billing_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB')}
-                        </p>
-                      )}
-                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                        <button
-                          onClick={() => handleSubscribe(user.membership_plan || '1')}
-                          disabled={checkoutLoading}
-                          title={lang === 'hy' ? 'Կվերաձևակերպի ընթացիկ ժամանակաշրջանը նոր քարտով' : 'Renews the current period now on a new card'}
-                          style={{ background: 'none', border: '1px solid var(--rose)', borderRadius: 8, padding: '7px 14px', cursor: checkoutLoading ? 'default' : 'pointer', fontSize: 12.5, color: 'var(--rose)', opacity: checkoutLoading ? 0.6 : 1 }}
-                        >
-                          {checkoutLoading ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…') : (lang === 'hy' ? 'Թարմացնել քարտը' : 'Update card')}
-                        </button>
-                        <button
-                          onClick={handleCancelAutoRenew}
-                          disabled={cancelRenewLoading}
-                          style={{ background: 'none', border: '1px solid #ddd', borderRadius: 8, padding: '7px 14px', cursor: cancelRenewLoading ? 'default' : 'pointer', fontSize: 12.5, color: '#888', opacity: cancelRenewLoading ? 0.6 : 1 }}
-                        >
-                          {cancelRenewLoading
-                            ? (lang === 'hy' ? 'Անջատվում է…' : 'Turning off…')
-                            : (lang === 'hy' ? 'Անջատել ինքնավերականգնումը' : 'Turn off auto-renew')}
-                        </button>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <p style={{ fontSize: 12.5, color: '#888', margin: '0 0 12px' }}>
-                        {lang === 'hy' ? 'Քարտ ավելացված չէ — ինքնավերականգնումն ակտիվ չէ:' : 'No card on file — auto-renew is off.'}
-                      </p>
+                  <p style={{ fontSize: 12.5, color: '#888', margin: '12px 0' }}>
+                    {user.binding_active
+                      ? (lang === 'hy' ? 'Քարտը պահված է — հաջորդ գնումն ակնթարթային կլինի:' : 'Card on file — your next purchase will be instant.')
+                      : (lang === 'hy' ? 'Քարտ պահված չէ:' : 'No card on file.')}
+                  </p>
+
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: buyPickerOpen ? 14 : 0 }}>
+                    <button
+                      onClick={() => setBuyPickerOpen(o => !o)}
+                      style={{ background: 'var(--rose)', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', cursor: 'pointer', fontSize: 12.5, fontWeight: 600 }}
+                    >
+                      {buyPickerOpen ? (lang === 'hy' ? 'Փակել' : 'Close') : (lang === 'hy' ? 'Գնել փաթեթ' : 'Buy another package')}
+                    </button>
+                    {user.binding_active && (
                       <button
-                        onClick={handleSubscribe}
-                        disabled={checkoutLoading}
-                        style={{ background: 'var(--rose)', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 16px', cursor: checkoutLoading ? 'default' : 'pointer', fontSize: 12.5, fontWeight: 600, opacity: checkoutLoading ? 0.7 : 1 }}
+                        onClick={handleRemoveCard}
+                        disabled={removeCardLoading}
+                        style={{ background: 'none', border: '1px solid #ddd', borderRadius: 8, padding: '7px 14px', cursor: removeCardLoading ? 'default' : 'pointer', fontSize: 12.5, color: '#888', opacity: removeCardLoading ? 0.6 : 1 }}
                       >
-                        {checkoutLoading ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…') : (lang === 'hy' ? 'Ավելացնել քարտ' : 'Add card')}
+                        {removeCardLoading
+                          ? (lang === 'hy' ? 'Հեռացվում է…' : 'Removing…')
+                          : (lang === 'hy' ? 'Հեռացնել քարտը' : 'Remove saved card')}
                       </button>
-                    </>
+                    )}
+                  </div>
+
+                  {buyPickerOpen && (
+                    <div>
+                      <PackagePicker packages={buyablePackages} selected={buyPackageKey} onSelect={setBuyPackageKey} lang={lang} />
+                      <button
+                        onClick={() => handleBuyPackage(buyPackageKey)}
+                        disabled={checkoutLoading || !buyPackageKey}
+                        style={{ marginTop: 12, background: 'var(--rose)', color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: checkoutLoading ? 'default' : 'pointer', fontSize: 13, fontWeight: 600, opacity: checkoutLoading ? 0.7 : 1 }}
+                      >
+                        {checkoutLoading ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…') : (lang === 'hy' ? 'Հաստատել գնումը' : 'Confirm purchase')}
+                      </button>
+                    </div>
                   )}
                 </div>
               )}
@@ -1440,8 +1451,8 @@ export default function DashboardPage({ lang, setLang }) {
               {!isActive ? (
                 <p className="dash-empty">
                   {lang === 'hy'
-                    ? 'Անդամների ցանկը հասանելի է միայն ակտիվ բաժանորդագրությամբ:'
-                    : 'The member directory is available to active subscribers only.'}
+                    ? 'Անդամների ցանկը հասանելի է միայն փաթեթ ունեցող անդամներին:'
+                    : 'The member directory is available to members with a package only.'}
                 </p>
               ) : <>
               {directory.length > 0 && (

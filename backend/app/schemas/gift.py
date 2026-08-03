@@ -19,8 +19,12 @@ class GiftStartIn(BaseModel):
     recipient_phone: Optional[str] = None
     anonymous: bool = False
     gift_type: str  # membership | events
-    duration_months: Optional[int] = None  # required when gift_type == membership
-    plan: Optional[str] = None  # required when gift_type == membership ("1" | "2")
+    # SUPERSEDED — membership gifts used to be duration+plan based. Fields
+    # kept (unused by new requests) since old already-issued gift rows still
+    # carry them; new requests send package_key instead.
+    duration_months: Optional[int] = None
+    plan: Optional[str] = None
+    package_key: Optional[str] = None  # required when gift_type == membership
     event_selections: Optional[List[GiftEventSelection]] = None  # required when gift_type == events
     lang_pref: Optional[str] = "en"
 
@@ -42,8 +46,11 @@ class GiftInfoOut(BaseModel):
     recipient_name: str
     giver_name: Optional[str] = None  # omitted when the gift was sent anonymously
     gift_type: str
+    # SUPERSEDED — see GiftStartIn.
     duration_months: Optional[int] = None
     plan: Optional[str] = None
+    package_event_count: Optional[int] = None
+    package_name: Optional[str] = None
     already_redeemed: bool
     recipient_has_account: bool
 
@@ -64,6 +71,9 @@ class GiftCardOut(BaseModel):
     gift_type: str
     duration_months: Optional[int] = None
     plan: Optional[str] = None
+    package_key: Optional[str] = None
+    package_event_count: Optional[int] = None
+    package_validity_days: Optional[int] = None
     amount: Decimal
     status: str
     email_verified: bool
