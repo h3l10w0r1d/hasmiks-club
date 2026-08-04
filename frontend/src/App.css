@@ -509,72 +509,88 @@ body{font-family:var(--font-serif);background:#fff;color:var(--mocha);overflow-x
 }
 
 .plans{
-  display:grid;grid-template-columns:1fr 1fr;
-  gap:24px;
-  max-width:840px;
+  display:flex;flex-wrap:wrap;
+  justify-content:center;align-items:stretch;
+  gap:28px;
+  max-width:1180px;
   margin:0 auto;
-  align-items:stretch;
 }
 .plan{
   background:#fff;
-  border:1px solid #f0ece8;
-  border-radius:4px;
-  padding:52px 44px;text-align:left;
+  border:1px solid var(--sand);
+  border-radius:20px;
+  padding:36px 32px;text-align:left;
   position:relative;
   display:flex;flex-direction:column;
+  flex:1 1 300px;min-width:280px;max-width:360px;
+  box-shadow:0 12px 32px -22px rgba(24,12,4,0.14);
 }
 .plan.hero-plan{
-  background:#fff;
-  border:1px solid rgba(126,52,52,0.18);
-  border-top:3px solid var(--rose);
-  box-shadow:0 8px 40px rgba(126,52,52,0.08);
+  border:2px solid var(--rose);
+  box-shadow:0 24px 48px -20px rgba(126,52,52,0.28);
+  transform:translateY(-8px);
+}
+.plan.hero-plan.gold-plan{
+  border-color:var(--gold);
+  box-shadow:0 24px 48px -20px rgba(140,101,48,0.28);
 }
 
-.plan-badge{
-  display:inline-block;
-  background:var(--rose-bg);color:var(--rose);
-  font-size:12px;font-weight:500;
-  letter-spacing:0.15em;text-transform:uppercase;
-  padding:5px 14px;margin-bottom:20px;
+.plan-badge-pill{
+  position:absolute;top:0;left:50%;transform:translate(-50%,-50%);
+  display:flex;align-items:center;gap:6px;
+  background:var(--rose);color:#fff;
+  font-size:12px;font-weight:600;
+  letter-spacing:0.03em;white-space:nowrap;
+  padding:7px 18px;border-radius:999px;
+  box-shadow:0 6px 16px -4px rgba(0,0,0,0.25);
 }
+.gold-plan .plan-badge-pill{background:var(--gold)}
+
 .plan-name{
-  font-size:12px;font-weight:500;
-  letter-spacing:0.2em;text-transform:uppercase;
-  color:var(--gold);margin-bottom:16px;
-  display:flex;align-items:center;gap:8px;
+  font-family:'Cormorant Garamond', 'Noto Sans Armenian',serif;
+  font-size:22px;font-weight:600;
+  color:var(--deep);margin-bottom:16px;
 }
-.plan-name::before{content:'';display:block;width:16px;height:1px;background:var(--gold)}
+.plan-price-row{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
 .plan-price{
   font-family:'Cormorant Garamond', 'Noto Sans Armenian',serif;
-  font-size:60px;font-weight:600;
+  font-size:38px;font-weight:700;
   color:var(--deep);line-height:1;
   white-space:nowrap;
 }
-.plan-price sup{font-size:24px;vertical-align:super;font-weight:300;margin-right:2px}
-.plan-mo{
-  font-size:13px;color:var(--stone);
-  letter-spacing:0.15em;text-transform:uppercase;
-  margin-bottom:28px;margin-top:2px;
-}
-.plan-div{height:1px;background:var(--sand);margin-bottom:28px}
-.plan-hero-div{height:1px;background:rgba(168,92,90,0.15);margin-bottom:28px}
+.plan-price sup{font-size:17px;vertical-align:super;font-weight:400;margin-right:1px}
+.plan-regular-price{font-size:15px;color:var(--stone);text-decoration:line-through}
+.plan-per-one{font-size:13.5px;color:var(--taupe);margin:8px 0 0}
 
-.plan-list{list-style:none;margin-bottom:36px}
+.plan-savings-box{
+  margin-top:12px;padding:12px 16px;border-radius:14px;
+  background:var(--rose-bg);color:var(--rose);
+}
+.gold-plan .plan-savings-box{background:rgba(140,101,48,0.1);color:var(--gold)}
+.plan-savings-label{font-size:13px;font-weight:600}
+.plan-savings-amount{font-size:16px;font-weight:700;margin-top:2px}
+
+.plan-description{font-size:14px;line-height:1.65;color:var(--taupe);margin:16px 0 0}
+
+.plan-div{height:1px;background:var(--sand);margin:22px 0}
+.plan-hero-div{height:1px;background:var(--sand);margin:22px 0}
+
+.plan-includes-label{font-size:13.5px;font-weight:600;color:var(--deep);margin:0 0 10px}
+.plan-list{list-style:none;margin-bottom:20px;display:flex;flex-direction:column;gap:9px}
 .plan-list li{
-  font-size:16px;color:var(--taupe);
-  padding:9px 0;
-  display:flex;gap:12px;align-items:flex-start;
-  border-bottom:1px solid #f0ece8;line-height:1.5;
+  font-size:14px;color:var(--taupe);
+  display:flex;gap:10px;align-items:flex-start;line-height:1.5;
 }
-.plan.hero-plan .plan-list li{
-  color:var(--mocha);
-  border-bottom-color:rgba(126,52,52,0.08);
+.plan.hero-plan .plan-list li{color:var(--mocha)}
+.plan-list li svg{
+  flex-shrink:0;margin-top:2px;
+  width:17px;height:17px;padding:3px;box-sizing:border-box;
+  border-radius:50%;background:var(--rose-bg);color:var(--rose);
 }
-.plan-list li::before{
-  content:'–';color:var(--gold);
-  flex-shrink:0;margin-top:1px;font-size:13px;
-}
-.plan.hero-plan .plan-list li::before{color:var(--rose)}
+.plan.hero-plan .plan-list li svg{background:var(--rose);color:#fff}
+.gold-plan .plan-list li svg{background:var(--gold);color:#fff}
+
+.plan-validity{font-size:12.5px;color:var(--stone);margin:0 0 20px}
 
 .plan-btn{
   display:block;text-align:center;box-sizing:border-box;
@@ -594,6 +610,37 @@ body{font-family:var(--font-serif);background:#fff;color:var(--mocha);overflow-x
   background:var(--rose);color:var(--cream);border:1px solid var(--rose);
 }
 .plan-btn-fill:hover{background:var(--rose-lt);border-color:var(--rose-lt)}
+
+.pricing-terms{
+  max-width:820px;width:100%;margin:56px auto 0;
+  background:#fff;border:1px solid var(--sand);border-radius:20px;
+  overflow:hidden;text-align:left;
+}
+.pricing-terms-toggle{
+  display:flex;align-items:center;justify-content:space-between;
+  width:100%;padding:20px 26px;border:none;background:none;cursor:pointer;
+  font-family:'Cormorant Garamond', 'Noto Sans Armenian',serif;
+  font-size:18px;font-weight:600;color:var(--deep);
+}
+.pricing-terms-chevron{
+  flex-shrink:0;width:32px;height:32px;border-radius:50%;
+  background:var(--cream);color:var(--rose);
+  display:flex;align-items:center;justify-content:center;
+  transition:transform .2s;
+}
+.pricing-terms-chevron.open{transform:rotate(180deg)}
+.pricing-terms-list{
+  list-style:none;padding:0 26px 26px;margin:0;
+  display:flex;flex-direction:column;gap:12px;
+}
+.pricing-terms-list li{
+  font-size:14px;line-height:1.6;color:var(--taupe);
+  display:flex;gap:10px;align-items:flex-start;
+}
+.pricing-terms-list li::before{
+  content:'';flex-shrink:0;width:6px;height:6px;border-radius:50%;
+  background:var(--rose);margin-top:8px;
+}
 
 /* ═══════════════════════════════════════
    FINAL CTA — large photo background
@@ -864,7 +911,9 @@ a.ci-row:hover .ci-value{color:var(--rose)}
   .story-img{height:70vw}
   .story-text-col{padding:56px 28px}
   .pricing{padding:64px 28px}
-  .plans{grid-template-columns:1fr}
+  .plans{flex-direction:column;align-items:stretch}
+  .plan{max-width:none}
+  .plan.hero-plan{transform:none}
   .final-content{padding:48px 24px}
   .ft-top{grid-template-columns:1fr;gap:32px}
 }

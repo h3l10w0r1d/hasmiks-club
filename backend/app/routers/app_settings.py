@@ -366,6 +366,16 @@ def _validate_packages(value: Any) -> list:
             raise HTTPException(422, "eventCount must be at least 1")
         if price < 0:
             raise HTTPException(422, "price must not be negative")
+        regular_price = item.get("regularPrice")
+        if regular_price is not None and regular_price != "":
+            try:
+                regular_price = float(regular_price)
+            except (TypeError, ValueError):
+                raise HTTPException(422, "regularPrice must be a number or null")
+            if regular_price < price:
+                raise HTTPException(422, "regularPrice must be at least the discounted price")
+        else:
+            regular_price = None
         validity_days = item.get("validityDays")
         if validity_days is not None:
             try:
@@ -389,6 +399,9 @@ def _validate_packages(value: Any) -> list:
             "nameHy": str(item.get("nameHy") or ""),
             "eventCount": event_count,
             "price": price,
+            "regularPrice": regular_price,
+            "descriptionEn": str(item.get("descriptionEn") or ""),
+            "descriptionHy": str(item.get("descriptionHy") or ""),
             "validityDays": validity_days,
             "telegramAccess": bool(item.get("telegramAccess", False)),
             "badge": badge,

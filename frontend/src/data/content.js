@@ -154,6 +154,28 @@ const t = {
     giftTeaserHy: `Դեռ պատրաստ չե՞ք միանալու: Կարող եք փաթեթը նվիրել ձեզ սիրելի մեկին։`,
     giftLinkEn: `Gift a Package`,
     giftLinkHy: `Նվիրել փաթեթ`,
+    termsTitleEn: `Important terms`,
+    termsTitleHy: `Կարևոր պայմաններ`,
+    termsEn: [
+      `Packages are not a monthly subscription and do not renew automatically.`,
+      `You must RSVP in advance for each gathering.`,
+      `Seats are limited and reserved in order of registration.`,
+      `You can cancel your RSVP at least 24 hours before the gathering.`,
+      `A later cancellation or no-show counts that visit as used.`,
+      `Each package is for one person and cannot be transferred to someone else.`,
+      `Unused visits are not carried over once the package's validity period ends.`,
+      `Special trips, off-site gatherings, or premium programs may carry an additional charge — members will be notified in advance.`,
+    ],
+    termsHy: [
+      `Փաթեթները ամսական բաժանորդագրություն չեն և ինքնաբերաբար չեն երկարաձգվում։`,
+      `Յուրաքանչյուր հանդիպման համար անհրաժեշտ է նախապես գրանցվել։`,
+      `Տեղերը սահմանափակ են և ամրագրվում են գրանցման հերթականությամբ։`,
+      `Մասնակցությունը հնարավոր է չեղարկել հանդիպումից առնվազն 24 ժամ առաջ։`,
+      `Ավելի ուշ չեղարկման կամ չներկայանալու դեպքում տվյալ մասնակցությունը համարվում է օգտագործված։`,
+      `Փաթեթը նախատեսված է մեկ անձի համար և չի կարող փոխանցվել մեկ այլ անձի։`,
+      `Չօգտագործված մասնակցությունները փաթեթի գործողության ժամկետի ավարտից հետո չեն պահպանվում։`,
+      `Հատուկ ուղևորությունները, արտագնա հանդիպումները կամ բարձրարժեք ծրագրերը կարող են ունենալ հավելավճար։ Այդ մասին մասնակիցները նախապես կտեղեկացվեն։`,
+    ],
   },
 
   finalCta: {

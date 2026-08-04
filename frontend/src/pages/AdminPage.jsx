@@ -734,6 +734,7 @@ export default function AdminPage() {
   const addPackage = () => {
     setPackagesForm(list => [...list, {
       id: newPackageId(), nameEn: '', nameHy: '', eventCount: 1, price: 0,
+      regularPrice: null, descriptionEn: '', descriptionHy: '',
       validityDays: null, telegramAccess: false, badge: null,
       itemsEn: [], itemsHy: [], active: true, sortOrder: list.length,
     }])
@@ -743,6 +744,27 @@ export default function AdminPage() {
   }
   const removePackage = (id) => {
     setPackagesForm(list => list.filter(p => p.id !== id))
+  }
+  // Bullet items are edited as EN/ՀԱՅ-paired rows (same index = same bullet
+  // in both languages) rather than two independently-line-wrapped textareas
+  // — avoids the two lists silently drifting out of sync.
+  const addBullet = (id) => {
+    setPackagesForm(list => list.map(p => p.id === id
+      ? { ...p, itemsEn: [...(p.itemsEn || []), ''], itemsHy: [...(p.itemsHy || []), ''] }
+      : p))
+  }
+  const updateBullet = (id, index, key, value) => {
+    setPackagesForm(list => list.map(p => {
+      if (p.id !== id) return p
+      const arr = [...(p[key] || [])]
+      arr[index] = value
+      return { ...p, [key]: arr }
+    }))
+  }
+  const removeBullet = (id, index) => {
+    setPackagesForm(list => list.map(p => p.id === id
+      ? { ...p, itemsEn: (p.itemsEn || []).filter((_, i) => i !== index), itemsHy: (p.itemsHy || []).filter((_, i) => i !== index) }
+      : p))
   }
   const movePackage = (id, dir) => {
     setPackagesForm(list => {
@@ -758,7 +780,17 @@ export default function AdminPage() {
     e?.preventDefault()
     setSavingPackages(true)
     try {
-      const saved = await adminSavePackages(packagesForm.map((p, idx) => ({ ...p, sortOrder: idx })))
+      // Numeric fields can sit as '' mid-edit (see updatePackage's number
+      // inputs) so the field can actually be cleared before typing a new
+      // value — normalize back to real numbers here, right before saving.
+      const saved = await adminSavePackages(packagesForm.map((p, idx) => ({
+        ...p,
+        eventCount: Number(p.eventCount) || 1,
+        price: Number(p.price) || 0,
+        regularPrice: p.regularPrice === '' || p.regularPrice == null ? null : Number(p.regularPrice),
+        validityDays: p.validityDays === '' || p.validityDays == null ? null : Number(p.validityDays),
+        sortOrder: idx,
+      })))
       setPackagesForm(saved)
       flash('Packages saved')
     } catch { flash('Failed to save packages', true) }
@@ -1903,16 +1935,33 @@ export default function AdminPage() {
                               </div>
                               <div className="grid grid-cols-3 gap-3">
                                 <Field label="Event credits">
-                                  <Input type="number" min="1" value={pkg.eventCount} onChange={e => updatePackage(pkg.id, { eventCount: Number(e.target.value) })} />
+                                  <Input
+                                    type="number" min="1" value={pkg.eventCount}
+                                    onChange={e => updatePackage(pkg.id, { eventCount: e.target.value === '' ? '' : Number(e.target.value) })}
+                                  />
                                 </Field>
                                 <Field label="Price (֏)">
-                                  <Input type="number" min="0" value={pkg.price} onChange={e => updatePackage(pkg.id, { price: Number(e.target.value) })} />
+                                  <Input
+                                    type="number" min="0" value={pkg.price}
+                                    onChange={e => updatePackage(pkg.id, { price: e.target.value === '' ? '' : Number(e.target.value) })}
+                                  />
                                 </Field>
-                                <Field label="Validity (days, blank = never expires)">
-                                  <Input type="number" min="1" value={pkg.validityDays ?? ''} onChange={e => updatePackage(pkg.id, { validityDays: e.target.value === '' ? null : Number(e.target.value) })} placeholder="90" />
+                                <Field label="Regular price (֏, optional — shown crossed out)">
+                                  <Input
+                                    type="number" min="0" value={pkg.regularPrice ?? ''}
+                                    onChange={e => updatePackage(pkg.id, { regularPrice: e.target.value === '' ? null : Number(e.target.value) })}
+                                    placeholder="none"
+                                  />
                                 </Field>
                               </div>
                               <div className="grid grid-cols-2 gap-3">
+                                <Field label="Validity (days, blank = never expires)">
+                                  <Input
+                                    type="number" min="1" value={pkg.validityDays ?? ''}
+                                    onChange={e => updatePackage(pkg.id, { validityDays: e.target.value === '' ? null : Number(e.target.value) })}
+                                    placeholder="90"
+                                  />
+                                </Field>
                                 <Field label="Badge">
                                   <select
                                     className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
@@ -1924,24 +1973,41 @@ export default function AdminPage() {
                                     <option value="best_value">Best value</option>
                                   </select>
                                 </Field>
-                                <div className="flex items-end gap-4 pb-1.5">
-                                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                                    <input type="checkbox" className="h-4 w-4 accent-primary cursor-pointer" checked={pkg.telegramAccess} onChange={e => updatePackage(pkg.id, { telegramAccess: e.target.checked })} />
-                                    Telegram access
-                                  </label>
-                                  <label className="flex items-center gap-2 text-sm cursor-pointer">
-                                    <input type="checkbox" className="h-4 w-4 accent-primary cursor-pointer" checked={pkg.active} onChange={e => updatePackage(pkg.id, { active: e.target.checked })} />
-                                    Active (shown publicly)
-                                  </label>
-                                </div>
+                              </div>
+                              <div className="flex items-center gap-4">
+                                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                  <input type="checkbox" className="h-4 w-4 accent-primary cursor-pointer" checked={pkg.telegramAccess} onChange={e => updatePackage(pkg.id, { telegramAccess: e.target.checked })} />
+                                  Telegram access
+                                </label>
+                                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                  <input type="checkbox" className="h-4 w-4 accent-primary cursor-pointer" checked={pkg.active} onChange={e => updatePackage(pkg.id, { active: e.target.checked })} />
+                                  Active (shown publicly)
+                                </label>
                               </div>
                               <div className="grid grid-cols-2 gap-3">
-                                <Field label="Bullet items (EN, one per line)">
-                                  <Textarea rows={3} value={(pkg.itemsEn || []).join('\n')} onChange={e => updatePackage(pkg.id, { itemsEn: e.target.value.split('\n').filter(Boolean) })} />
+                                <Field label="Description (EN, optional)">
+                                  <Textarea rows={2} value={pkg.descriptionEn || ''} onChange={e => updatePackage(pkg.id, { descriptionEn: e.target.value })} placeholder="A short paragraph shown under the price." />
                                 </Field>
-                                <Field label="Bullet items (ՀԱՅ, one per line)">
-                                  <Textarea rows={3} value={(pkg.itemsHy || []).join('\n')} onChange={e => updatePackage(pkg.id, { itemsHy: e.target.value.split('\n').filter(Boolean) })} />
+                                <Field label="Description (ՀԱՅ, optional)">
+                                  <Textarea rows={2} value={pkg.descriptionHy || ''} onChange={e => updatePackage(pkg.id, { descriptionHy: e.target.value })} />
                                 </Field>
+                              </div>
+                              <div>
+                                <Label className="text-xs mb-2 block">Bullet items ("Package includes")</Label>
+                                <div className="space-y-2">
+                                  {Array.from({ length: Math.max((pkg.itemsEn || []).length, (pkg.itemsHy || []).length) }).map((_, bi) => (
+                                    <div key={bi} className="grid grid-cols-2 gap-2">
+                                      <Input value={pkg.itemsEn?.[bi] || ''} onChange={e => updateBullet(pkg.id, bi, 'itemsEn', e.target.value)} placeholder="EN bullet" />
+                                      <div className="flex gap-2">
+                                        <Input value={pkg.itemsHy?.[bi] || ''} onChange={e => updateBullet(pkg.id, bi, 'itemsHy', e.target.value)} placeholder="ՀԱՅ bullet" />
+                                        <Button type="button" variant="ghost" size="sm" onClick={() => removeBullet(pkg.id, bi)}><X className="h-4 w-4" /></Button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                                <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => addBullet(pkg.id)}>
+                                  <Plus className="h-3.5 w-3.5 mr-1" />Add bullet
+                                </Button>
                               </div>
                             </div>
                           ))}

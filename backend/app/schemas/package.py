@@ -13,6 +13,9 @@ class PackageOut(BaseModel):
     nameHy: str
     eventCount: int
     price: float
+    regularPrice: Optional[float] = None
+    descriptionEn: str = ""
+    descriptionHy: str = ""
     validityDays: Optional[int] = None
     telegramAccess: bool = False
     badge: Optional[str] = None

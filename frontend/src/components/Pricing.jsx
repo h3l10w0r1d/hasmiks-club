@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Star, Crown, Check } from 'lucide-react'
+import { Star, Crown, Check, ChevronDown } from 'lucide-react'
 import { useContent } from '../context/SiteContentContext'
 import { E, AddItemButton, RemoveItemButton } from './Editable'
 import { getPublicPackages } from '../api/packages'
@@ -8,24 +8,28 @@ import Reveal from './Reveal'
 
 const copy = {
   en: {
-    perEvent: (n) => `֏${n.toLocaleString()} / event`,
-    savings: (n) => `Savings: ֏${n.toLocaleString()}`,
+    perOne: (n) => `Single participation cost: ֏${n.toLocaleString()}`,
+    savingsLabel: 'Your savings:',
+    savings: (n) => `֏${n.toLocaleString()}`,
+    includes: 'Package includes:',
     neverExpires: 'No expiry',
-    validMonths: (n) => `Valid for ${n} month${n === 1 ? '' : 's'}`,
-    validDays: (n) => `Valid for ${n} day${n === 1 ? '' : 's'}`,
+    validMonths: (n) => `Valid for ${n} month${n === 1 ? '' : 's'} from purchase`,
+    validDays: (n) => `Valid for ${n} day${n === 1 ? '' : 's'} from purchase`,
     telegramIncluded: 'Access to the private Telegram club',
     popular: 'Most popular',
     bestValue: 'Best value',
   },
   hy: {
-    perEvent: (n) => `֏${n.toLocaleString()} / միջոցառում`,
-    savings: (n) => `Խնայողություն՝ ֏${n.toLocaleString()}`,
+    perOne: (n) => `Մեկ մասնակցության արժեքը՝ ֏${n.toLocaleString()}`,
+    savingsLabel: 'Ձեր խնայողությունը՝',
+    savings: (n) => `֏${n.toLocaleString()}`,
+    includes: 'Փաթեթը ներառում է՝',
     neverExpires: 'Ժամկետ չունի',
-    validMonths: (n) => `Գործում է ${n} ամիս`,
-    validDays: (n) => `Գործում է ${n} օր`,
-    telegramIncluded: 'Փակ Telegram ակումբի հասանելիություն',
+    validMonths: (n) => `Փաթեթը գործում է գնման օրվանից ${n} ամիս`,
+    validDays: (n) => `Փաթեթը գործում է գնման օրվանից ${n} օր`,
+    telegramIncluded: 'Telegram ակումբի հասանելիություն փաթեթի գործողության ընթացքում',
     popular: 'Ամենապահանջված',
-    bestValue: 'Ամենաշահեկ',
+    bestValue: 'Ամենաշահավետ',
   },
 }
 
@@ -38,14 +42,14 @@ export default function Pricing({ lang }) {
   const p = (b) => `pricing.${b}${suffix}`
   const v = (b) => (hy ? c[`${b}Hy`] : c[`${b}En`])
   const paragraphs = Array.isArray(v('sub')) ? v('sub') : [v('sub')].filter(Boolean)
+  const terms = Array.isArray(v('terms')) ? v('terms') : []
 
   const [packages, setPackages] = useState([])
+  const [termsOpen, setTermsOpen] = useState(false)
 
   useEffect(() => {
     getPublicPackages().then(setPackages).catch(() => setPackages([]))
   }, [])
-
-  const basePerEvent = packages.find((pkg) => pkg.eventCount === 1)?.price ?? null
 
   return (
     <section className="pricing" id="pricing">
@@ -63,29 +67,46 @@ export default function Pricing({ lang }) {
 
       <div className="plans">
         {packages.map((pkg, pos) => {
-          const perEvent = pkg.eventCount > 0 ? Math.round(pkg.price / pkg.eventCount) : pkg.price
-          const savings = basePerEvent != null && pkg.eventCount > 1 ? basePerEvent * pkg.eventCount - pkg.price : 0
-          const items = hy ? pkg.itemsHy : pkg.itemsEn
+          const perOne = pkg.eventCount > 0 ? Math.round(pkg.price / pkg.eventCount) : pkg.price
+          const savings = pkg.regularPrice != null ? pkg.regularPrice - pkg.price : 0
+          const items = (hy ? pkg.itemsHy : pkg.itemsEn) || []
+          const description = hy ? pkg.descriptionHy : pkg.descriptionEn
+          const gold = pkg.badge === 'best_value'
           return (
-            <Reveal as="div" className={`plan${pkg.badge ? ' hero-plan' : ''}`} key={pkg.id} delay={120 + pos * 90}>
+            <Reveal as="div" className={`plan${pkg.badge ? ' hero-plan' : ''}${gold ? ' gold-plan' : ''}`} key={pkg.id} delay={120 + pos * 90}>
               {pkg.badge && (
-                <div className="plan-badge">
+                <div className="plan-badge-pill">
                   {pkg.badge === 'popular' ? <Star size={13} /> : <Crown size={13} />}
                   {pkg.badge === 'popular' ? tr.popular : tr.bestValue}
                 </div>
               )}
               <div className="plan-name">{hy ? pkg.nameHy : pkg.nameEn}</div>
-              <div className="plan-price"><sup>֏</sup>{Number(pkg.price).toLocaleString()}</div>
-              <div className="plan-mo">{pkg.eventCount} {hy ? 'մասնակցություն' : `event${pkg.eventCount === 1 ? '' : 's'}`}</div>
-              {pkg.eventCount > 1 && <div className="plan-per-event">{tr.perEvent(perEvent)}</div>}
+              <div className="plan-price-row">
+                <div className="plan-price"><sup>֏</sup>{Number(pkg.price).toLocaleString()}</div>
+                {pkg.regularPrice != null && (
+                  <div className="plan-regular-price">֏{Number(pkg.regularPrice).toLocaleString()}</div>
+                )}
+              </div>
+              {pkg.eventCount > 1 && <p className="plan-per-one">{tr.perOne(perOne)}</p>}
+              {savings > 0 && (
+                <div className="plan-savings-box">
+                  <div className="plan-savings-label">{tr.savingsLabel}</div>
+                  <div className="plan-savings-amount">{tr.savings(savings)}</div>
+                </div>
+              )}
+              {description && <p className="plan-description">{description}</p>}
               <div className="plan-hero-div"></div>
-              <ul className="plan-list">
-                {items.map((item, j) => (
-                  <li key={j}><Check size={14} />{item}</li>
-                ))}
-                {pkg.telegramAccess && <li><Check size={14} />{tr.telegramIncluded}</li>}
-                {savings > 0 && <li><Check size={14} />{tr.savings(savings)}</li>}
-              </ul>
+              {items.length > 0 && (
+                <>
+                  <p className="plan-includes-label">{tr.includes}</p>
+                  <ul className="plan-list">
+                    {items.map((item, j) => (
+                      <li key={j}><Check size={12} />{item}</li>
+                    ))}
+                    {pkg.telegramAccess && <li><Check size={12} />{tr.telegramIncluded}</li>}
+                  </ul>
+                </>
+              )}
               <div className="plan-validity">
                 {pkg.validityDays == null
                   ? tr.neverExpires
@@ -107,6 +128,20 @@ export default function Pricing({ lang }) {
           <E as="span" path={p('giftLink')} value={v('giftLink')} />
         </Link>
       </Reveal>
+
+      {terms.length > 0 && (
+        <Reveal as="div" className="pricing-terms">
+          <button type="button" className="pricing-terms-toggle" onClick={() => setTermsOpen((o) => !o)}>
+            <E as="span" path={p('termsTitle')} value={v('termsTitle')} />
+            <ChevronDown size={18} className={termsOpen ? 'pricing-terms-chevron open' : 'pricing-terms-chevron'} />
+          </button>
+          {termsOpen && (
+            <ul className="pricing-terms-list">
+              {terms.map((term, i) => <li key={i}>{term}</li>)}
+            </ul>
+          )}
+        </Reveal>
+      )}
     </section>
   )
 }
