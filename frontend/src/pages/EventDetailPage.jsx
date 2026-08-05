@@ -10,7 +10,6 @@ import { sanitizeHtml } from '../utils/sanitizeHtml'
 import { yandexEmbedUrl } from '../utils/yandexMap'
 import GlobalHeader from '../components/GlobalHeader'
 import ConfirmDialog from '../components/ConfirmDialog'
-import GuestCheckoutModal from '../components/GuestCheckoutModal'
 
 const copy = {
   en: {
@@ -29,8 +28,6 @@ const copy = {
     rsvpSuccess:  'You\'re in! Check your email for details.',
     cancelSuccess:'RSVP cancelled.',
     error:        'Something went wrong — please try again.',
-    buyTicket:    price => `Buy a one-time ticket — ֏${Number(price).toLocaleString()}`,
-    guestSoldOut: 'One-time tickets are sold out for this event.',
     past:         'This event has already happened.',
     viewOnMap:    'View on map',
   },
@@ -50,8 +47,6 @@ const copy = {
     rsvpSuccess:  'Գրանցված եք: Ստուգե՛ք ձեր էլ. փոստը:',
     cancelSuccess:'Գրանցումը չեղարկված է:',
     error:        'Ինչ-որ բան սխալ գնաց — խնդրում ենք կրկին փորձել:',
-    buyTicket:    price => `Գնել մեկանգամյա տոմս — ֏${Number(price).toLocaleString()}`,
-    guestSoldOut: 'Այս միջոցառման մեկանգամյա տոմսերը սպառված են:',
     past:         'Այս միջոցառումն արդեն կայացել է:',
     viewOnMap:    'Դիտել քարտեզի վրա',
   },
@@ -76,7 +71,6 @@ export default function EventDetailPage({ lang = 'en' }) {
   const [busy, setBusy] = useState(false)
   const [toast, setToast] = useState(null)
   const [confirmCancel, setConfirmCancel] = useState(false)
-  const [guestModalOpen, setGuestModalOpen] = useState(false)
 
   const showToast = useCallback((msg, type = 'success') => {
     setToast({ msg, type })
@@ -107,8 +101,10 @@ export default function EventDetailPage({ lang = 'en' }) {
   }, [authLoading, id])
 
   const handleAttend = async () => {
+    // No more one-time guest tickets — attending always means becoming a
+    // member first, so send unauthenticated visitors to registration.
     if (!user) {
-      navigate('/login', { state: { from: `/events/${id}` } })
+      navigate('/register', { state: { from: `/events/${id}` } })
       return
     }
     if (user.membership_status !== 'active') {
@@ -241,20 +237,7 @@ export default function EventDetailPage({ lang = 'en' }) {
                   {busy ? '…' : bp.label}
                 </button>
 
-                {!user && (
-                  <>
-                    <span style={styles.hint}>{t.memberOnly}</span>
-                    {ev.ticket_price != null && !ev.is_full && (
-                      ev.guest_tickets_full ? (
-                        <span style={styles.hint}>{t.guestSoldOut}</span>
-                      ) : (
-                        <button style={styles.btnOutline} onClick={() => setGuestModalOpen(true)}>
-                          {t.buyTicket(ev.ticket_price)}
-                        </button>
-                      )
-                    )}
-                  </>
-                )}
+                {!user && <span style={styles.hint}>{t.memberOnly}</span>}
 
                 {user && user.membership_status !== 'active' && (
                   <div style={styles.upgradeBanner}>
@@ -300,10 +283,6 @@ export default function EventDetailPage({ lang = 'en' }) {
           onConfirm={() => { doCancelRsvp(); setConfirmCancel(false) }}
           onCancel={() => setConfirmCancel(false)}
         />
-      )}
-
-      {guestModalOpen && (
-        <GuestCheckoutModal lang={lang} event={ev} onClose={() => setGuestModalOpen(false)} />
       )}
     </div>
   )

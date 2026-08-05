@@ -18,9 +18,9 @@ const t = {
     locHy: `Երևան · Telegram ակումբ · Հանդիպումներ ամեն երկու շաբաթ`,
     pEn: [`For the first time, Armenian women have a place built just for them — for women who are **curious, alive, and refuse to disappear.** A real club gathering face to face every two weeks and staying close on Telegram every day.`],
     pHy: [`Կյանքի ամեն փուլում կնոջը պետք է մի միջավայր, որտեղ կարող է անկեղծ խոսել, նոր մարդկանց ճանաչել, կիսվել իր պատմություններով և պարզապես հաճելի ժամանակ անցկացնել։ Հասմիկի ակումբը ստեղծվում է հենց դրա համար՝ 50+ հայ կանանց համար, ովքեր ուզում են իրենց առօրյայում ավելացնել շփում, ջերմություն և նոր ոգեշնչում։ Այստեղ մենք հանդիպում ենք, լսում իրար և հիշեցնում՝ գեղեցիկ օրերը դեռ շատ են։`],
-    joinEn: `Join the Club`,
-    joinHy: `Միանալ ակումբին`,
-    joinHref: `/register`,   // overridable CTA destination — internal path or full https:// URL
+    joinEn: `View Events`,
+    joinHy: `Դիտել հանդիպումները`,
+    joinHref: `/events`,   // overridable CTA destination — internal path or full https:// URL
     stat1LabelEn: `Following`,
     stat1LabelHy: `Հետևորդ`,
     stat2LabelEn: `Monthly Meetings`,
@@ -187,9 +187,9 @@ Let us live them together.`,
 Եկեք դրանք միասին ապրենք։`,
     pEn: [`Join Hasmik's Club and become part of a warm circle where you are understood, heard, and awaited.`],
     pHy: [`Միացեք Հասմիկի ակումբին և դարձեք մի ջերմ շրջապատի մաս, որտեղ Ձեզ հասկանում են, լսում և սպասում։`],
-    btnEn: `Join Hasmik's Club`,
-    btnHy: `ՄԻԱՆԱԼ ԱԿՈՒՄԲԻՆ`,
-    btnHref: `/register`,   // overridable CTA destination — internal path or full https:// URL
+    btnEn: `View Events`,
+    btnHy: `ԴԻՏԵԼ ՀԱՆԴԻՊՈՒՄՆԵՐԸ`,
+    btnHref: `/events`,   // overridable CTA destination — internal path or full https:// URL
   },
 
   // Standalone /about page (not part of the landing layout, but editable in the

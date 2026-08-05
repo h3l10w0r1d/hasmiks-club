@@ -25,7 +25,7 @@ import { getNotificationPreferences, updateNotificationPreferences } from '../ap
 import { refreshToken as apiRefresh } from '../api/auth'
 import { sanitizeHtml, stripHtml } from '../utils/sanitizeHtml'
 import NotificationBell from '../components/NotificationBell'
-import OnboardingModal from '../components/OnboardingModal'
+import PostRegisterPackageModal from '../components/PostRegisterPackageModal'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DateTile from '../components/EventDateTile'
 // Forum disabled for now — kept for a future re-enable, see all "FORUM (disabled)" markers below.
@@ -119,11 +119,28 @@ const NOTIF_TYPES = [
   { key: 'system',   en: 'Account & system', hy: 'Հաշիվ և համակարգ' },
 ]
 
+// Set by RegisterPage right after a successful (auto-approved) signup —
+// keep this string in sync with the matching constant there.
+const JUST_REGISTERED_KEY = 'hc_just_registered'
+
 export default function DashboardPage({ lang, setLang }) {
   const { user, setUser, signOut } = useAuth()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [tab, setTab] = useState(searchParams.get('tab') || 'home')
+  // Set by RegisterPage right after a successful (auto-approved) signup —
+  // shows the package-picker popup instantly on arrival here. Read from
+  // sessionStorage, not router navigation state: signing in on the
+  // register page makes GuestOnlyRoute redirect away from it on its own
+  // the instant that auth-context update lands, and that redirect reliably
+  // races (and wins over) any navigate(..., {state}) call made there,
+  // silently dropping the state before this page ever sees it.
+  const [showPackageModal, setShowPackageModal] = useState(() => {
+    try { return sessionStorage.getItem(JUST_REGISTERED_KEY) === '1' } catch { return false }
+  })
+  useEffect(() => {
+    try { sessionStorage.removeItem(JUST_REGISTERED_KEY) } catch { /* storage unavailable */ }
+  }, [])
 
   // Keep the URL's ?tab= in sync so refreshing (or sharing/bookmarking the
   // link) lands back on the same tab instead of always resetting to Home.
@@ -168,7 +185,6 @@ export default function DashboardPage({ lang, setLang }) {
   const [openAlbum, setOpenAlbum] = useState(null)
   const [lightboxIndex, setLightboxIndex] = useState(-1)
   const [rsvpDone, setRsvpDone] = useState({})
-  const [showOnboarding, setShowOnboarding] = useState(false)
   const fileInputRef = useRef(null)
   const homeLoaded = useRef(false)
 
@@ -258,7 +274,6 @@ export default function DashboardPage({ lang, setLang }) {
       setProfileForm(initialForm)
       lastSavedProfileRef.current = JSON.stringify(initialForm)
       setProfilePhotos(fresh.profile_photos || [])
-      if (!fresh.onboarding_completed) setShowOnboarding(true)
     }).catch(() => {})
     getMemberSettings().then(s => { if (alive) setTelegramUrl(s.telegram_invite_url || '') }).catch(() => {})
     getMyPackages().then(p => { if (alive) setMyPackages(p) }).catch(() => {})
@@ -1583,12 +1598,16 @@ export default function DashboardPage({ lang, setLang }) {
         />
       )}
 
-      {/* ── Onboarding modal ── */}
-      {showOnboarding && (
-        <OnboardingModal
+      {/* ── Post-registration package popup ── */}
+      {showPackageModal && (
+        <PostRegisterPackageModal
           lang={lang}
-          telegramUrl={telegramUrl}
-          onDone={() => setShowOnboarding(false)}
+          user={user}
+          onSkip={() => setShowPackageModal(false)}
+          onSuccess={() => {
+            setShowPackageModal(false)
+            getMe().then(setUser).catch(() => {})
+          }}
         />
       )}
 
