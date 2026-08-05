@@ -49,6 +49,17 @@ export default function GoogleSignInButton({ lang = 'en', referralCode, onSucces
       window.google.accounts.id.initialize({
         client_id: CLIENT_ID,
         callback: async ({ credential }) => {
+          // This callback lives on window.google.accounts.id, not on this
+          // component — Google's own initialize() call has no "deregister"
+          // API, so it stays registered after this component unmounts.
+          // Without this guard, a stale callback from a login form/button
+          // that's long gone (e.g. the admin already signed in and moved
+          // on to a totally different page) can still fire later — from
+          // GSI's own background session checks — send a credential to
+          // the backend, get a legitimate 401 for an unrelated reason, and
+          // (via the shared axios client's 401 handler) sign out whatever
+          // real, still-valid session is currently active.
+          if (cancelled) return
           try {
             const data = await googleSignIn(credential, referralCode)
             onSuccess?.(data)
@@ -63,7 +74,14 @@ export default function GoogleSignInButton({ lang = 'en', referralCode, onSucces
       })
       setReady(true)
     }).catch(() => onError?.(lang === 'hy' ? 'Google մուտքը հասանելի չէ' : 'Google sign-in unavailable'))
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      // Stop any pending One Tap/FedCM prompt this instance may have
+      // triggered — doesn't deregister the initialize() callback itself
+      // (GSI has no API for that), but the `cancelled` guard above makes
+      // that moot.
+      window.google?.accounts?.id?.cancel()
+    }
   }, [lang])
 
   if (!CLIENT_ID) return null
