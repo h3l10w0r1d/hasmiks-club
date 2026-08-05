@@ -171,9 +171,13 @@ function CustomPage({ lang, setLang }) {
 }
 
 function ProtectedRoute({ children }) {
-  const { user, loading } = useAuth()
+  const { user, loading, signingOutRef } = useAuth()
   if (loading) return null
-  return user ? children : <Navigate to="/login" replace />
+  if (user) return children
+  // A deliberate sign-out already navigates to / itself — don't fight it
+  // with a reactive redirect to /login just because `user` went null first.
+  if (signingOutRef.current) return null
+  return <Navigate to="/login" replace />
 }
 
 // Inverse of ProtectedRoute: while a JWT is still valid, send the user straight
@@ -185,9 +189,9 @@ function GuestOnlyRoute({ children }) {
 }
 
 function AdminRoute({ children }) {
-  const { user, loading } = useAuth()
+  const { user, loading, signingOutRef } = useAuth()
   if (loading) return null
-  if (!user) return <Navigate to="/login" replace />
+  if (!user) return signingOutRef.current ? null : <Navigate to="/login" replace />
   if (!user.is_admin) return <Navigate to="/dashboard" replace />
   return children
 }

@@ -487,7 +487,11 @@ export default function DashboardPage({ lang, setLang }) {
     } catch { setMsg(lang === 'hy' ? 'Սխալ' : 'Error sending email') }
   }
 
-  const handleSignOut = () => { signOut(); navigate('/') }
+  // Navigate away first, then clear the user — ProtectedRoute reactively
+  // redirects to /login the instant `user` goes null, so clearing it while
+  // still mounted here races this navigate('/') and (has been observed to)
+  // win, landing signed-out users on /login instead of the homepage.
+  const handleSignOut = () => { navigate('/'); signOut() }
 
   const [notifPrefs, setNotifPrefs] = useState(null)
   useEffect(() => {
@@ -532,8 +536,8 @@ export default function DashboardPage({ lang, setLang }) {
         setDeletingAccount(true)
         try {
           await deleteMyAccount()
-          signOut()
           navigate('/')
+          signOut()
         } catch {
           setMsg(lang === 'hy' ? 'Չհաջողվեց ջնջել հաշիվը' : 'Could not delete your account')
           setTimeout(() => setMsg(''), 3000)

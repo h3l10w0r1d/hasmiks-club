@@ -940,7 +940,7 @@ export default function AdminPage() {
             <button className="admin-sidebar-btn back" onClick={() => { setMobileNavOpen(false); navigate('/dashboard') }}>
               <LayoutDashboard size={13} /> Member view
             </button>
-            <button className="admin-sidebar-btn signout" onClick={() => { setMobileNavOpen(false); signOut(); navigate('/') }}>
+            <button className="admin-sidebar-btn signout" onClick={() => { setMobileNavOpen(false); navigate('/'); signOut() }}>
               <LogOut size={13} /> Sign out
             </button>
           </div>
@@ -953,7 +953,7 @@ export default function AdminPage() {
           <button className="admin-sidebar-btn back" onClick={() => navigate('/dashboard')}>
             <LayoutDashboard size={13} /> Member view
           </button>
-          <button className="admin-sidebar-btn signout" onClick={() => { signOut(); navigate('/') }}>
+          <button className="admin-sidebar-btn signout" onClick={() => { navigate('/'); signOut() }}>
             <LogOut size={13} /> Sign out
           </button>
         </div>

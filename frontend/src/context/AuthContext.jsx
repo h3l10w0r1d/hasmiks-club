@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { getMe } from '../api/members'
 import { refreshToken } from '../api/auth'
+import { markSignedOut } from '../api/client'
 
 const AuthContext = createContext(null)
 
@@ -17,6 +18,10 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const refreshTimerRef = useRef(null)
+  // Read by ProtectedRoute/AdminRoute: a ref (not state) so setting it never
+  // itself triggers a render — it only needs to be current by the time the
+  // route guards re-render in response to `user` going null right below.
+  const signingOutRef = useRef(false)
 
   const silentRefresh = useCallback(async (token) => {
     const exp = parseJwtExp(token)
@@ -71,6 +76,7 @@ export function AuthProvider({ children }) {
   }, [silentRefresh])
 
   const signIn = (tokenData) => {
+    signingOutRef.current = false
     localStorage.setItem('hc_token', tokenData.access_token)
     setUser(tokenData.user)
     silentRefresh(tokenData.access_token)
@@ -80,12 +86,21 @@ export function AuthProvider({ children }) {
     // Cancel any pending silent-refresh so it can't put the token back
     clearTimeout(refreshTimerRef.current)
     refreshTimerRef.current = null
+    markSignedOut()
+    // ProtectedRoute/AdminRoute normally redirect to /login the instant
+    // `user` goes null — right, for an expired/missing session, but wrong
+    // for a deliberate sign-out, which already navigates to / itself. This
+    // flag tells those guards to stand down for this one transition, then
+    // clears itself — a later direct visit to /dashboard while genuinely
+    // signed out must still bounce to /login, not silently render nothing.
+    signingOutRef.current = true
+    setTimeout(() => { signingOutRef.current = false }, 2000)
     localStorage.removeItem('hc_token')
     setUser(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, setUser, signIn, signOut, loading }}>
+    <AuthContext.Provider value={{ user, setUser, signIn, signOut, loading, signingOutRef }}>
       {children}
     </AuthContext.Provider>
   )
