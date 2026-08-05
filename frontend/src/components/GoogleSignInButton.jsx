@@ -76,11 +76,14 @@ export default function GoogleSignInButton({ lang = 'en', referralCode, onSucces
     }).catch(() => onError?.(lang === 'hy' ? 'Google մուտքը հասանելի չէ' : 'Google sign-in unavailable'))
     return () => {
       cancelled = true
-      // Stop any pending One Tap/FedCM prompt this instance may have
-      // triggered — doesn't deregister the initialize() callback itself
-      // (GSI has no API for that), but the `cancelled` guard above makes
-      // that moot.
-      window.google?.accounts?.id?.cancel()
+      // No accounts.id.cancel() here on purpose — this component only ever
+      // calls renderButton(), never prompt(), so there's no One Tap flow to
+      // cancel; cancel() acts on Google's shared global client state (not
+      // scoped to this instance), and was observed aborting an in-progress
+      // FedCM sign-in the user had just started whenever this component
+      // happened to unmount mid-flow (e.g. switching the Log in/Sign up
+      // tab). The `cancelled` flag above is what actually matters — it
+      // stops a stale callback from acting after unmount.
     }
   }, [lang])
 

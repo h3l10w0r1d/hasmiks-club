@@ -9,6 +9,8 @@ const copy = {
     validDays: (n) => `Valid for ${n} day${n === 1 ? '' : 's'}`,
     popular: 'Most popular',
     bestValue: 'Best value',
+    savingsLabel: 'Your savings:',
+    savings: (n) => `֏${n.toLocaleString()}`,
     empty: 'No packages are available right now — please check back soon.',
   },
   hy: {
@@ -18,7 +20,9 @@ const copy = {
     validMonths: (n) => `Գործում է ${n} ամիս`,
     validDays: (n) => `Գործում է ${n} օր`,
     popular: 'Ամենապահանջված',
-    bestValue: 'Ամենաշահեկ',
+    bestValue: 'Ամենաշահավետ',
+    savingsLabel: 'Ձեր խնայողությունը՝',
+    savings: (n) => `֏${n.toLocaleString()}`,
     empty: 'Այս պահին փաթեթներ հասանելի չեն, խնդրում ենք փորձել ավելի ուշ։',
   },
 }
@@ -40,6 +44,7 @@ export default function PackagePicker({ packages, selected, onSelect, lang = 'en
       {packages.map((pkg) => {
         const isSelected = selected === pkg.id
         const perEvent = pkg.eventCount > 0 ? Math.round(pkg.price / pkg.eventCount) : pkg.price
+        const savings = pkg.regularPrice != null ? pkg.regularPrice - pkg.price : 0
         const items = hy ? pkg.itemsHy : pkg.itemsEn
         return (
           <button
@@ -60,13 +65,30 @@ export default function PackagePicker({ packages, selected, onSelect, lang = 'en
             <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--deep, #180C04)', marginBottom: 4 }}>
               {hy ? pkg.nameHy : pkg.nameEn}
             </div>
-            <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--rose, #7E3434)', marginBottom: 2 }}>
-              ֏{Number(pkg.price).toLocaleString()}
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap', marginBottom: 2 }}>
+              <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--rose, #7E3434)' }}>
+                ֏{Number(pkg.price).toLocaleString()}
+              </div>
+              {pkg.regularPrice != null && (
+                <div style={{ fontSize: 13, color: 'var(--stone, #82715C)', textDecoration: 'line-through' }}>
+                  ֏{Number(pkg.regularPrice).toLocaleString()}
+                </div>
+              )}
             </div>
             <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--taupe, #786050)', marginBottom: 8 }}>
               {t.events(pkg.eventCount)}
               {pkg.eventCount > 1 && ` · ${t.perEvent(perEvent)}`}
             </div>
+            {savings > 0 && (
+              <div style={{
+                display: 'inline-block', borderRadius: 10, padding: '8px 12px', marginBottom: 10,
+                background: pkg.badge === 'best_value' ? 'rgba(140,101,48,0.1)' : 'var(--rose-bg, #fdecec)',
+                color: pkg.badge === 'best_value' ? 'var(--gold, #8C6530)' : 'var(--rose, #7E3434)',
+              }}>
+                <div style={{ fontSize: 11, fontWeight: 600 }}>{t.savingsLabel}</div>
+                <div style={{ fontSize: 14, fontWeight: 700 }}>{t.savings(savings)}</div>
+              </div>
+            )}
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 8px', display: 'flex', flexDirection: 'column', gap: 6 }}>
               {items.map((item, j) => (
                 <li key={j} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13 }}>

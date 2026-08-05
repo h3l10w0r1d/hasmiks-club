@@ -77,8 +77,9 @@ export default function Pricing({ lang }) {
           const items = (hy ? pkg.itemsHy : pkg.itemsEn) || []
           const description = hy ? pkg.descriptionHy : pkg.descriptionEn
           const gold = pkg.badge === 'best_value'
+          const popular = pkg.badge === 'popular'
           return (
-            <Reveal as="div" className={`plan${pkg.badge ? ' hero-plan' : ''}${gold ? ' gold-plan' : ''}`} key={pkg.id} delay={120 + pos * 90}>
+            <Reveal as="div" className={`plan${popular ? ' hero-plan' : ''}${gold ? ' gold-plan' : ''}`} key={pkg.id} delay={120 + pos * 90}>
               {pkg.badge && (
                 <div className="plan-badge-pill">
                   {pkg.badge === 'popular' ? <Star size={13} /> : <Crown size={13} />}

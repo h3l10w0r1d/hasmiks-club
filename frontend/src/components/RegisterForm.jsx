@@ -16,16 +16,34 @@ const DRAFT_KEY = 'hc_register_draft'
 // the matching constant in DashboardPage.jsx.
 const JUST_REGISTERED_KEY = 'hc_just_registered'
 
+// Armenia first/default — this club's primary audience — followed by the
+// countries its Armenian diaspora members most commonly write in from.
+const COUNTRY_CODES = [
+  { code: '+374', labelEn: 'Armenia +374', labelHy: 'Հայաստան +374' },
+  { code: '+1',   labelEn: 'USA/Canada +1', labelHy: 'ԱՄՆ/Կանադա +1' },
+  { code: '+7',   labelEn: 'Russia +7', labelHy: 'Ռուսաստան +7' },
+  { code: '+33',  labelEn: 'France +33', labelHy: 'Ֆրանսիա +33' },
+  { code: '+49',  labelEn: 'Germany +49', labelHy: 'Գերմանիա +49' },
+  { code: '+44',  labelEn: 'UK +44', labelHy: 'Մեծ Բրիտանիա +44' },
+  { code: '+995', labelEn: 'Georgia +995', labelHy: 'Վրաստան +995' },
+  { code: '+971', labelEn: 'UAE +971', labelHy: 'ԱՄԷ +971' },
+  { code: '+61',  labelEn: 'Australia +61', labelHy: 'Ավստրալիա +61' },
+]
+
 function loadDraft(lang) {
-  try {
-    const saved = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null')
-    if (saved) return { ...saved, password: '' }
-  } catch { /* ignore corrupt draft */ }
-  return {
-    full_name: '', email: '', password: '',
+  const defaults = {
+    full_name: '', email: '', password: '', country_code: '+374', phone: '',
     lang_pref: lang || 'hy',
     application_message: '',
   }
+  try {
+    const saved = JSON.parse(sessionStorage.getItem(DRAFT_KEY) || 'null')
+    // Merge onto defaults, not the other way round — an older draft saved
+    // before country_code/phone existed must still fall back to Armenia's
+    // code and an empty number rather than leaving them undefined.
+    if (saved) return { ...defaults, ...saved, password: '' }
+  } catch { /* ignore corrupt draft */ }
+  return defaults
 }
 
 // The actual signup form body — shared by RegisterPage (a real route, for
@@ -56,6 +74,7 @@ export default function RegisterForm({ lang, onSuccess, onSwitchToLogin }) {
     title:       lang === 'hy' ? 'Միանալ ակումբին' : 'Join the Club',
     name:        lang === 'hy' ? 'Անուն Ազգանուն' : 'Full Name',
     email:       lang === 'hy' ? 'Էլ. հասցե' : 'Email',
+    phone:       lang === 'hy' ? 'Հեռախոսահամար' : 'Phone number',
     password:    lang === 'hy' ? 'Գաղտնաբառ' : 'Password',
     appMsg:      lang === 'hy' ? 'Ինչու՞ եք ուզում անդամ դառնալ' : 'Why do you want to join?',
     appMsgHint:  lang === 'hy' ? 'Ձեր դիմումը կուղարկվի ադմինիստրատորի հաստատման համար' : 'Your application will be reviewed before your account is activated',
@@ -82,6 +101,7 @@ export default function RegisterForm({ lang, onSuccess, onSwitchToLogin }) {
       const payload = {
         full_name: form.full_name,
         email: form.email,
+        phone: `${form.country_code}${form.phone.trim()}`,
         password: form.password,
         lang_pref: form.lang_pref,
         referral_code: refCode || null,
@@ -120,6 +140,30 @@ export default function RegisterForm({ lang, onSuccess, onSwitchToLogin }) {
         </label>
         <label className="auth-label">{t.email}
           <input className="auth-input" type="email" value={form.email} onChange={set('email')} required />
+        </label>
+        <label className="auth-label">{t.phone}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <select
+              className="auth-input"
+              style={{ flex: '0 0 auto', width: 108 }}
+              value={form.country_code}
+              onChange={set('country_code')}
+            >
+              {COUNTRY_CODES.map(c => (
+                <option key={c.code} value={c.code}>{lang === 'hy' ? c.labelHy : c.labelEn}</option>
+              ))}
+            </select>
+            <input
+              className="auth-input"
+              style={{ flex: 1 }}
+              type="tel"
+              inputMode="tel"
+              value={form.phone}
+              onChange={set('phone')}
+              placeholder={lang === 'hy' ? '77 123456' : '77 123456'}
+              required
+            />
+          </div>
         </label>
         <label className="auth-label">{t.password}
           <input className="auth-input" type="password" value={form.password} onChange={set('password')} required minLength={8} />

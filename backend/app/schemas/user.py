@@ -7,6 +7,7 @@ class UserRegister(BaseModel):
     email: EmailStr
     password: str
     full_name: str
+    phone: str
     lang_pref: str = "en"
     bio: Optional[str] = None
     referral_code: Optional[str] = None   # ref code of the inviter

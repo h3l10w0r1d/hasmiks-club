@@ -93,6 +93,7 @@ def register(payload: UserRegister, db: Session = Depends(get_db)):
         email=payload.email,
         password_hash=hash_password(payload.password),
         full_name=payload.full_name,
+        phone=payload.phone,
         lang_pref=payload.lang_pref,
         bio=payload.bio,
         is_verified=False,
