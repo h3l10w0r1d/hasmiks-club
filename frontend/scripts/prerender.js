@@ -17,11 +17,36 @@
 // plugin — those tend to lag brand-new major Vite versions (this project is
 // on Vite 8), and this way every step is something we can debug directly
 // against a build we can't live-test on Vercel's own infrastructure.
-import { chromium } from 'playwright-chromium'
 import http from 'node:http'
 import { createReadStream, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { extname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+// Vercel's `vercel build` container has no root/apt access, so the full
+// `playwright-chromium` package's bundled browser fails to launch there
+// (missing shared libs like libnspr4.so — there's no way to apt-get them
+// in). `@sparticuz/chromium` ships a statically-linked Chromium built
+// specifically for exactly this kind of constrained serverless/build
+// environment, paired with the lighter `playwright-core` (same driver,
+// no bundled browser download). Locally (any dev machine, any OS) the
+// full `playwright-chromium` package already works out of the box and
+// sparticuz's Linux-only binary wouldn't even execute — so branch on
+// Vercel's own `VERCEL` build-time env var rather than always using one.
+async function launchBrowser() {
+  if (process.env.VERCEL) {
+    const [{ chromium }, { default: sparticuzChromium }] = await Promise.all([
+      import('playwright-core'),
+      import('@sparticuz/chromium'),
+    ])
+    return chromium.launch({
+      args: sparticuzChromium.args,
+      executablePath: await sparticuzChromium.executablePath(),
+      headless: true,
+    })
+  }
+  const { chromium } = await import('playwright-chromium')
+  return chromium.launch()
+}
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const DIST = join(__dirname, '..', 'dist')
@@ -111,7 +136,20 @@ async function main() {
 
   const server = await startStaticServer()
   const port = server.address().port
-  const browser = await chromium.launch()
+
+  let browser
+  try {
+    browser = await launchBrowser()
+  } catch (err) {
+    // Prerendering is a progressive enhancement on top of the SPA vite
+    // build that already succeeded above — a broken headless-browser
+    // environment (a new Vercel build-image change, a version mismatch,
+    // etc.) should degrade to shipping the plain SPA, exactly what shipped
+    // before this script existed, never fail the whole deploy.
+    console.warn(`[prerender] Could not launch a browser (${err.message}) — shipping the SPA build without prerendered routes.`)
+    server.close()
+    return
+  }
 
   const prerendered = []
   try {
