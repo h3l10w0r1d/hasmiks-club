@@ -5,16 +5,13 @@ import { SQUARE_SIZE } from './socialButtonStyle'
 
 const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID
 
-// Google's button text language is set via ?hl= on the script URL (the
-// renderButton "locale" option does not control it), so cache one script
-// load per language rather than a single global singleton.
-const scriptPromises = {}
-function loadGoogleScript(hl) {
-  if (window.google?.accounts?.id && scriptPromises[hl]) return scriptPromises[hl]
-  if (!scriptPromises[hl]) {
-    scriptPromises[hl] = new Promise((resolve, reject) => {
+let scriptPromise = null
+function loadGoogleScript() {
+  if (window.google?.accounts?.oauth2) return Promise.resolve()
+  if (!scriptPromise) {
+    scriptPromise = new Promise((resolve, reject) => {
       const script = document.createElement('script')
-      script.src = `https://accounts.google.com/gsi/client?hl=${hl}`
+      script.src = 'https://accounts.google.com/gsi/client'
       script.async = true
       script.defer = true
       script.onload = resolve
@@ -22,101 +19,94 @@ function loadGoogleScript(hl) {
       document.head.appendChild(script)
     })
   }
-  return scriptPromises[hl]
+  return scriptPromise
 }
 
 /**
- * A compact, icon-only "Continue with Google" square — one of a row of equal
- * provider buttons. Google's own rendered icon button (which otherwise varies
- * by browser/locale — Chrome's FedCM account chooser renders in the OS/browser
- * language, not ours) is kept invisible and centered on top of our own
- * square, in case it renders correctly — but it's not relied on exclusively:
- * Google's `renderButton` has a real, reproducible failure mode where the
- * iframe it injects sizes itself to 0×0 (confirmed even with a fully visible,
- * correctly-laid-out container — not a timing/CSS issue on our side), which
- * silently makes the whole thing unclickable since there's nothing left
- * underneath to receive the click. Our own visible square has its own
- * onClick calling `prompt()` (Google's own documented way to trigger sign-in
- * from a custom button) so it stays clickable independent of whether the
- * overlay iframe renders correctly. On success, verifies the credential
- * with the backend (auto-links to an existing email/password account, or
- * creates a new member) and calls onSuccess with the TokenOut data.
+ * A compact, icon-only "Continue with Google" square — one of a row of
+ * equal provider buttons. Uses Google's OAuth2 implicit token-client popup
+ * flow (google.accounts.oauth2.initTokenClient), triggered directly from
+ * our own always-visible button's onClick.
+ *
+ * This deliberately isn't the classic ID-token renderButton()/One Tap
+ * approach (an invisible Google-rendered button/prompt layered over a
+ * custom square) that shipped first — that turned out to reproducibly fail
+ * silently in real use: renderButton()'s injected iframe sizes itself to
+ * 0×0 regardless of button type, and prompt() never even attempts a
+ * network request. Both symptoms point at the same cause — those flows
+ * lean on third-party-cookie/FedCM access that's increasingly restricted
+ * by default across browsers. A real top-level popup window (what this
+ * flow opens) has no such dependency, and if something IS misconfigured
+ * (e.g. this origin isn't authorized for the OAuth client), the popup
+ * itself shows a real, visible Google error page instead of nothing
+ * happening at all — which is also just a much easier thing to debug.
+ *
+ * On success, sends the resulting access token to the backend, which
+ * verifies it by asking Google's own userinfo endpoint who it belongs to
+ * (not a local JWT check, since there's no ID token in this flow).
  */
 export default function GoogleSignInButton({ lang = 'en', referralCode, onSuccess, onError }) {
-  const overlayRef = useRef(null)
   const [ready, setReady] = useState(false)
+  const tokenClientRef = useRef(null)
+  // The token client's callback is created once, on mount — it reads the
+  // latest props from this ref rather than closing over them directly, so
+  // a referralCode/onSuccess/onError change doesn't require tearing down
+  // and recreating the client (and doesn't risk a stale closure either).
+  const latestRef = useRef({ lang, referralCode, onSuccess, onError })
+  useEffect(() => {
+    latestRef.current = { lang, referralCode, onSuccess, onError }
+  })
 
   useEffect(() => {
     if (!CLIENT_ID) return
     let cancelled = false
-    const hl = lang === 'hy' ? 'hy' : 'en'
-    loadGoogleScript(hl).then(() => {
-      if (cancelled || !overlayRef.current) return
-      window.google.accounts.id.initialize({
+    loadGoogleScript().then(() => {
+      if (cancelled) return
+      tokenClientRef.current = window.google.accounts.oauth2.initTokenClient({
         client_id: CLIENT_ID,
-        callback: async ({ credential }) => {
-          // This callback lives on window.google.accounts.id, not on this
-          // component — Google's own initialize() call has no "deregister"
-          // API, so it stays registered after this component unmounts.
-          // Without this guard, a stale callback from a login form/button
-          // that's long gone (e.g. the admin already signed in and moved
-          // on to a totally different page) can still fire later — from
-          // GSI's own background session checks — send a credential to
-          // the backend, get a legitimate 401 for an unrelated reason, and
-          // (via the shared axios client's 401 handler) sign out whatever
-          // real, still-valid session is currently active.
-          if (cancelled) return
+        scope: 'email profile',
+        callback: async (response) => {
+          const { lang, referralCode, onSuccess, onError } = latestRef.current
+          // 'popup_closed' / 'access_denied' — the member closed the
+          // window or declined; not worth surfacing as an error.
+          if (response.error) {
+            if (response.error !== 'popup_closed' && response.error !== 'access_denied') {
+              onError?.(lang === 'hy' ? 'Google մուտքը ձախողվեց' : 'Google sign-in failed')
+            }
+            return
+          }
           try {
-            const data = await googleSignIn(credential, referralCode)
+            const data = await googleSignIn(response.access_token, referralCode)
             onSuccess?.(data)
           } catch {
             onError?.(lang === 'hy' ? 'Google մուտքը ձախողվեց' : 'Google sign-in failed')
           }
         },
       })
-      overlayRef.current.innerHTML = ''
-      window.google.accounts.id.renderButton(overlayRef.current, {
-        type: 'icon', shape: 'square', size: 'large',
-      })
       setReady(true)
     }).catch(() => onError?.(lang === 'hy' ? 'Google մուտքը հասանելի չէ' : 'Google sign-in unavailable'))
-    return () => {
-      cancelled = true
-      // No accounts.id.cancel() here on purpose — this component only ever
-      // calls renderButton(), never prompt(), so there's no One Tap flow to
-      // cancel; cancel() acts on Google's shared global client state (not
-      // scoped to this instance), and was observed aborting an in-progress
-      // FedCM sign-in the user had just started whenever this component
-      // happened to unmount mid-flow (e.g. switching the Log in/Sign up
-      // tab). The `cancelled` flag above is what actually matters — it
-      // stops a stale callback from acting after unmount.
-    }
-  }, [lang])
+    return () => { cancelled = true }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   if (!CLIENT_ID) return null
 
   return (
-    <div style={{ position: 'relative', width: SQUARE_SIZE, height: SQUARE_SIZE, flexShrink: 0 }}>
-      <button
-        type="button"
-        title="Google"
-        aria-label="Continue with Google"
-        onClick={() => window.google?.accounts?.id?.prompt()}
-        style={{
-          width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          border: '1px solid var(--sand)', borderRadius: 10, background: '#fff', cursor: 'pointer', boxSizing: 'border-box',
-        }}
-      >
-        <GoogleIcon size={22} />
-      </button>
-      {/* Sits on top when Google's own renderButton succeeds, giving the
-          real button chrome (and its account chooser) priority — falls
-          through to our onClick above when it doesn't. */}
-      <div ref={overlayRef} style={{
-        position: 'absolute', inset: 0, opacity: 0, overflow: 'hidden',
+    <button
+      type="button"
+      title="Google"
+      aria-label="Continue with Google"
+      disabled={!ready}
+      onClick={() => tokenClientRef.current?.requestAccessToken()}
+      style={{
+        width: SQUARE_SIZE, height: SQUARE_SIZE, flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        pointerEvents: ready ? 'auto' : 'none',
-      }} />
-    </div>
+        border: '1px solid var(--sand)', borderRadius: 10, background: '#fff',
+        cursor: ready ? 'pointer' : 'default', boxSizing: 'border-box',
+        opacity: ready ? 1 : 0.6, transition: 'opacity .15s',
+      }}
+    >
+      <GoogleIcon size={22} />
+    </button>
   )
 }

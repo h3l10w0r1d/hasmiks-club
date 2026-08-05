@@ -5,8 +5,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from fastapi.responses import RedirectResponse
-from google.auth.transport import requests as google_requests
-from google.oauth2 import id_token as google_id_token
+import requests as http_requests
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -25,7 +24,12 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 
 
 class GoogleSignInRequest(BaseModel):
-    credential: str  # the ID token from Google Identity Services
+    # An OAuth2 access token from Google's implicit token-client popup flow
+    # (google.accounts.oauth2.initTokenClient) — NOT an ID token/JWT. Verified
+    # by calling Google's userinfo endpoint, not by local JWT signature
+    # verification. See the comment on the /google route for why this
+    # replaced the old ID-token + renderButton()/One Tap approach.
+    access_token: str
     referral_code: str | None = None  # only used when this creates a brand-new account
 
 _REF_CHARS = string.ascii_uppercase + string.digits
@@ -139,16 +143,35 @@ def login(form: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get
 
 @router.post("/google", response_model=TokenOut)
 def google_sign_in(payload: GoogleSignInRequest, db: Session = Depends(get_db)):
+    # Was ID-token verification (google.oauth2.id_token.verify_oauth2_token)
+    # fed by a Google-rendered button/One Tap prompt — dropped because both
+    # renderButton() and prompt() turned out to reproducibly fail silently
+    # in real usage (renderButton's injected iframe sizes itself to 0x0,
+    # prompt() never even attempts a network request), most likely third-
+    # party-cookie/FedCM restrictions increasingly the default across
+    # browsers, which both of those flows depend on. The OAuth2 popup flow
+    # (google.accounts.oauth2.initTokenClient on the frontend) opens a real
+    # top-level popup instead, which doesn't depend on either — this route
+    # now verifies the resulting access token by asking Google's own
+    # userinfo endpoint who it belongs to, rather than checking a JWT
+    # signature locally.
     if not settings.GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=503, detail="Google Sign-In is not configured")
     try:
-        claims = google_id_token.verify_oauth2_token(
-            payload.credential, google_requests.Request(), settings.GOOGLE_CLIENT_ID,
+        resp = http_requests.get(
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            headers={"Authorization": f"Bearer {payload.access_token}"},
+            timeout=10,
         )
-    except ValueError:
+        resp.raise_for_status()
+        claims = resp.json()
+    except http_requests.RequestException:
         raise HTTPException(status_code=401, detail="Invalid Google credential")
 
-    if not claims.get("email_verified"):
+    # Google's userinfo endpoint has returned this as either a real bool or
+    # the string "true" depending on version/library — check both rather
+    # than trust Python truthiness (the string "false" is truthy).
+    if claims.get("email_verified") not in (True, "true"):
         raise HTTPException(status_code=401, detail="Google account email is not verified")
 
     google_sub = claims["sub"]

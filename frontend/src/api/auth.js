@@ -14,8 +14,8 @@ export const login = (email, password) => {
 
 export const refreshToken = () => client.post('/auth/refresh').then((r) => r.data)
 
-export const googleSignIn = (credential, referralCode) =>
-  client.post('/auth/google', { credential, referral_code: referralCode || null }).then((r) => r.data)
+export const googleSignIn = (accessToken, referralCode) =>
+  client.post('/auth/google', { access_token: accessToken, referral_code: referralCode || null }).then((r) => r.data)
 
 export const telegramSignIn = (telegramUser, referralCode) =>
   client.post('/auth/telegram', { ...telegramUser, referral_code: referralCode || null }).then((r) => r.data)
