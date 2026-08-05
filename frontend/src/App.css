@@ -515,6 +515,13 @@ body{font-family:var(--font-serif);background:#fff;color:var(--mocha);overflow-x
   max-width:1180px;
   margin:0 auto;
 }
+/* PackagePicker (dashboard/welcome/gift) reuses .plan cards inside modals
+   and narrower page sections — no need for the landing section's wide
+   max-width/centering, and each card is itself the clickable control. */
+.plans-picker{max-width:none;justify-content:flex-start;gap:18px}
+.plans-picker .plan{cursor:pointer;outline:none}
+.plans-picker .plan.plan-selected{outline:3px solid var(--rose);outline-offset:2px}
+.plans-picker .plan.plan-selected.gold-plan{outline-color:var(--gold)}
 .plan{
   background:#fff;
   border:1px solid var(--sand);
