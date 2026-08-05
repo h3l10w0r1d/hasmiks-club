@@ -4,6 +4,7 @@ import { Helmet } from 'react-helmet-async'
 import { login } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
 import GlobalHeader from '../components/GlobalHeader'
+import AuthShell from '../components/AuthShell'
 import GoogleSignInButton from '../components/GoogleSignInButton'
 import TelegramLoginButton from '../components/TelegramLoginButton'
 
@@ -51,47 +52,43 @@ export default function LoginPage({ lang }) {
       <meta name="robots" content="noindex, follow" />
     </Helmet>
     <GlobalHeader lang={lang} />
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-logo">Hasmik's <span>Club</span></div>
-        <span className="auth-logo-sub">{lang === 'hy' ? 'Անդամների հարթակ' : 'Members Portal'}</span>
-        <h1 className="auth-title">{t.title}</h1>
-        <div className="auth-divider" />
-        <form onSubmit={handleSubmit} className="auth-form">
-          <label className="auth-label">{t.email}
-            <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-          </label>
-          <label className="auth-label">{t.password}
-            <input className="auth-input" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-          </label>
-          {error && <p className="auth-error">{error}</p>}
-          <button className="btn-rose auth-submit" type="submit" disabled={loading}>
-            {loading ? '...' : t.submit}
-          </button>
-        </form>
+    <AuthShell lang={lang} active="login">
+      <h1 className="auth-title">{t.title}</h1>
+      <div className="auth-divider" />
+      <form onSubmit={handleSubmit} className="auth-form">
+        <label className="auth-label">{t.email}
+          <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
+        </label>
+        <label className="auth-label">{t.password}
+          <input className="auth-input" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
+        </label>
+        {error && <p className="auth-error">{error}</p>}
+        <button className="btn-rose auth-submit" type="submit" disabled={loading}>
+          {loading ? '...' : t.submit}
+        </button>
+      </form>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
-          <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
-          <span style={{ fontSize: 12, color: 'var(--stone)' }}>{lang === 'hy' ? 'կամ' : 'or'}</span>
-          <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
-          <GoogleSignInButton lang={lang}
-            onSuccess={(data) => { signIn(data); navigate(from, { replace: true }) }}
-            onError={setError} />
-          <TelegramLoginButton lang={lang}
-            onSuccess={(data) => { signIn(data); navigate(from, { replace: true }) }}
-            onError={setError} />
-        </div>
-
-        <p className="auth-footer">
-          {t.noAcc} <Link to="/register" className="auth-link">{t.register}</Link>
-        </p>
-        <p className="auth-footer">
-          <Link to="/forgot-password" className="auth-link">{t.forgot}</Link>
-        </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
+        <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
+        <span style={{ fontSize: 12, color: 'var(--stone)' }}>{lang === 'hy' ? 'կամ' : 'or'}</span>
+        <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
       </div>
-    </div>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
+        <GoogleSignInButton lang={lang}
+          onSuccess={(data) => { signIn(data); navigate(from, { replace: true }) }}
+          onError={setError} />
+        <TelegramLoginButton lang={lang}
+          onSuccess={(data) => { signIn(data); navigate(from, { replace: true }) }}
+          onError={setError} />
+      </div>
+
+      <p className="auth-footer">
+        {t.noAcc} <Link to="/register" className="auth-link">{t.register}</Link>
+      </p>
+      <p className="auth-footer">
+        <Link to="/forgot-password" className="auth-link">{t.forgot}</Link>
+      </p>
+    </AuthShell>
     </>
   )
 }

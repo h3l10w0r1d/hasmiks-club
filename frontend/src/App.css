@@ -1016,7 +1016,66 @@ a.ci-row:hover .ci-value{color:var(--rose)}
 .lang-btn:not(.active):hover{background:var(--sand)}
 
 /* ═══════════════════════════════════════
-   AUTH PAGES
+   AUTH MODAL (login / signup)
+═══════════════════════════════════════ */
+.auth-modal-overlay{
+  min-height:calc(100vh - 56px);   /* subtract GlobalHeader height */
+  background:var(--linen);
+  background-image:radial-gradient(ellipse at 20% 80%, rgba(126,52,52,0.06) 0%, transparent 60%),
+                   radial-gradient(ellipse at 80% 20%, rgba(160,118,56,0.05) 0%, transparent 55%);
+  display:flex;align-items:center;justify-content:center;
+  padding:40px 20px;
+}
+.auth-modal{
+  position:relative;
+  display:flex;
+  width:100%;max-width:920px;
+  background:var(--cream);
+  border-radius:20px;
+  overflow:hidden;
+  box-shadow:0 20px 60px rgba(24,12,4,0.16);
+}
+.auth-modal-close{
+  position:absolute;top:16px;right:16px;z-index:5;
+  width:32px;height:32px;border-radius:50%;border:0;
+  background:rgba(255,255,255,0.85);color:var(--deep);
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;transition:background .15s;
+}
+.auth-modal-close:hover{background:#fff}
+.auth-modal-banner{
+  flex:0 0 40%;
+  background-size:cover;background-position:center;
+  min-height:100%;
+}
+.auth-modal-body{
+  flex:1;min-width:0;
+  padding:44px 44px 36px;
+  max-height:min(88vh, 760px);
+  overflow-y:auto;
+}
+.auth-tabs{
+  display:flex;gap:6px;
+  background:var(--linen);border-radius:999px;
+  padding:4px;margin-bottom:28px;
+  max-width:280px;
+}
+.auth-tab{
+  flex:1;text-align:center;
+  padding:9px 16px;border-radius:999px;
+  font-size:14px;font-weight:600;
+  color:var(--taupe);text-decoration:none;
+  transition:background .15s, color .15s;
+}
+.auth-tab-active{background:var(--cream);color:var(--rose);box-shadow:0 1px 4px rgba(24,12,4,0.08)}
+@media(max-width:780px){
+  .auth-modal{flex-direction:column;max-width:460px}
+  .auth-modal-banner{flex:0 0 160px;width:100%}
+  .auth-modal-body{padding:32px 28px 28px;max-height:none}
+}
+
+/* ═══════════════════════════════════════
+   AUTH PAGES (forgot/reset password — unchanged legacy layout)
 ═══════════════════════════════════════ */
 .auth-page{
   min-height:calc(100vh - 56px);   /* subtract GlobalHeader height */

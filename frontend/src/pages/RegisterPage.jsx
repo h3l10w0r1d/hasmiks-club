@@ -5,6 +5,7 @@ import { register } from '../api/auth'
 import { getPublicSettings } from '../api/payments'
 import { useAuth } from '../context/AuthContext'
 import GlobalHeader from '../components/GlobalHeader'
+import AuthShell from '../components/AuthShell'
 import GoogleSignInButton from '../components/GoogleSignInButton'
 import TelegramLoginButton from '../components/TelegramLoginButton'
 
@@ -13,6 +14,11 @@ import TelegramLoginButton from '../components/TelegramLoginButton'
 // of thing that makes an older member give up rather than retype it. The
 // password itself is deliberately left out of the saved snapshot.
 const DRAFT_KEY = 'hc_register_draft'
+// Read once by DashboardPage on its very next mount to decide whether to
+// show the post-registration package popup — see the note in handleSubmit
+// below for why this can't be router navigation state. Keep this string in
+// sync with the matching constant in DashboardPage.jsx.
+const JUST_REGISTERED_KEY = 'hc_just_registered'
 
 function loadDraft(lang) {
   try {
@@ -79,13 +85,22 @@ export default function RegisterPage({ lang }) {
         application_message: requireApproval ? (form.application_message || null) : null,
       }
       const data = await register(payload)
+      // Approved accounts (no manual review) land on the dashboard and see
+      // the membership package popup right away — a real choice to
+      // subscribe now or skip for later. Pending (manual-review) accounts
+      // land on the same dashboard without it, since they can't buy a
+      // package yet. A sessionStorage flag, not router navigation state:
+      // signIn() below sets `user`, which makes GuestOnlyRoute redirect
+      // away from this page on its own the instant that context update
+      // lands — a race against any navigate(..., {state}) call made here,
+      // which GuestOnlyRoute's own (stateless) redirect reliably wins,
+      // silently dropping the state before DashboardPage ever sees it.
+      if (data.user?.application_status !== 'pending') {
+        try { sessionStorage.setItem(JUST_REGISTERED_KEY, '1') } catch { /* storage unavailable */ }
+      }
       signIn(data)
       clearDraft()
-
-      // Approved accounts (no manual review) see the membership proposal first —
-      // benefits + a real choice to subscribe now or skip for later. Pending
-      // (manual-review) accounts go straight to the dashboard's review screen.
-      navigate(data.user?.application_status !== 'pending' ? '/welcome' : '/dashboard')
+      navigate('/dashboard')
     } catch (err) {
       const detail = err.response?.data?.detail
       if (detail === 'Email already registered') setError(t.errEmail)
@@ -102,75 +117,77 @@ export default function RegisterPage({ lang }) {
       <link rel="canonical" href="https://www.hasmiksclub.am/register" />
     </Helmet>
     <GlobalHeader lang={lang} />
-    <div className="auth-page">
-      <div className="auth-card">
-        <div className="auth-logo">Hasmik's <span>Club</span></div>
-        <span className="auth-logo-sub">{lang === 'hy' ? 'Անդամության հայտ' : 'Membership Application'}</span>
-        <h1 className="auth-title">{t.title}</h1>
+    <AuthShell lang={lang} active="register">
+      <h1 className="auth-title">{t.title}</h1>
+
+      {requireApproval && (
+        <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '10px 14px', marginBottom: 20, fontSize: 15, color: '#5c3d1f' }}>
+          ℹ️ {t.appMsgHint}
+        </div>
+      )}
+
+      <form onSubmit={handleSubmit} className="auth-form">
+        <label className="auth-label">{t.name}
+          <input className="auth-input" type="text" value={form.full_name} onChange={set('full_name')} required />
+        </label>
+        <label className="auth-label">{t.email}
+          <input className="auth-input" type="email" value={form.email} onChange={set('email')} required />
+        </label>
+        <label className="auth-label">{t.password}
+          <input className="auth-input" type="password" value={form.password} onChange={set('password')} required minLength={8} />
+        </label>
 
         {requireApproval && (
-          <div style={{ background: '#fff8e1', border: '1px solid #ffe082', borderRadius: 10, padding: '10px 14px', marginBottom: 20, fontSize: 15, color: '#5c3d1f' }}>
-            ℹ️ {t.appMsgHint}
-          </div>
+          <label className="auth-label">{t.appMsg}
+            <textarea
+              className="auth-input"
+              style={{ minHeight: 80, resize: 'vertical' }}
+              value={form.application_message}
+              onChange={set('application_message')}
+              required={requireApproval}
+            />
+          </label>
         )}
 
-        <form onSubmit={handleSubmit} className="auth-form">
-          <label className="auth-label">{t.name}
-            <input className="auth-input" type="text" value={form.full_name} onChange={set('full_name')} required />
-          </label>
-          <label className="auth-label">{t.email}
-            <input className="auth-input" type="email" value={form.email} onChange={set('email')} required />
-          </label>
-          <label className="auth-label">{t.password}
-            <input className="auth-input" type="password" value={form.password} onChange={set('password')} required minLength={8} />
-          </label>
+        {error && <p className="auth-error">{error}</p>}
 
-          {requireApproval && (
-            <label className="auth-label">{t.appMsg}
-              <textarea
-                className="auth-input"
-                style={{ minHeight: 80, resize: 'vertical' }}
-                value={form.application_message}
-                onChange={set('application_message')}
-                required={requireApproval}
-              />
-            </label>
-          )}
+        <button className="btn-rose auth-submit" type="submit" disabled={loading}>
+          {loading ? '...' : t.submit}
+        </button>
+      </form>
 
-          {error && <p className="auth-error">{error}</p>}
-
-          <button className="btn-rose auth-submit" type="submit" disabled={loading}>
-            {loading ? '...' : t.submit}
-          </button>
-        </form>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
-          <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
-          <span style={{ fontSize: 14, color: 'var(--taupe)' }}>{lang === 'hy' ? 'կամ' : 'or'}</span>
-          <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
-          <GoogleSignInButton lang={lang} referralCode={refCode}
-            onSuccess={(data) => {
-              signIn(data)
-              clearDraft()
-              navigate(data.user?.application_status !== 'pending' ? '/welcome' : '/dashboard')
-            }}
-            onError={setError} />
-          <TelegramLoginButton lang={lang} referralCode={refCode}
-            onSuccess={(data) => {
-              signIn(data)
-              clearDraft()
-              navigate(data.user?.application_status !== 'pending' ? '/welcome' : '/dashboard')
-            }}
-            onError={setError} />
-        </div>
-
-        <p className="auth-footer">
-          {t.hasAcc} <Link to="/login" className="auth-link">{t.login}</Link>
-        </p>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
+        <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
+        <span style={{ fontSize: 14, color: 'var(--taupe)' }}>{lang === 'hy' ? 'կամ' : 'or'}</span>
+        <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
       </div>
-    </div>
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
+        <GoogleSignInButton lang={lang} referralCode={refCode}
+          onSuccess={(data) => {
+            if (data.user?.application_status !== 'pending') {
+              try { sessionStorage.setItem(JUST_REGISTERED_KEY, '1') } catch { /* storage unavailable */ }
+            }
+            signIn(data)
+            clearDraft()
+            navigate('/dashboard')
+          }}
+          onError={setError} />
+        <TelegramLoginButton lang={lang} referralCode={refCode}
+          onSuccess={(data) => {
+            if (data.user?.application_status !== 'pending') {
+              try { sessionStorage.setItem(JUST_REGISTERED_KEY, '1') } catch { /* storage unavailable */ }
+            }
+            signIn(data)
+            clearDraft()
+            navigate('/dashboard')
+          }}
+          onError={setError} />
+      </div>
+
+      <p className="auth-footer">
+        {t.hasAcc} <Link to="/login" className="auth-link">{t.login}</Link>
+      </p>
+    </AuthShell>
     </>
   )
 }
