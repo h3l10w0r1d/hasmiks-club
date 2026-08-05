@@ -29,12 +29,18 @@ function loadGoogleScript(hl) {
  * A compact, icon-only "Continue with Google" square — one of a row of equal
  * provider buttons. Google's own rendered icon button (which otherwise varies
  * by browser/locale — Chrome's FedCM account chooser renders in the OS/browser
- * language, not ours) is kept but made invisible and centered on top of our
- * own square — the standard technique for custom OAuth buttons: the real
- * click still lands on Google's widget, only the visuals are ours. On
- * success, verifies the credential with the backend (auto-links to an
- * existing email/password account, or creates a new member) and calls
- * onSuccess with the TokenOut data.
+ * language, not ours) is kept invisible and centered on top of our own
+ * square, in case it renders correctly — but it's not relied on exclusively:
+ * Google's `renderButton` has a real, reproducible failure mode where the
+ * iframe it injects sizes itself to 0×0 (confirmed even with a fully visible,
+ * correctly-laid-out container — not a timing/CSS issue on our side), which
+ * silently makes the whole thing unclickable since there's nothing left
+ * underneath to receive the click. Our own visible square has its own
+ * onClick calling `prompt()` (Google's own documented way to trigger sign-in
+ * from a custom button) so it stays clickable independent of whether the
+ * overlay iframe renders correctly. On success, verifies the credential
+ * with the backend (auto-links to an existing email/password account, or
+ * creates a new member) and calls onSuccess with the TokenOut data.
  */
 export default function GoogleSignInButton({ lang = 'en', referralCode, onSuccess, onError }) {
   const overlayRef = useRef(null)
@@ -90,13 +96,22 @@ export default function GoogleSignInButton({ lang = 'en', referralCode, onSucces
   if (!CLIENT_ID) return null
 
   return (
-    <div style={{ position: 'relative', width: SQUARE_SIZE, height: SQUARE_SIZE }}>
-      <button type="button" tabIndex={-1} aria-hidden="true" title="Google" style={{
-        width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
-        border: '1px solid var(--sand)', borderRadius: 10, background: '#fff', cursor: 'pointer', boxSizing: 'border-box',
-      }}>
+    <div style={{ position: 'relative', width: SQUARE_SIZE, height: SQUARE_SIZE, flexShrink: 0 }}>
+      <button
+        type="button"
+        title="Google"
+        aria-label="Continue with Google"
+        onClick={() => window.google?.accounts?.id?.prompt()}
+        style={{
+          width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          border: '1px solid var(--sand)', borderRadius: 10, background: '#fff', cursor: 'pointer', boxSizing: 'border-box',
+        }}
+      >
         <GoogleIcon size={22} />
       </button>
+      {/* Sits on top when Google's own renderButton succeeds, giving the
+          real button chrome (and its account chooser) priority — falls
+          through to our onClick above when it doesn't. */}
       <div ref={overlayRef} style={{
         position: 'absolute', inset: 0, opacity: 0, overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'center',

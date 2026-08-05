@@ -744,14 +744,17 @@ export default function DashboardPage({ lang, setLang }) {
   // above without prop-drilling a dozen values through.
   const renderEventActions = (ev) => (
     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+      <Link to={`/events/${ev.id}`} className="plan-btn plan-btn-outline plan-btn-row" style={{ textDecoration: 'none' }}>
+        {lang === 'hy' ? 'Մանրամասն' : 'Details'}
+      </Link>
       {rsvpDone[ev.id] ? (
         <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
       ) : !isActive ? (
         <>
-          <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Գնեք փաթեթ՝ գրանցվելու համար' : 'Buy a package to RSVP'}</button>
+          <button className="plan-btn plan-btn-fill plan-btn-row" onClick={handleSubscribe}>{lang === 'hy' ? 'Գնեք փաթեթ՝ գրանցվելու համար' : 'Buy a package to RSVP'}</button>
           {ev.ticket_price != null && ev.seats_available > 0 && !(ev.max_guest_tickets != null && ev.guest_seats_taken >= ev.max_guest_tickets) && (
             <button
-              className="plan-btn plan-btn-outline"
+              className="plan-btn plan-btn-outline plan-btn-row"
               disabled={oneTimeTicketLoading === ev.id}
               onClick={() => handleBuyOneTimeTicket(ev)}
             >
@@ -764,14 +767,14 @@ export default function DashboardPage({ lang, setLang }) {
           )}
         </>
       ) : ev.user_has_rsvp ? (
-        <button className="plan-btn plan-btn-outline" onClick={() => handleRsvpClick(ev)}>{t.cancelRsvp}</button>
+        <button className="plan-btn plan-btn-outline plan-btn-row" onClick={() => handleRsvpClick(ev)}>{t.cancelRsvp}</button>
       ) : creditsAvailable <= 0 ? (
-        <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Գնեք փաթեթ՝ գրանցվելու համար' : 'Buy a package to RSVP'}</button>
+        <button className="plan-btn plan-btn-fill plan-btn-row" onClick={handleSubscribe}>{lang === 'hy' ? 'Գնեք փաթեթ՝ գրանցվելու համար' : 'Buy a package to RSVP'}</button>
       ) : ev.seats_available > 0 ? (
-        <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(ev)}>{t.rsvpBtn}</button>
+        <button className="plan-btn plan-btn-fill plan-btn-row" onClick={() => handleRsvp(ev)}>{t.rsvpBtn}</button>
       ) : (
         <button
-          className={`plan-btn ${waitlistPositions[ev.id]?.on_waitlist ? 'plan-btn-outline' : 'plan-btn-fill'}`}
+          className={`plan-btn plan-btn-row ${waitlistPositions[ev.id]?.on_waitlist ? 'plan-btn-outline' : 'plan-btn-fill'}`}
           style={{ background: waitlistPositions[ev.id]?.on_waitlist ? undefined : '#f39c12', borderColor: '#f39c12', color: waitlistPositions[ev.id]?.on_waitlist ? '#f39c12' : '#fff' }}
           onClick={() => handleWaitlistClick(ev)}
         >
@@ -1002,10 +1005,7 @@ export default function DashboardPage({ lang, setLang }) {
                                 </span>
                               )}
                             </div>
-                            {desc && <p className="event-desc">{desc}</p>}
-                            <Link to={`/events/${ev.id}`} style={{ display: 'inline-block', margin: '4px 0 12px', fontSize: 12, fontWeight: 600, color: 'var(--rose)', textDecoration: 'none' }}>
-                              {lang === 'hy' ? 'Մանրամասն →' : 'Details →'}
-                            </Link>
+                            {desc && <p className="event-desc" style={{ marginBottom: 12 }}>{desc}</p>}
                             {renderEventActions(ev)}
                           </div>
                         </div>
@@ -1018,30 +1018,6 @@ export default function DashboardPage({ lang, setLang }) {
               </div>
 
               <div className="home-side">
-              {/* Referral link */}
-              {user.referral_code && (
-                <div className="home-card" style={{ marginBottom: 28 }}>
-                  <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--deep)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <UserPlus size={16} /> {lang === 'hy' ? 'Հրավիրե՛ք ընկերուհի' : 'Invite a friend'}
-                  </p>
-                  <p style={{ fontSize: 13, color: '#888', marginBottom: 12 }}>
-                    {lang === 'hy' ? 'Կիսե՛ք հղումը՝ ընկերուհուն հրավիրելու համար:' : "Share your link and your friend's application will be linked to you."}
-                  </p>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <code style={{ background: '#f5ece8', borderRadius: 8, padding: '6px 12px', fontSize: 13, color: 'var(--deep)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {window.location.origin}/register?ref={user.referral_code}
-                    </code>
-                    <button
-                      onClick={() => { navigator.clipboard.writeText(`${window.location.origin}/register?ref=${user.referral_code}`); setMsg(lang === 'hy' ? 'Պատճենված է!' : 'Copied!'); setTimeout(() => setMsg(''), 2000) }}
-                      style={{ background: 'var(--rose)', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600, flexShrink: 0 }}
-                    >
-                      {lang === 'hy' ? 'Պատճենել' : 'Copy'}
-                    </button>
-                  </div>
-                  {msg && <p className="auth-success" style={{ marginTop: 10, marginBottom: 0 }}>{msg}</p>}
-                </div>
-              )}
-
               {/* Gallery preview */}
               {albums.length > 0 && albums[0].cover_url && (
                 <div style={{ marginBottom: 28 }}>

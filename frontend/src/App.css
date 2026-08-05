@@ -618,6 +618,15 @@ body{font-family:var(--font-serif);background:#fff;color:var(--mocha);overflow-x
 }
 .plan-btn-fill:hover{background:var(--rose-lt);border-color:var(--rose-lt)}
 
+/* Compact variant for button ROWS (event hero card, event-list rows) —
+   .plan-btn itself is block/100%-width, built for one-button-per-pricing-
+   card layouts; sitting several of those inside a flex row just stacks
+   them instead of the compact side-by-side pills the dashboard needs. */
+.plan-btn-row{
+  display:inline-flex;width:auto;flex:none;
+  min-height:0;padding:10px 20px;margin-top:0;
+}
+
 .pricing-terms{
   max-width:820px;width:100%;margin:56px auto 0;
   background:#fff;border:1px solid var(--sand);border-radius:20px;

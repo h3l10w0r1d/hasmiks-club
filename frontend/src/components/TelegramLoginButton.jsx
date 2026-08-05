@@ -56,13 +56,29 @@ export default function TelegramLoginButton({ lang = 'en', referralCode, onSucce
   if (!BOT_USERNAME) return null
 
   return (
-    <div style={{ position: 'relative', width: SQUARE_SIZE, height: SQUARE_SIZE }}>
+    // flexShrink: 0 — sitting in a `justify-content: center; gap` row next
+    // to GoogleSignInButton, this square was found shrinking down to ~26px
+    // when the row was tight, while Telegram's iframe (rendered at its own
+    // fixed intrinsic size, not responsive to the container) stayed put —
+    // the mismatch pushed the real clickable iframe outside this square
+    // entirely. Unlike Google, Telegram's widget exposes no JS API to
+    // trigger sign-in independent of that iframe, so keeping this square a
+    // reliable, un-shrunk 52×52 target is what the overlay technique
+    // actually depends on here.
+    <div style={{ position: 'relative', width: SQUARE_SIZE, height: SQUARE_SIZE, flexShrink: 0 }}>
       <button type="button" tabIndex={-1} aria-hidden="true" title="Telegram" style={{
         width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center',
         border: '1px solid var(--sand)', borderRadius: 10, background: '#fff', cursor: 'pointer', boxSizing: 'border-box',
       }}>
         <TelegramIcon size={24} />
       </button>
+      {/* overflow stays hidden — Telegram's iframe renders much wider
+          (~148px) than this 52px square and gets centered across it, so an
+          unclipped version bleeds ~48px into whichever button sits next to
+          it (confirmed: it was intercepting clicks meant for the Google
+          button beside it). Clipping still leaves the iframe's own center
+          — where Telegram renders its actual clickable widget — inside
+          our visible bounds. */}
       <div ref={overlayRef} style={{
         position: 'absolute', inset: 0, opacity: 0, overflow: 'hidden',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
