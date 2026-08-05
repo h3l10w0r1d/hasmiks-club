@@ -179,7 +179,10 @@ def checkout_package(
     db.commit()
 
     charge = ameriabank.charge_amount(row.amount)
-    description = f"Hasmik's Club package — {package['nameEn']} — {current_user.email or current_user.full_name}"
+    # Ameriabank's hosted payment page HTML-escapes the Description field but
+    # doesn't decode entities when rendering it back — a Unicode em dash here
+    # showed up on the card literally as "&mdash;". Plain ASCII avoids that.
+    description = f"Hasmik's Club package - {package['nameEn']} - {current_user.email or current_user.full_name}"
 
     if current_user.binding_active and current_user.card_holder_id:
         request_payload = {"OrderID": row.order_id, "Amount": float(charge), "CardHolderID": current_user.card_holder_id}
