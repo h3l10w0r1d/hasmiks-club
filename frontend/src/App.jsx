@@ -27,6 +27,7 @@ import GuestScanPage from './pages/GuestScanPage'
 import AdminMemberDetailPage from './pages/AdminMemberDetailPage'
 import ForgotPasswordPage from './pages/ForgotPasswordPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
+import TelegramAuthCompletePage from './pages/TelegramAuthCompletePage'
 import Band from './components/Band'
 import EventsPage from './pages/EventsPage'
 import EventDetailPage from './pages/EventDetailPage'
@@ -250,6 +251,7 @@ function AppRoutes() {
       } />
       <Route path="/forgot-password" element={<ForgotPasswordPage lang={lang} />} />
       <Route path="/reset-password" element={<ResetPasswordPage lang={lang} />} />
+      <Route path="/auth/telegram/complete" element={<TelegramAuthCompletePage lang={lang} />} />
       <Route path="/events" element={<EventsPage lang={lang} />} />
       <Route path="/events/:id" element={<EventDetailPage lang={lang} />} />
       <Route path="/about" element={<AboutPage lang={lang} setLang={setLang} />} />

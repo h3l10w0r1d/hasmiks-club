@@ -77,6 +77,10 @@ class Settings(BaseSettings):
     AMERIABANK_PACKAGE_BACK_URL: str = "https://hasmiks-club.onrender.com/packages/callback"
     AMERIABANK_PACKAGE_SUCCESS_URL: str = "https://www.hasmiksclub.am/dashboard"
     AMERIABANK_PACKAGE_CANCEL_URL: str = "https://www.hasmiksclub.am/dashboard"
+    # Telegram's Login Widget redirect mode (data-auth-url, see
+    # GET /auth/telegram/callback) lands here with a ?token= after a
+    # successful sign-in — the frontend route that stores it and continues on.
+    TELEGRAM_LOGIN_COMPLETE_URL: str = "https://www.hasmiksclub.am/auth/telegram/complete"
 
     class Config:
         env_file = ".env"

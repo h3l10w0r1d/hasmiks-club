@@ -1,6 +1,7 @@
 import secrets
 import string
 from datetime import datetime, timedelta, timezone
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
@@ -229,12 +230,14 @@ def google_sign_in(payload: GoogleSignInRequest, db: Session = Depends(get_db)):
     return TokenOut(access_token=token, user=UserOut.model_validate(user))
 
 
-@router.post("/telegram", response_model=TokenOut)
-def telegram_sign_in(payload: TelegramSignInRequest, db: Session = Depends(get_db)):
-    if not settings.TELEGRAM_BOT_TOKEN:
-        raise HTTPException(status_code=503, detail="Telegram Sign-In is not configured")
-    verify_telegram_payload(payload)
-
+def _telegram_login(payload: TelegramSignInRequest, db: Session) -> tuple[User, bool]:
+    """Find-or-create the user for an already-HMAC-verified Telegram
+    payload. Shared by both the POST (JS-callback widget) and GET
+    (redirect widget) entry points below — they differ only in how the
+    resulting token gets back to the frontend, not in this logic. Returns
+    (user, is_new) — the redirect entry point forwards is_new to the
+    frontend so it can show the post-registration package popup, mirroring
+    what RegisterForm.jsx's markJustRegistered does for the other providers."""
     full_name = f"{payload.first_name} {payload.last_name}".strip() if payload.last_name else payload.first_name
     user = db.query(User).filter(User.telegram_id == payload.id).first()
     is_new = False
@@ -284,8 +287,70 @@ def telegram_sign_in(payload: TelegramSignInRequest, db: Session = Depends(get_d
         # except the referral_signup event, which still fires to the referrer.
         _track_new_signup(db, user, "telegram", referrer)
 
+    return user, is_new
+
+
+@router.post("/telegram", response_model=TokenOut)
+def telegram_sign_in(payload: TelegramSignInRequest, db: Session = Depends(get_db)):
+    if not settings.TELEGRAM_BOT_TOKEN:
+        raise HTTPException(status_code=503, detail="Telegram Sign-In is not configured")
+    verify_telegram_payload(payload)
+    user, _is_new = _telegram_login(payload, db)
     token = create_access_token(str(user.id))
     return TokenOut(access_token=token, user=UserOut.model_validate(user))
+
+
+@router.get("/telegram/callback")
+def telegram_callback(
+    id: int,
+    first_name: str,
+    auth_date: int,
+    hash: str,
+    last_name: str | None = None,
+    username: str | None = None,
+    photo_url: str | None = None,
+    referral_code: str | None = None,
+    next: str | None = None,
+    db: Session = Depends(get_db),
+):
+    """Telegram Login Widget's REDIRECT mode (data-auth-url, as opposed to
+    the JS-callback data-onauth mode the POST /telegram route above still
+    serves for other callers) — Telegram signs the user's data and sends
+    the member's own browser here as a plain top-level GET, not a popup or
+    an AJAX call. Swapped in as the primary flow after the JS-callback
+    widget's invisible-iframe click target was found to reproducibly fail
+    to open its popup at all (confirmed even clicking Telegram's own
+    unmodified widget directly, outside our app entirely) — the same class
+    of popup/FedCM-dependent failure GoogleSignInButton.jsx hit and fixed
+    by switching away from a popup-opening flow. A plain redirect has no
+    popup to block in the first place.
+
+    `next` is an opaque frontend path (e.g. /dashboard, or
+    /gift/claim/<token>?social=1) that TelegramLoginButton.jsx passed in as
+    part of data-auth-url — Telegram preserves it since it only appends its
+    own params, never removes existing ones. Forwarded straight through to
+    TelegramAuthCompletePage.jsx so callers other than plain login/register
+    (e.g. gift claiming, which needs an extra step after auth) still work.
+    """
+    complete_url = settings.TELEGRAM_LOGIN_COMPLETE_URL
+    next_qs = f"&next={quote(next)}" if next else ""
+    if not settings.TELEGRAM_BOT_TOKEN:
+        return RedirectResponse(f"{complete_url}?error=unavailable{next_qs}")
+    payload = TelegramSignInRequest(
+        id=id, first_name=first_name, last_name=last_name, username=username,
+        photo_url=photo_url, auth_date=auth_date, hash=hash, referral_code=referral_code,
+    )
+    try:
+        verify_telegram_payload(payload)
+    except HTTPException:
+        return RedirectResponse(f"{complete_url}?error=invalid{next_qs}")
+    user, is_new = _telegram_login(payload, db)
+    token = create_access_token(str(user.id))
+    # Matches RegisterForm.jsx's markJustRegistered condition exactly, so the
+    # post-registration package popup shows regardless of which provider —
+    # or which form (login vs register) — created the account.
+    new_qs = "&new=1" if is_new and user.application_status != "pending" else ""
+    return RedirectResponse(f"{complete_url}?token={token}{next_qs}{new_qs}")
 
 
 @router.post("/refresh", response_model=TokenOut)

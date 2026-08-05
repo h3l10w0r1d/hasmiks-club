@@ -68,9 +68,7 @@ export default function LoginForm({ lang, onSuccess, onSwitchToRegister, showFor
         <GoogleSignInButton lang={lang}
           onSuccess={(data) => { signIn(data); onSuccess(data) }}
           onError={setError} />
-        <TelegramLoginButton lang={lang}
-          onSuccess={(data) => { signIn(data); onSuccess(data) }}
-          onError={setError} />
+        <TelegramLoginButton />
       </div>
 
       <p className="auth-footer">

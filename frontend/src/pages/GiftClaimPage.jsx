@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { Gift, Sparkles } from 'lucide-react'
 import GlobalHeader from '../components/GlobalHeader'
@@ -51,12 +51,14 @@ export default function GiftClaimPage({ lang = 'en' }) {
   const t = copy[lang] ?? copy.en
   const { token } = useParams()
   const navigate = useNavigate()
-  const { signIn } = useAuth()
+  const [searchParams] = useSearchParams()
+  const { signIn, user } = useAuth()
 
   const [status, setStatus] = useState('loading') // loading | notFound | alreadyClaimed | closed | opening | open | claiming
   const [info, setInfo] = useState(null)
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const socialAppliedRef = useRef(false)
 
   useEffect(() => {
     getGiftClaimInfo(token)
@@ -102,6 +104,27 @@ export default function GiftClaimPage({ lang = 'en' }) {
       setError(err?.response?.data?.detail || t.genericError)
     }
   }
+
+  // Telegram's redirect-mode sign-in navigates all the way away and back
+  // through TelegramAuthCompletePage.jsx (see TelegramLoginButton.jsx) — by
+  // the time this page remounts, the member is already signed in via
+  // AuthContext, and `?social=1` (from the `next` we gave the button below)
+  // says a gift claim is still owed. Waits for `info` too so the claiming
+  // state below has something to render against.
+  useEffect(() => {
+    if (socialAppliedRef.current) return
+    if (searchParams.get('social') !== '1' || !user || !info) return
+    socialAppliedRef.current = true
+    setError('')
+    setStatus('claiming')
+    claimGiftApply(token)
+      .then(finishClaim)
+      .catch((err) => {
+        setStatus('open')
+        setError(err?.response?.data?.detail || t.genericError)
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, user, info])
 
   const fromLine = info?.giver_name ? t.fromNamed(info.giver_name) : t.fromSomeone
 
@@ -188,7 +211,7 @@ export default function GiftClaimPage({ lang = 'en' }) {
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
               <GoogleSignInButton lang={lang} onSuccess={handleSocialSuccess} onError={setError} />
-              <TelegramLoginButton lang={lang} onSuccess={handleSocialSuccess} onError={setError} />
+              <TelegramLoginButton next={`/gift/claim/${token}?social=1`} />
             </div>
           </div>
         )}

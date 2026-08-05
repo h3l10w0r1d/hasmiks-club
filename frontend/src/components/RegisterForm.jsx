@@ -184,9 +184,7 @@ export default function RegisterForm({ lang, onSuccess, onSwitchToLogin }) {
         <GoogleSignInButton lang={lang} referralCode={refCode}
           onSuccess={(data) => { markJustRegistered(data); signIn(data); clearDraft(); onSuccess(data) }}
           onError={setError} />
-        <TelegramLoginButton lang={lang} referralCode={refCode}
-          onSuccess={(data) => { markJustRegistered(data); signIn(data); clearDraft(); onSuccess(data) }}
-          onError={setError} />
+        <TelegramLoginButton referralCode={refCode} />
       </div>
 
       <p className="auth-footer">
