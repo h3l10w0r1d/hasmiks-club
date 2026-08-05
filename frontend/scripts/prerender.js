@@ -151,16 +151,22 @@ async function main() {
     return
   }
 
+  // One shared context + page for the whole run, navigated fresh per route
+  // via page.goto() (a real HTTP navigation each time, so main.jsx's
+  // data-default cleanup and every page's own script still run fresh —
+  // reusing the page doesn't leave anything stale). Opening/closing a new
+  // BrowserContext per route was tried first and is what shipped in an
+  // earlier commit, but @sparticuz/chromium's Vercel build launches with
+  // --single-process/--no-zygote, and repeatedly tearing down contexts
+  // under those flags crashed the whole browser process after the very
+  // first route — an uncaught rejection that took the entire build down
+  // with it. A single long-lived context sidesteps that instability.
   const prerendered = []
+  let context, page
   try {
+    context = await browser.newContext()
+    page = await context.newPage()
     for (const route of routes) {
-      // A fresh page (and fresh browser context) per route — isolates
-      // localStorage/state between routes and, empirically, is also what
-      // makes main.jsx's data-default cleanup run reliably; reusing one
-      // page across goto() calls left stale default meta tags behind on
-      // every route after the first.
-      const context = await browser.newContext()
-      const page = await context.newPage()
       try {
         await page.goto(`http://127.0.0.1:${port}${route}`, { waitUntil: 'networkidle', timeout: 20000 })
         // React Router + data fetching settle asynchronously after the
@@ -170,17 +176,38 @@ async function main() {
         // page's specific loading-complete signal.
         await page.waitForTimeout(1000)
         const html = await page.content()
+        // An /events/:id page that can't load its own data (e.g. the
+        // backend's CORS allowlist rejects this static server's origin —
+        // see startStaticServer's ALLOWED_ORIGINS note) silently renders
+        // its "event not found" empty state instead of throwing, which
+        // would otherwise sail through as a genuine-looking prerendered
+        // snapshot: actively wrong, misleading content baked in for a real
+        // event. Skip publishing those rather than shipping a false 404.
+        if (/^\/events\/\d+$/.test(route) && !/<link rel="canonical"/.test(html)) {
+          console.warn(`[prerender] ${route} rendered its not-found state (likely blocked by CORS) — skipping, not publishing false content.`)
+          continue
+        }
         writeRouteHtml(route, html)
         prerendered.push(route)
         console.log(`[prerender] ${route}`)
       } catch (err) {
         console.warn(`[prerender] Failed on ${route}: ${err.message} — leaving the SPA fallback for this route.`)
-      } finally {
-        await context.close()
+        // A closed/crashed browser fails every remaining goto() the same
+        // way — stop the loop instead of burning the 20s timeout on each
+        // of the rest, but still fall through to write a sitemap for
+        // whatever did succeed and let the build finish successfully.
+        if (browser.isConnected && !browser.isConnected()) break
       }
     }
+  } catch (err) {
+    // Catches failures in the one-time context/page setup itself (not
+    // covered by the per-route try above) — same fail-soft contract as
+    // launchBrowser(): never let a browser-automation problem fail the
+    // build that vite already finished successfully.
+    console.warn(`[prerender] Browser session failed (${err.message}) — shipping what was captured so far.`)
   } finally {
-    await browser.close()
+    try { await context?.close() } catch { /* already gone */ }
+    try { await browser.close() } catch { /* already gone */ }
     server.close()
   }
 
