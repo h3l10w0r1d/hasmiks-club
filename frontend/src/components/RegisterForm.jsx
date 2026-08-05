@@ -5,6 +5,7 @@ import { getPublicSettings } from '../api/payments'
 import { useAuth } from '../context/AuthContext'
 import GoogleSignInButton from './GoogleSignInButton'
 import TelegramLoginButton from './TelegramLoginButton'
+import CountryCodeSelect, { COUNTRY_CODES } from './CountryCodeSelect'
 
 // Everything except the password survives a refresh or accidental back-nav —
 // losing an already-typed name/email mid-registration is exactly the kind
@@ -16,23 +17,14 @@ const DRAFT_KEY = 'hc_register_draft'
 // the matching constant in DashboardPage.jsx.
 const JUST_REGISTERED_KEY = 'hc_just_registered'
 
-// Armenia first/default — this club's primary audience — followed by the
-// countries its Armenian diaspora members most commonly write in from.
-const COUNTRY_CODES = [
-  { code: '+374', labelEn: 'Armenia +374', labelHy: 'Հայաստան +374' },
-  { code: '+1',   labelEn: 'USA/Canada +1', labelHy: 'ԱՄՆ/Կանադա +1' },
-  { code: '+7',   labelEn: 'Russia +7', labelHy: 'Ռուսաստան +7' },
-  { code: '+33',  labelEn: 'France +33', labelHy: 'Ֆրանսիա +33' },
-  { code: '+49',  labelEn: 'Germany +49', labelHy: 'Գերմանիա +49' },
-  { code: '+44',  labelEn: 'UK +44', labelHy: 'Մեծ Բրիտանիա +44' },
-  { code: '+995', labelEn: 'Georgia +995', labelHy: 'Վրաստան +995' },
-  { code: '+971', labelEn: 'UAE +971', labelHy: 'ԱՄԷ +971' },
-  { code: '+61',  labelEn: 'Australia +61', labelHy: 'Ավստրալիա +61' },
-]
+// `country_code` is stored as "<dial code>|<country name>" (matching
+// CountryCodeSelect's option keys, since several countries share a dial
+// code e.g. +1) — Armenia is the default, this club's primary audience.
+const DEFAULT_COUNTRY_CODE = `${COUNTRY_CODES[0].code}|${COUNTRY_CODES[0].name}`
 
 function loadDraft(lang) {
   const defaults = {
-    full_name: '', email: '', password: '', country_code: '+374', phone: '',
+    full_name: '', email: '', password: '', country_code: DEFAULT_COUNTRY_CODE, phone: '',
     lang_pref: lang || 'hy',
     application_message: '',
   }
@@ -101,7 +93,7 @@ export default function RegisterForm({ lang, onSuccess, onSwitchToLogin }) {
       const payload = {
         full_name: form.full_name,
         email: form.email,
-        phone: `${form.country_code}${form.phone.trim()}`,
+        phone: `${form.country_code.split('|')[0]}${form.phone.trim()}`,
         password: form.password,
         lang_pref: form.lang_pref,
         referral_code: refCode || null,
@@ -143,16 +135,11 @@ export default function RegisterForm({ lang, onSuccess, onSwitchToLogin }) {
         </label>
         <label className="auth-label">{t.phone}
           <div style={{ display: 'flex', gap: 8 }}>
-            <select
-              className="auth-input"
-              style={{ flex: '0 0 auto', width: 108 }}
+            <CountryCodeSelect
+              lang={lang}
               value={form.country_code}
-              onChange={set('country_code')}
-            >
-              {COUNTRY_CODES.map(c => (
-                <option key={c.code} value={c.code}>{lang === 'hy' ? c.labelHy : c.labelEn}</option>
-              ))}
-            </select>
+              onChange={(v) => setForm(f => ({ ...f, country_code: v }))}
+            />
             <input
               className="auth-input"
               style={{ flex: 1 }}
