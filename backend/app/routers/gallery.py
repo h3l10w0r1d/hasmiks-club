@@ -1,6 +1,7 @@
 """
 Gallery: admin CRUD + member read-only.
 """
+from datetime import datetime, timezone
 from typing import List, Optional
 
 import cloudinary
@@ -26,7 +27,12 @@ class PhotoOut(BaseModel):
     url: str
     caption: Optional[str]
     sort_order: int
+    created_at: Optional[datetime] = None
     model_config = {"from_attributes": True}
+
+
+class NewPhotoCount(BaseModel):
+    count: int
 
 
 class AlbumOut(BaseModel):
@@ -83,6 +89,35 @@ def get_albums(
         )
         for a in albums
     ]
+
+
+@router.get("/gallery/new-count", response_model=NewPhotoCount)
+def get_new_photo_count(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Photos added since this member last opened the Gallery tab — drives
+    the dashboard's "N new" badge. Never having visited counts everything
+    as new rather than nothing, so a brand-new member doesn't miss a badge
+    on a gallery that's already full of photos. Registered before
+    /gallery/{album_id} — FastAPI matches routes in declaration order, and
+    that path param would otherwise swallow this literal path first."""
+    cutoff = current_user.gallery_last_seen_at or datetime.min.replace(tzinfo=timezone.utc)
+    count = (
+        db.query(AlbumPhoto)
+        .filter(AlbumPhoto.created_at.isnot(None), AlbumPhoto.created_at > cutoff)
+        .count()
+    )
+    return NewPhotoCount(count=count)
+
+
+@router.post("/gallery/mark-seen", status_code=204)
+def mark_gallery_seen(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    current_user.gallery_last_seen_at = datetime.now(timezone.utc)
+    db.commit()
 
 
 @router.get("/gallery/{album_id}", response_model=AlbumDetail)

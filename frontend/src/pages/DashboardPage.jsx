@@ -15,9 +15,9 @@ import 'yet-another-react-lightbox/styles.css'
 import 'yet-another-react-lightbox/plugins/captions.css'
 import 'yet-another-react-lightbox/plugins/thumbnails.css'
 import { useAuth } from '../context/AuthContext'
-import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum, addProfilePhoto, deleteProfilePhoto, getMemberProfile, unlinkTelegram, exportMyData, deleteMyAccount } from '../api/members'
+import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum, getGalleryNewCount, markGalleryVisited, addProfilePhoto, deleteProfilePhoto, getMemberProfile, unlinkTelegram, exportMyData, deleteMyAccount } from '../api/members'
 import { getEvents, rsvp, cancelRsvp, joinWaitlist, leaveWaitlist, getWaitlistPosition, memberGuestTicketCheckout } from '../api/events'
-import { getLibrary } from '../api/content'
+import { getLibrary, updateLibraryProgress } from '../api/content'
 import { getMemberSettings } from '../api/payments'
 import { getMyPackages, getPublicPackages, checkoutPackage, removeCard } from '../api/packages'
 import PackagePicker from '../components/PackagePicker'
@@ -142,6 +142,8 @@ export default function DashboardPage({ lang, setLang }) {
     try { sessionStorage.removeItem(JUST_REGISTERED_KEY) } catch { /* storage unavailable */ }
   }, [])
 
+  const [newPhotoCount, setNewPhotoCount] = useState(0)
+
   // Keep the URL's ?tab= in sync so refreshing (or sharing/bookmarking the
   // link) lands back on the same tab instead of always resetting to Home.
   const changeTab = useCallback((next) => {
@@ -151,6 +153,11 @@ export default function DashboardPage({ lang, setLang }) {
       p.set('tab', next)
       return p
     }, { replace: true })
+    // Opening the gallery clears the "N new" badge on Home — fire-and-forget,
+    // the tab switch shouldn't wait on it.
+    if (next === 'gallery') {
+      markGalleryVisited().then(() => setNewPhotoCount(0)).catch(() => {})
+    }
   }, [setSearchParams])
   const [events, setEvents] = useState([])
   const [library, setLibrary] = useState([])
@@ -189,6 +196,14 @@ export default function DashboardPage({ lang, setLang }) {
   const homeLoaded = useRef(false)
 
   const closeContent = useCallback(() => { setSelectedContent(null); setReaderOpen(false) }, [])
+  // Self-reported "how far did you get" — there's no in-app reader to track
+  // this automatically, library items are just downloadable files.
+  const handleSetProgress = useCallback((contentId, progress) => {
+    updateLibraryProgress(contentId, progress).then(() => {
+      setLibrary(list => list.map(i => i.id === contentId ? { ...i, progress } : i))
+      setSelectedContent(c => c && c.id === contentId ? { ...c, progress } : c)
+    }).catch(() => {})
+  }, [])
   useEffect(() => {
     if (!selectedContent) return
     const onKey = (e) => { if (e.key === 'Escape') { readerOpen ? setReaderOpen(false) : closeContent() } }
@@ -307,6 +322,7 @@ export default function DashboardPage({ lang, setLang }) {
       }).catch(() => {})
       getLibrary().then(setLibrary).catch(() => {})
       getGallery().then(setAlbums).catch(() => {})
+      getGalleryNewCount().then(r => setNewPhotoCount(r.count)).catch(() => {})
       if (isActive) getMemberDirectory().then(setDirectory).catch(() => {})
     }
     if (tab === 'library') getLibrary().then(setLibrary).catch(() => {})
@@ -712,6 +728,63 @@ export default function DashboardPage({ lang, setLang }) {
   const now = new Date()
   const upcomingEvents = events.filter(ev => new Date(ev.event_date) > now)
   const unlockedLibrary = library.filter(item => item.is_unlocked)
+  // The event to feature in the hero card — whichever the member is
+  // already RSVP'd to and soonest, or just the soonest event overall if
+  // they haven't RSVP'd to anything yet.
+  const heroEvent = upcomingEvents.find(ev => ev.user_has_rsvp) || upcomingEvents[0] || null
+  const myRsvpCount = upcomingEvents.filter(ev => ev.user_has_rsvp).length
+  const totalPhotoCount = albums.reduce((sum, a) => sum + (a.photo_count || 0), 0)
+  // "Currently reading" — the first unlocked item with visible progress,
+  // falling back to the first unlocked item at 0% if nothing's started yet.
+  const currentlyReading = unlockedLibrary.find(item => item.progress > 0 && item.progress < 100) || unlockedLibrary[0] || null
+
+  // Same RSVP/waitlist/buy-ticket button block used both in the hero card
+  // and in each row of the Upcoming Events list — kept as one function
+  // (not a separate component) so it can close over all the handlers/state
+  // above without prop-drilling a dozen values through.
+  const renderEventActions = (ev) => (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+      {rsvpDone[ev.id] ? (
+        <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
+      ) : !isActive ? (
+        <>
+          <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Գնեք փաթեթ՝ գրանցվելու համար' : 'Buy a package to RSVP'}</button>
+          {ev.ticket_price != null && ev.seats_available > 0 && !(ev.max_guest_tickets != null && ev.guest_seats_taken >= ev.max_guest_tickets) && (
+            <button
+              className="plan-btn plan-btn-outline"
+              disabled={oneTimeTicketLoading === ev.id}
+              onClick={() => handleBuyOneTimeTicket(ev)}
+            >
+              {oneTimeTicketLoading === ev.id
+                ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…')
+                : (lang === 'hy'
+                  ? `Գնել մեկանգամյա տոմս — ֏${Number(ev.ticket_price).toLocaleString()}`
+                  : `Buy a one-time ticket — ֏${Number(ev.ticket_price).toLocaleString()}`)}
+            </button>
+          )}
+        </>
+      ) : ev.user_has_rsvp ? (
+        <button className="plan-btn plan-btn-outline" onClick={() => handleRsvpClick(ev)}>{t.cancelRsvp}</button>
+      ) : creditsAvailable <= 0 ? (
+        <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Գնեք փաթեթ՝ գրանցվելու համար' : 'Buy a package to RSVP'}</button>
+      ) : ev.seats_available > 0 ? (
+        <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(ev)}>{t.rsvpBtn}</button>
+      ) : (
+        <button
+          className={`plan-btn ${waitlistPositions[ev.id]?.on_waitlist ? 'plan-btn-outline' : 'plan-btn-fill'}`}
+          style={{ background: waitlistPositions[ev.id]?.on_waitlist ? undefined : '#f39c12', borderColor: '#f39c12', color: waitlistPositions[ev.id]?.on_waitlist ? '#f39c12' : '#fff' }}
+          onClick={() => handleWaitlistClick(ev)}
+        >
+          {waitlistPositions[ev.id]?.on_waitlist ? t.leaveWait : t.waitlist}
+        </button>
+      )}
+      {waitlistPositions[ev.id]?.on_waitlist && (
+        <span style={{ fontSize: 13, color: '#f39c12', fontWeight: 600 }}>
+          #{waitlistPositions[ev.id].position} {t.waitPos}
+        </span>
+      )}
+    </div>
+  )
   const filteredLibrary = library.filter(item => {
     if (libraryType !== 'all' && item.type !== libraryType) return false
     if (!librarySearch.trim()) return true
@@ -816,18 +889,59 @@ export default function DashboardPage({ lang, setLang }) {
           {/* ── HOME ── */}
           {tab === 'home' && (
             <div className="dash-section">
-              <h2 className="dash-section-title">
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-                  {greeting}, {user.full_name.split(' ')[0]}! <Flower2 size={20} strokeWidth={1.5} color="var(--rose)" />
-                </span>
-              </h2>
+              <div className="home-header-row">
+                <h2 className="dash-section-title" style={{ margin: 0 }}>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    {greeting}, {user.full_name.split(' ')[0]}! <Flower2 size={20} strokeWidth={1.5} color="var(--rose)" />
+                  </span>
+                </h2>
+                {isActive && telegramUrl && (
+                  <a href={telegramUrl} target="_blank" rel="noreferrer" className="home-telegram-chip">
+                    <Send size={15} strokeWidth={2} />
+                    {lang === 'hy' ? 'Միանալ Telegram խմբին' : 'Join the Telegram group'}
+                  </a>
+                )}
+              </div>
+
+              {/* Featured event — whichever is soonest and (preferably) already RSVP'd */}
+              {heroEvent && (() => {
+                const title = lang === 'hy' && heroEvent.title_hy ? heroEvent.title_hy : heroEvent.title
+                const descRaw = lang === 'hy' && heroEvent.description_hy ? heroEvent.description_hy : heroEvent.description
+                const descFull = descRaw ? stripHtml(descRaw) : ''
+                const desc = descFull.length > 220 ? `${descFull.slice(0, 220).trim()}…` : descFull
+                const countdown = getCountdown(heroEvent.event_date, lang)
+                return (
+                  <div className="home-hero-card">
+                    <div className="home-hero-body">
+                      <span className="home-hero-eyebrow">
+                        {heroEvent.user_has_rsvp
+                          ? (lang === 'hy' ? 'Ձեր հաջորդ հանդիպումը' : "Your next event")
+                          : (lang === 'hy' ? 'Ամենամոտ հանդիպումը' : 'Closest upcoming event')}
+                      </span>
+                      <Link to={`/events/${heroEvent.id}`} className="home-hero-title">{title}</Link>
+                      <div className="event-meta" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', margin: '8px 0' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CalendarDays size={13} /> {new Date(heroEvent.event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'short' })}, {new Date(heroEvent.event_date).toLocaleTimeString(lang === 'hy' ? 'hy-AM' : 'en-GB', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>·</span>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={13} /> {heroEvent.location}</span>
+                      </div>
+                      {desc && <p className="event-desc" style={{ marginBottom: 16 }}>{desc}</p>}
+                      {renderEventActions(heroEvent)}
+                    </div>
+                    {heroEvent.cover_url && (
+                      <Link to={`/events/${heroEvent.id}`} className="home-hero-img">
+                        <img src={cldOptimize(heroEvent.cover_url, { width: 900 })} alt={title} />
+                        {countdown && <span className="home-hero-countdown">{countdown}</span>}
+                      </Link>
+                    )}
+                  </div>
+                )
+              })()}
 
               {/* At-a-glance stats */}
               <div className="stat-strip">
-                <StatCard icon={CheckCircle2} label={t.status} value={isActive ? t.active : t.inactive} accent={isActive} />
-                <StatCard icon={CalendarDays} label={lang === 'hy' ? 'Հաջորդը' : 'Next Event'}
-                  value={upcomingEvents[0] ? (getCountdown(upcomingEvents[0].event_date, lang) || new Date(upcomingEvents[0].event_date).toLocaleDateString(lang === 'hy' ? 'hy-AM' : 'en-GB', { day: 'numeric', month: 'short' })) : '—'} />
+                <StatCard icon={CheckCircle2} label={lang === 'hy' ? 'Իմ գրանցումները' : 'My RSVPs'} value={myRsvpCount} accent={myRsvpCount > 0} />
                 <StatCard icon={BookOpen} label={t.library} value={unlockedLibrary.length} />
+                <StatCard icon={ImageIcon} label={lang === 'hy' ? 'Լուսանկարներ' : 'Photos'} value={totalPhotoCount} />
                 <StatCard icon={Users} label={lang === 'hy' ? 'Ակումբ' : 'Club'} value={directory.length} />
               </div>
 
@@ -852,7 +966,6 @@ export default function DashboardPage({ lang, setLang }) {
                       {group.label}
                     </h3>
                     {group.events.map(ev => {
-                      const wl = waitlistPositions[ev.id]
                       const title = lang === 'hy' && ev.title_hy ? ev.title_hy : ev.title
                       const descRaw = lang === 'hy' && ev.description_hy ? ev.description_hy : ev.description
                       const descFull = descRaw ? stripHtml(descRaw) : ''
@@ -893,47 +1006,7 @@ export default function DashboardPage({ lang, setLang }) {
                             <Link to={`/events/${ev.id}`} style={{ display: 'inline-block', margin: '4px 0 12px', fontSize: 12, fontWeight: 600, color: 'var(--rose)', textDecoration: 'none' }}>
                               {lang === 'hy' ? 'Մանրամասն →' : 'Details →'}
                             </Link>
-                            <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                              {rsvpDone[ev.id] ? (
-                                <span style={{ color: '#c0394b', fontWeight: 600, fontSize: 14, display: 'flex', alignItems: 'center', gap: 5 }}>You're going! <PartyPopper size={15} /></span>
-                              ) : !isActive ? (
-                                <>
-                                  <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Գնեք փաթեթ՝ գրանցվելու համար' : 'Buy a package to RSVP'}</button>
-                                  {ev.ticket_price != null && ev.seats_available > 0 && !(ev.max_guest_tickets != null && ev.guest_seats_taken >= ev.max_guest_tickets) && (
-                                    <button
-                                      className="plan-btn plan-btn-outline"
-                                      disabled={oneTimeTicketLoading === ev.id}
-                                      onClick={() => handleBuyOneTimeTicket(ev)}
-                                    >
-                                      {oneTimeTicketLoading === ev.id
-                                        ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…')
-                                        : (lang === 'hy'
-                                          ? `Գնել մեկանգամյա տոմս — ֏${Number(ev.ticket_price).toLocaleString()}`
-                                          : `Buy a one-time ticket — ֏${Number(ev.ticket_price).toLocaleString()}`)}
-                                    </button>
-                                  )}
-                                </>
-                              ) : ev.user_has_rsvp ? (
-                                <button className="plan-btn plan-btn-outline" onClick={() => handleRsvpClick(ev)}>{t.cancelRsvp}</button>
-                              ) : creditsAvailable <= 0 ? (
-                                <button className="plan-btn plan-btn-fill" onClick={handleSubscribe}>{lang === 'hy' ? 'Գնեք փաթեթ՝ գրանցվելու համար' : 'Buy a package to RSVP'}</button>
-                              ) : ev.seats_available > 0 ? (
-                                <button className="plan-btn plan-btn-fill" onClick={() => handleRsvp(ev)}>{t.rsvpBtn}</button>
-                              ) : (
-                                <button
-                                  className={`plan-btn ${wl?.on_waitlist ? 'plan-btn-outline' : 'plan-btn-fill'}`}
-                                  style={{ background: wl?.on_waitlist ? undefined : '#f39c12', borderColor: '#f39c12', color: wl?.on_waitlist ? '#f39c12' : '#fff' }}
-                                  onClick={() => handleWaitlistClick(ev)}
-                                >
-                                  {wl?.on_waitlist ? t.leaveWait : t.waitlist}
-                                </button>
-                              )}
-                              {wl?.on_waitlist && (
-                                <span style={{ fontSize: 13, color: '#f39c12', fontWeight: 600 }}>
-                                  #{wl.position} {t.waitPos}
-                                </span>
-                              )}
-                            </div>
+                            {renderEventActions(ev)}
                           </div>
                         </div>
                       )
@@ -942,45 +1015,6 @@ export default function DashboardPage({ lang, setLang }) {
                 ))}
               </div>
 
-              {/* Library preview */}
-              <div style={{ marginBottom: 32 }}>
-                <HomeHeading icon={BookOpen}>{lang === 'hy' ? 'Գրադարանից' : 'From the Library'}</HomeHeading>
-                {unlockedLibrary.length === 0 ? (
-                  <div className="home-card">
-                    <p style={{ fontSize: 14, color: '#9b6e6e', fontStyle: 'italic', margin: 0 }}>
-                      {lang === 'hy' ? 'Ձեր գրադարանը կհայտնվի, երբ անդամությունը ակտիվ լինի' : 'Your library will appear here once your membership is activated'}
-                    </p>
-                  </div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                    {unlockedLibrary.slice(0, 2).map(item => (
-                      <div key={item.id}
-                        className="home-card home-clickable"
-                        style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}
-                        onClick={() => setSelectedContent(item)}>
-                        {item.cover_url && (
-                          <img src={cldOptimize(item.cover_url, { width: 96 })} alt={item.title} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
-                        )}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 3 }}>
-                            {item.type === 'recipe' ? t.recipe : t.ebook}
-                          </div>
-                          <div style={{ fontWeight: 600, color: '#2c1a1a', fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            {lang === 'hy' && item.title_hy ? item.title_hy : item.title}
-                          </div>
-                        </div>
-                        {item.file_url && (
-                          <a href={item.file_url} target="_blank" rel="noreferrer"
-                            onClick={e => e.stopPropagation()}
-                            style={{ background: 'var(--rose)', color: '#fff', border: 'none', borderRadius: 8, padding: '6px 14px', cursor: 'pointer', fontSize: 12, fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>
-                            {t.download}
-                          </a>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
               </div>
 
               <div className="home-side">
@@ -1010,7 +1044,7 @@ export default function DashboardPage({ lang, setLang }) {
 
               {/* Gallery preview */}
               {albums.length > 0 && albums[0].cover_url && (
-                <div style={{ marginBottom: 32 }}>
+                <div style={{ marginBottom: 28 }}>
                   <HomeHeading icon={GalleryHorizontal}>{lang === 'hy' ? 'Լուսանկարներ' : 'Gallery'}</HomeHeading>
                   <div
                     className="home-clickable"
@@ -1021,25 +1055,63 @@ export default function DashboardPage({ lang, setLang }) {
                     <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to top, rgba(44,26,26,.6) 0%, transparent 50%)', display: 'flex', alignItems: 'flex-end', padding: '16px 20px' }}>
                       <span style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 20, fontWeight: 700, color: '#fff' }}>{albums[0].title}</span>
                     </div>
+                    {newPhotoCount > 0 && (
+                      <span className="home-new-badge">
+                        {lang === 'hy' ? `${newPhotoCount} նոր` : `${newPhotoCount} new`}
+                      </span>
+                    )}
                   </div>
                 </div>
               )}
 
-              {/* Community count */}
+              {/* Currently reading */}
+              {currentlyReading && (
+                <div style={{ marginBottom: 28 }}>
+                  <HomeHeading icon={BookOpen}>{lang === 'hy' ? 'Գրադարանից' : 'From the Library'}</HomeHeading>
+                  <div
+                    className="home-card home-clickable"
+                    style={{ padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}
+                    onClick={() => setSelectedContent(currentlyReading)}
+                  >
+                    {currentlyReading.cover_url && (
+                      <img src={cldOptimize(currentlyReading.cover_url, { width: 96 })} alt={currentlyReading.title} style={{ width: 48, height: 48, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 10, fontWeight: 600, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'var(--gold)', marginBottom: 3 }}>
+                        {currentlyReading.type === 'recipe' ? t.recipe : t.ebook}
+                      </div>
+                      <div style={{ fontWeight: 600, color: '#2c1a1a', fontSize: 14, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 6 }}>
+                        {lang === 'hy' && currentlyReading.title_hy ? currentlyReading.title_hy : currentlyReading.title}
+                      </div>
+                      <div className="home-progress-track">
+                        <div className="home-progress-fill" style={{ width: `${currentlyReading.progress}%` }} />
+                      </div>
+                    </div>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--rose)', flexShrink: 0 }}>{currentlyReading.progress}%</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Community */}
               {directory.length > 0 && (
-                <div className="home-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-                  <div>
-                    <div style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 22, fontWeight: 700, color: '#2c1a1a' }}>
-                      {directory.length} {lang === 'hy' ? 'անդամ ակումբում' : 'members in the club'}
-                    </div>
-                    <div style={{ fontSize: 13, color: '#9b6e6e', marginTop: 4 }}>
-                      {lang === 'hy' ? 'Ծանոթացե՛ք Hasmik\'s Club-ի անդամների հետ' : "Connect with fellow Hasmik's Club members"}
-                    </div>
+                <div className="home-card">
+                  <div className="home-avatar-stack">
+                    {directory.slice(0, 3).map(m => (
+                      m.photo_url
+                        ? <img key={m.id} src={cldOptimize(m.photo_url, { width: 64 })} alt={m.full_name} className="home-avatar" />
+                        : <span key={m.id} className="home-avatar home-avatar-initials">{m.full_name?.[0] || '?'}</span>
+                    ))}
+                  </div>
+                  <div style={{ fontFamily: '"Cormorant Garamond", "Noto Sans Armenian", serif', fontSize: 20, fontWeight: 700, color: '#2c1a1a', margin: '10px 0 2px' }}>
+                    {directory.length} {lang === 'hy' ? 'անդամ ակումբում' : 'members in the club'}
+                  </div>
+                  <div style={{ fontSize: 13, color: '#9b6e6e', marginBottom: 14 }}>
+                    {lang === 'hy' ? 'Ծանոթացե՛ք Hasmik\'s Club-ի անդամների հետ' : "Connect with fellow Hasmik's Club members"}
                   </div>
                   <button
                     onClick={() => changeTab('community')}
-                    style={{ background: 'none', border: '1px solid #c0394b', color: '#c0394b', borderRadius: 8, padding: '8px 18px', cursor: 'pointer', fontSize: 13, fontWeight: 600, flexShrink: 0 }}>
-                    {lang === 'hy' ? 'Ծանոթանալ →' : 'Meet them →'}
+                    style={{ width: '100%', background: 'none', border: '1px solid #c0394b', color: '#c0394b', borderRadius: 8, padding: '8px 18px', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+                    {lang === 'hy' ? 'Ծանոթանալ →' : 'View all →'}
                   </button>
                 </div>
               )}
@@ -1645,6 +1717,31 @@ export default function DashboardPage({ lang, setLang }) {
                   style={{ color: 'var(--taupe)', fontSize: 14, lineHeight: 1.75, marginBottom: 24 }}
                   dangerouslySetInnerHTML={{ __html: sanitizeHtml(lang === 'hy' && selectedContent.description_hy ? selectedContent.description_hy : selectedContent.description) }}
                 />
+              )}
+
+              {selectedContent.is_unlocked && (
+                <div style={{ marginBottom: 20 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+                    <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--taupe)' }}>
+                      {lang === 'hy' ? 'Ինչքա՞ն եք առաջադիմել' : 'How far did you get?'}
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--rose)' }}>{selectedContent.progress}%</span>
+                  </div>
+                  <div className="home-progress-track" style={{ marginBottom: 10 }}>
+                    <div className="home-progress-fill" style={{ width: `${selectedContent.progress}%` }} />
+                  </div>
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    {[0, 25, 50, 75, 100].map(p => (
+                      <button
+                        key={p}
+                        onClick={() => handleSetProgress(selectedContent.id, p)}
+                        className={`home-progress-step${selectedContent.progress === p ? ' active' : ''}`}
+                      >
+                        {p}%
+                      </button>
+                    ))}
+                  </div>
+                </div>
               )}
 
               {selectedContent.is_unlocked && selectedContent.file_url ? (

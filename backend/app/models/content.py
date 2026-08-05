@@ -33,6 +33,9 @@ class MemberContent(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     content_id = Column(Integer, ForeignKey("content_items.id"), nullable=False)
     unlocked_at = Column(DateTime(timezone=True), server_default=func.now())
+    # Self-reported "how far did you get" (0-100) — there's no in-app reader
+    # to track this automatically, content is just a downloadable file.
+    progress = Column(Integer, nullable=False, default=0, server_default='0')
 
     user = relationship("User", back_populates="unlocked_content")
     content = relationship("ContentItem", back_populates="member_access")

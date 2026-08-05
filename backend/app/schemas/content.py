@@ -24,5 +24,10 @@ class ContentOut(BaseModel):
     cover_url: Optional[str]
     published_at: datetime
     is_unlocked: bool = False
+    progress: int = 0
 
     model_config = {"from_attributes": True}
+
+
+class ProgressUpdate(BaseModel):
+    progress: int

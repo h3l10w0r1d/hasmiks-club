@@ -10,6 +10,8 @@ export const deleteMyAccount = () => client.delete('/members/me').then((r) => r.
 export const getMemberDirectory = (q) => client.get('/members/directory', { params: q ? { q } : {} }).then(r => r.data)
 export const getGallery = () => client.get('/gallery').then(r => r.data)
 export const getAlbum = (id) => client.get(`/gallery/${id}`).then(r => r.data)
+export const getGalleryNewCount = () => client.get('/gallery/new-count').then(r => r.data)
+export const markGalleryVisited = () => client.post('/gallery/mark-seen').then(r => r.data)
 
 export const uploadPhoto = (file) => {
   const form = new FormData()

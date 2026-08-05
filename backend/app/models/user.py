@@ -85,6 +85,10 @@ class User(Base):
     application_message = Column(Text, nullable=True)
     application_status = Column(String(20), nullable=False, default='approved', server_default='approved')
     onboarding_completed = Column(Boolean, nullable=False, default=False, server_default='false')
+    # When this member last opened the Gallery tab — drives the dashboard's
+    # "N new photos" badge (see /gallery/new-count, /gallery/mark-seen).
+    # Null means "never visited," so every existing photo counts as new.
+    gallery_last_seen_at = Column(DateTime(timezone=True), nullable=True)
     joined_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
