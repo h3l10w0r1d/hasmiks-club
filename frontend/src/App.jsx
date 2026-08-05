@@ -194,6 +194,9 @@ function AdminRoute({ children }) {
 
 function AppRoutes() {
   const [lang, setLang] = useLang()
+  // The static index.html hardcodes lang="hy" as a crawler-safe baseline —
+  // sync the live DOM to whatever the visitor actually has selected.
+  useEffect(() => { document.documentElement.lang = lang }, [lang])
   return (
     <Routes>
       <Route path="/" element={

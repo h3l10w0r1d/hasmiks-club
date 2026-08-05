@@ -233,6 +233,7 @@ export default function GiftPage({ lang = 'en' }) {
       <Helmet>
         <title>{t.pageTitle}</title>
         <meta name="description" content={t.pageDesc} />
+        <link rel="canonical" href="https://www.hasmiksclub.am/gift" />
       </Helmet>
 
       <GlobalHeader lang={lang} />

@@ -1,2 +1,9 @@
 User-agent: *
 Allow: /
+Disallow: /dashboard
+Disallow: /welcome
+Disallow: /admin
+Disallow: /preview
+Disallow: /gift/claim/
+
+Sitemap: https://www.hasmiksclub.am/sitemap.xml

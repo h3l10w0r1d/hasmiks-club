@@ -182,11 +182,13 @@ export default function EventDetailPage({ lang = 'en' }) {
 
   return (
     <div style={styles.page}>
-      <Helmet>
-        <title>{title} — Hasmik's Club</title>
+      <Helmet defer={false}>
+        <title>{`${title} — Hasmik's Club`}</title>
         {desc && <meta name="description" content={desc.replace(/<[^>]*>/g, ' ').slice(0, 200)} />}
+        <link rel="canonical" href={`https://www.hasmiksclub.am/events/${id}`} />
         <meta property="og:title" content={title} />
         <meta property="og:type" content="article" />
+        <meta name="twitter:card" content="summary_large_image" />
         {ev.cover_url && <meta property="og:image" content={ev.cover_url} />}
       </Helmet>
 

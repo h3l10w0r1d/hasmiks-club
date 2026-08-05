@@ -5,6 +5,14 @@ import * as Sentry from '@sentry/react'
 import './index.css'
 import App from './App.jsx'
 
+// Static index.html ships a [data-default] title/description/canonical/OG
+// baseline for non-JS crawlers (react-helmet-async can only manage tags it
+// renders itself, so it can't remove these). Strip them the instant the app
+// mounts, before Helmet renders its own — otherwise every route ends up
+// with duplicate <title>/description/canonical tags in the live DOM (and
+// therefore in whatever scripts/prerender.js snapshots per route).
+document.querySelectorAll('[data-default]').forEach((el) => el.remove())
+
 // Error tracking — a no-op unless VITE_SENTRY_DSN is configured.
 if (import.meta.env.VITE_SENTRY_DSN) {
   Sentry.init({

@@ -11,7 +11,7 @@ export default function NotFoundPage({ lang = 'en' }) {
   const t = copy[lang] ?? copy.en
   return (
     <div style={{ minHeight: '100vh', background: '#fff8f5', fontFamily: "'Jost', 'Noto Sans Armenian', 'Inter', sans-serif" }}>
-      <Helmet><title>{t.title} — Hasmik's Club</title></Helmet>
+      <Helmet><title>{`${t.title} — Hasmik's Club`}</title></Helmet>
       <GlobalHeader lang={lang} />
       <div style={{ maxWidth: 460, margin: '0 auto', padding: '110px 20px', textAlign: 'center' }}>
         <Compass size={40} strokeWidth={1.4} color="var(--rose, #7E3434)" />

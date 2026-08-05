@@ -219,6 +219,7 @@ export default function EventsPage({ lang = 'en' }) {
       <Helmet>
         <title>{t.pageTitle}</title>
         <meta name="description" content={t.pageDesc} />
+        <link rel="canonical" href="https://www.hasmiksclub.am/events" />
         <meta property="og:title" content={t.pageTitle} />
         <meta property="og:description" content={t.pageDesc} />
         <meta property="og:type" content="website" />

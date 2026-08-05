@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import { register } from '../api/auth'
 import { getPublicSettings } from '../api/payments'
 import { useAuth } from '../context/AuthContext'
@@ -114,6 +115,10 @@ export default function RegisterPage({ lang }) {
 
   return (
     <>
+    <Helmet defer={false}>
+      <title>{`${t.title} — Hasmik's Club`}</title>
+      <link rel="canonical" href="https://www.hasmiksclub.am/register" />
+    </Helmet>
     <GlobalHeader lang={lang} />
     <div className="auth-page">
       <div className="auth-card">

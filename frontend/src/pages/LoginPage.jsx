@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { Helmet } from 'react-helmet-async'
 import { login } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
 import GlobalHeader from '../components/GlobalHeader'
@@ -44,6 +45,11 @@ export default function LoginPage({ lang }) {
 
   return (
     <>
+    <Helmet defer={false}>
+      <title>{`${t.title} — Hasmik's Club`}</title>
+      <link rel="canonical" href="https://www.hasmiksclub.am/login" />
+      <meta name="robots" content="noindex, follow" />
+    </Helmet>
     <GlobalHeader lang={lang} />
     <div className="auth-page">
       <div className="auth-card">

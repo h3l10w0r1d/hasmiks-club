@@ -1,0 +1,27 @@
+# Hasmik's Club
+
+> Hasmik's Club is a curated women's community in Yerevan, Armenia, for
+> Armenian women 50 and older — intimate gatherings, cultural events, and a
+> circle of like-minded women. Regular meetups happen roughly every two
+> weeks in cafés, gardens, and galleries around Yerevan, alongside a private
+> Telegram group for members. Membership works via one-time credit packages
+> (buy a set number of event credits, use them to RSVP) rather than a
+> recurring subscription.
+
+## Key pages
+
+- [Home](https://www.hasmiksclub.am/): overview of the club, its founder
+  Hasmik, and membership packages.
+- [Events](https://www.hasmiksclub.am/events): upcoming gatherings members
+  can RSVP to.
+- [About](https://www.hasmiksclub.am/about): the club's story and mission.
+- [Contact](https://www.hasmiksclub.am/contact): how to reach the club.
+- [Gift a Package](https://www.hasmiksclub.am/gift): buy a membership
+  package as a gift for someone else.
+- [Terms](https://www.hasmiksclub.am/terms): membership terms and
+  conditions.
+
+## Language
+
+The site is primarily in Armenian (հայերեն), with English also available
+via an in-page language toggle.
