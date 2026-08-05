@@ -2,6 +2,7 @@ import { Link, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { Menu, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useAuthModal } from '../context/AuthModalContext'
 import { useContent } from '../context/SiteContentContext'
 import { E, EditableImage } from './Editable'
 import LangSwitch from './LangSwitch'
@@ -16,7 +17,12 @@ import LangSwitch from './LangSwitch'
  */
 export default function GlobalHeader({ lang = 'hy', setLang }) {
   const { user } = useAuth()
+  const { openLogin, openRegister } = useAuthModal()
   const { pathname } = useLocation()
+  // /login and /register already render the same card as a full page (for
+  // direct links/bookmarks/SEO) — popping the modal open on top of itself
+  // there would be redundant, so those two keep plain in-page navigation.
+  const isAuthPage = pathname === '/login' || pathname === '/register'
   const [menuOpen, setMenuOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const site = useContent()
@@ -67,8 +73,16 @@ export default function GlobalHeader({ lang = 'hy', setLang }) {
     </>
   ) : (
     <>
-      <Link to="/login" state={pathname !== '/login' ? { from: pathname } : undefined} className="gh-btn gh-btn--ghost" onClick={close}><E as="span" path={`nav.signIn${sfx}`} value={nav[`signIn${sfx}`]} /></Link>
-      <Link to="/register" className="gh-btn gh-btn--solid" onClick={close}><E as="span" path={`nav.join${sfx}`} value={nav[`join${sfx}`]} /></Link>
+      {isAuthPage ? (
+        <Link to="/login" className="gh-btn gh-btn--ghost" onClick={close}><E as="span" path={`nav.signIn${sfx}`} value={nav[`signIn${sfx}`]} /></Link>
+      ) : (
+        <button type="button" className="gh-btn gh-btn--ghost" onClick={() => { close(); openLogin() }}><E as="span" path={`nav.signIn${sfx}`} value={nav[`signIn${sfx}`]} /></button>
+      )}
+      {isAuthPage ? (
+        <Link to="/register" className="gh-btn gh-btn--solid" onClick={close}><E as="span" path={`nav.join${sfx}`} value={nav[`join${sfx}`]} /></Link>
+      ) : (
+        <button type="button" className="gh-btn gh-btn--solid" onClick={() => { close(); openRegister() }}><E as="span" path={`nav.join${sfx}`} value={nav[`join${sfx}`]} /></button>
+      )}
     </>
   )
 

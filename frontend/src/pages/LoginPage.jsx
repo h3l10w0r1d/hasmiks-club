@@ -1,93 +1,25 @@
-import { useState } from 'react'
-import { useNavigate, useLocation, Link } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
-import { login } from '../api/auth'
-import { useAuth } from '../context/AuthContext'
 import GlobalHeader from '../components/GlobalHeader'
 import AuthShell from '../components/AuthShell'
-import GoogleSignInButton from '../components/GoogleSignInButton'
-import TelegramLoginButton from '../components/TelegramLoginButton'
+import LoginForm from '../components/LoginForm'
 
 export default function LoginPage({ lang }) {
-  const { signIn } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const from = location.state?.from || '/dashboard'
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-
-  const t = {
-    title:    lang === 'hy' ? 'Մուտք գործել' : 'Sign In',
-    email:    lang === 'hy' ? 'Էլ. հասցե' : 'Email',
-    password: lang === 'hy' ? 'Գաղտնաբառ' : 'Password',
-    submit:   lang === 'hy' ? 'Մուտք' : 'Sign In',
-    noAcc:    lang === 'hy' ? 'Հաշիվ չունե՞ք։' : "Don't have an account?",
-    register: lang === 'hy' ? 'Գրանցվել' : 'Join the Circle',
-    errDef:   lang === 'hy' ? 'Սխալ էլ. հասցե կամ գաղտնաբառ' : 'Invalid email or password',
-    forgot:   lang === 'hy' ? 'Մոռացե՞լ եք գաղտնաբառը' : 'Forgot password?',
-  }
-
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setLoading(true)
-    try {
-      const data = await login(email, password)
-      signIn(data)
-      navigate(from, { replace: true })
-    } catch {
-      setError(t.errDef)
-    } finally {
-      setLoading(false)
-    }
-  }
+  const title = lang === 'hy' ? 'Մուտք գործել' : 'Sign In'
 
   return (
     <>
     <Helmet defer={false}>
-      <title>{`${t.title} — Hasmik's Club`}</title>
+      <title>{`${title} — Hasmik's Club`}</title>
       <link rel="canonical" href="https://www.hasmiksclub.am/login" />
       <meta name="robots" content="noindex, follow" />
     </Helmet>
     <GlobalHeader lang={lang} />
     <AuthShell lang={lang} active="login">
-      <h1 className="auth-title">{t.title}</h1>
-      <div className="auth-divider" />
-      <form onSubmit={handleSubmit} className="auth-form">
-        <label className="auth-label">{t.email}
-          <input className="auth-input" type="email" value={email} onChange={e => setEmail(e.target.value)} required />
-        </label>
-        <label className="auth-label">{t.password}
-          <input className="auth-input" type="password" value={password} onChange={e => setPassword(e.target.value)} required />
-        </label>
-        {error && <p className="auth-error">{error}</p>}
-        <button className="btn-rose auth-submit" type="submit" disabled={loading}>
-          {loading ? '...' : t.submit}
-        </button>
-      </form>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '20px 0' }}>
-        <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
-        <span style={{ fontSize: 12, color: 'var(--stone)' }}>{lang === 'hy' ? 'կամ' : 'or'}</span>
-        <div style={{ flex: 1, height: 1, background: 'var(--sand)' }} />
-      </div>
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 12 }}>
-        <GoogleSignInButton lang={lang}
-          onSuccess={(data) => { signIn(data); navigate(from, { replace: true }) }}
-          onError={setError} />
-        <TelegramLoginButton lang={lang}
-          onSuccess={(data) => { signIn(data); navigate(from, { replace: true }) }}
-          onError={setError} />
-      </div>
-
-      <p className="auth-footer">
-        {t.noAcc} <Link to="/register" className="auth-link">{t.register}</Link>
-      </p>
-      <p className="auth-footer">
-        <Link to="/forgot-password" className="auth-link">{t.forgot}</Link>
-      </p>
+      <LoginForm lang={lang} onSuccess={() => navigate(from, { replace: true })} />
     </AuthShell>
     </>
   )

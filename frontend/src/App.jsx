@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { AuthProvider, useAuth } from './context/AuthContext'
+import { AuthModalProvider } from './context/AuthModalContext'
 import { SiteContentProvider, useContent, EDIT_ACTION_MSG } from './context/SiteContentContext'
 import { DEFAULT_LAYOUT, SECTION_LABEL, BLOCK_TEMPLATE_LABEL, isCustomBlockId, normalizeLayout } from './data/landingSections'
 import { normalizePageLayout } from './data/sitePages'
@@ -202,6 +203,7 @@ function AppRoutes() {
   // sync the live DOM to whatever the visitor actually has selected.
   useEffect(() => { document.documentElement.lang = lang }, [lang])
   return (
+    <AuthModalProvider lang={lang}>
     <Routes>
       <Route path="/" element={
         <GuestOnlyRoute>
@@ -258,6 +260,7 @@ function AppRoutes() {
       <Route path="/gift/claim/:token" element={<GiftClaimPage lang={lang} />} />
       <Route path="*" element={<NotFoundPage lang={lang} />} />
     </Routes>
+    </AuthModalProvider>
   )
 }
 

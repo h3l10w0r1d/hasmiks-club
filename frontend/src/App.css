@@ -1026,6 +1026,17 @@ a.ci-row:hover .ci-value{color:var(--rose)}
   display:flex;align-items:center;justify-content:center;
   padding:40px 20px;
 }
+/* The true popup (AuthModal) — an actual overlay on top of whatever page is
+   currently showing, not an in-flow page background like the plain variant
+   above (used by the /login, /register routes themselves). */
+.auth-modal-overlay--fixed{
+  position:fixed;inset:0;z-index:300;
+  min-height:100vh;
+  background:rgba(24,12,4,0.5);
+  background-image:none;
+  animation:auth-modal-fade .15s ease;
+}
+@keyframes auth-modal-fade{from{opacity:0}to{opacity:1}}
 .auth-modal{
   position:relative;
   display:flex;
@@ -1063,11 +1074,13 @@ a.ci-row:hover .ci-value{color:var(--rose)}
 .auth-tab{
   flex:1;text-align:center;
   padding:9px 16px;border-radius:999px;
-  font-size:14px;font-weight:600;
+  font-size:14px;font-weight:600;font-family:inherit;
   color:var(--taupe);text-decoration:none;
+  background:transparent;border:0;cursor:pointer;
   transition:background .15s, color .15s;
 }
 .auth-tab-active{background:var(--cream);color:var(--rose);box-shadow:0 1px 4px rgba(24,12,4,0.08)}
+.auth-link-btn{background:none;border:0;padding:0;font:inherit;cursor:pointer}
 @media(max-width:780px){
   .auth-modal{flex-direction:column;max-width:460px}
   .auth-modal-banner{flex:0 0 160px;width:100%}
