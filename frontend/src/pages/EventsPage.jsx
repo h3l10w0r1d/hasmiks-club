@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { Flower2, MapPin, CalendarDays } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useAuthModal } from '../context/AuthModalContext'
 import { getPublicEvents, getEvents, rsvp, cancelRsvp } from '../api/events'
 import { cldOptimize } from '../utils/cloudinary'
 import { stripHtml } from '../utils/sanitizeHtml'
@@ -97,6 +98,7 @@ export default function EventsPage({ lang = 'en' }) {
   const ev0 = site.events
   const evc = { heading: ev0[`heading${sfx}`], sub: ev0[`sub${sfx}`], noEvents: ev0[`noEvents${sfx}`] }
   const { user, setUser, loading: authLoading } = useAuth()
+  const { openRegister } = useAuthModal()
   const navigate = useNavigate()
   const t = copy[lang] ?? copy.en
 
@@ -144,7 +146,7 @@ export default function EventsPage({ lang = 'en' }) {
     // Not logged in → send to registration (no more one-time guest tickets,
     // attending now always means becoming a member first)
     if (!user) {
-      navigate('/register', { state: { from: '/events' } })
+      openRegister()
       return
     }
     // No package purchased yet → send to the package picker

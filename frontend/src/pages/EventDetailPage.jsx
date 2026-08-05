@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { Flower2, MapPin, CalendarDays, ArrowLeft } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
+import { useAuthModal } from '../context/AuthModalContext'
 import { getPublicEvent, getEvent, rsvp, cancelRsvp } from '../api/events'
 import { cldOptimize } from '../utils/cloudinary'
 import { getMe } from '../api/members'
@@ -62,6 +63,7 @@ function formatDate(iso, lang) {
 export default function EventDetailPage({ lang = 'en' }) {
   const { id } = useParams()
   const { user, setUser, loading: authLoading } = useAuth()
+  const { openRegister } = useAuthModal()
   const navigate = useNavigate()
   const t = copy[lang] ?? copy.en
 
@@ -104,7 +106,7 @@ export default function EventDetailPage({ lang = 'en' }) {
     // No more one-time guest tickets — attending always means becoming a
     // member first, so send unauthenticated visitors to registration.
     if (!user) {
-      navigate('/register', { state: { from: `/events/${id}` } })
+      openRegister()
       return
     }
     if (user.membership_status !== 'active') {

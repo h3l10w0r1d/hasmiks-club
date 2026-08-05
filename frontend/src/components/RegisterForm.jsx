@@ -59,7 +59,7 @@ export default function RegisterForm({ lang, onSuccess, onSwitchToLogin }) {
     password:    lang === 'hy' ? 'Գաղտնաբառ' : 'Password',
     appMsg:      lang === 'hy' ? 'Ինչու՞ եք ուզում անդամ դառնալ' : 'Why do you want to join?',
     appMsgHint:  lang === 'hy' ? 'Ձեր դիմումը կուղարկվի ադմինիստրատորի հաստատման համար' : 'Your application will be reviewed before your account is activated',
-    submit:      lang === 'hy' ? 'Ուղարկել դիմում' : requireApproval ? 'Submit Application' : 'Create Account',
+    submit:      lang === 'hy' ? (requireApproval ? 'Ուղարկել դիմում' : 'Գրանցվել') : (requireApproval ? 'Submit Application' : 'Create Account'),
     hasAcc:      lang === 'hy' ? 'Արդեն հաշիվ ունե՞ք։' : 'Already have an account?',
     login:       lang === 'hy' ? 'Մուտք գործել' : 'Sign In',
     errDef:      lang === 'hy' ? 'Գրանցման սխալ' : 'Registration failed. Try again.',

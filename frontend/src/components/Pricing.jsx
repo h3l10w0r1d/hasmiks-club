@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { Star, Crown, Check, ChevronDown } from 'lucide-react'
+import { useAuth } from '../context/AuthContext'
+import { useAuthModal } from '../context/AuthModalContext'
 import { useContent } from '../context/SiteContentContext'
 import { E, AddItemButton, RemoveItemButton } from './Editable'
 import { getPublicPackages } from '../api/packages'
@@ -34,6 +36,9 @@ const copy = {
 }
 
 export default function Pricing({ lang }) {
+  const { user } = useAuth()
+  const { openRegister } = useAuthModal()
+  const navigate = useNavigate()
   const t = useContent()
   const c = t.pricing
   const hy = lang === 'hy'
@@ -114,9 +119,9 @@ export default function Pricing({ lang }) {
                     ? tr.validMonths(pkg.validityDays / 30)
                     : tr.validDays(pkg.validityDays)}
               </div>
-              <Link to="/register" className={`plan-btn ${pkg.badge ? 'plan-btn-fill' : 'plan-btn-outline'}`}>
+              <button type="button" className={`plan-btn ${pkg.badge ? 'plan-btn-fill' : 'plan-btn-outline'}`} onClick={() => (user ? navigate('/dashboard') : openRegister())}>
                 {v('btn')}
-              </Link>
+              </button>
             </Reveal>
           )
         })}

@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import { Heart, HeartHandshake, Coffee, Compass } from 'lucide-react'
 import GlobalHeader from '../components/GlobalHeader'
 import Footer from '../components/Footer'
 import InstagramEmbed from '../components/InstagramEmbed'
+import { useAuth } from '../context/AuthContext'
+import { useAuthModal } from '../context/AuthModalContext'
 import { useContent } from '../context/SiteContentContext'
 import { E, EditableReel, installEditGuards, AddItemButton, RemoveItemButton } from '../components/Editable'
 
@@ -13,6 +15,9 @@ const SECTION_ICONS = [Heart, HeartHandshake, Coffee, Compass]
 
 export default function AboutPage({ lang = 'en', setLang }) {
   useEffect(() => { installEditGuards() }, [])
+  const { user } = useAuth()
+  const { openRegister } = useAuthModal()
+  const navigate = useNavigate()
   const t = useContent()
   const a = t.about
   const hy = lang === 'hy'
@@ -76,7 +81,7 @@ export default function AboutPage({ lang = 'en', setLang }) {
 
           <section className="page-section page-section--card page-section--center">
             <E as="h2" path={`about.ctaText${sfx}`} value={c.ctaText} />
-            <Link to="/register" className="page-cta"><E as="span" path={`about.cta${sfx}`} value={c.cta} /></Link>
+            <button type="button" className="page-cta" onClick={() => (user ? navigate('/dashboard') : openRegister())}><E as="span" path={`about.cta${sfx}`} value={c.cta} /></button>
           </section>
         </div>
       </main>
