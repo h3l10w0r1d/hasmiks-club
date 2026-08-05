@@ -136,9 +136,17 @@ export default function Pricing({ lang }) {
             <ChevronDown size={18} className={termsOpen ? 'pricing-terms-chevron open' : 'pricing-terms-chevron'} />
           </button>
           {termsOpen && (
-            <ul className="pricing-terms-list">
-              {terms.map((term, i) => <li key={i}>{term}</li>)}
-            </ul>
+            <>
+              <ul className="pricing-terms-list">
+                {terms.map((term, i) => (
+                  <li key={i} className="hc-item-row">
+                    <E as="span" path={p('terms')} value={term} listIndex={i} />
+                    {terms.length > 1 && <RemoveItemButton paths={[p('terms')]} index={i} />}
+                  </li>
+                ))}
+              </ul>
+              <AddItemButton paths={[p('terms')]} label={hy ? 'Ավելացնել պայման' : 'Add term'} />
+            </>
           )}
         </Reveal>
       )}
