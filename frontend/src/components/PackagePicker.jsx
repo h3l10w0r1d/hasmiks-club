@@ -11,13 +11,13 @@ const emptyCopy = {
  * selection/checkout. Renders each package with the exact same card look as
  * the landing page's pricing section (via PackageCard), so a package looks
  * identical everywhere it's shown — only the selection affordance differs. */
-export default function PackagePicker({ packages, selected, onSelect, lang = 'en' }) {
+export default function PackagePicker({ packages, selected, onSelect, lang = 'en', className = '' }) {
   if (!packages || packages.length === 0) {
     return <p style={{ fontSize: 14, color: '#A99B8A' }}>{lang === 'hy' ? emptyCopy.hy : emptyCopy.en}</p>
   }
 
   return (
-    <div className="plans plans-picker">
+    <div className={`plans plans-picker${className ? ` ${className}` : ''}`}>
       {packages.map((pkg) => {
         const isSelected = selected === pkg.id
         return (

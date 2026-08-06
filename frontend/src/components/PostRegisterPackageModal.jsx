@@ -85,7 +85,7 @@ export default function PostRegisterPackageModal({ lang = 'en', user, onSkip, on
         <p style={{ color: 'var(--taupe, #786050)', fontSize: 15, marginBottom: 26 }}>{t.sub}</p>
 
         <p style={{ fontWeight: 600, fontSize: 14, color: 'var(--deep, #180C04)', marginBottom: 14 }}>{t.choose}</p>
-        <PackagePicker packages={packages} selected={selectedPackage} onSelect={setSelectedPackage} lang={lang} />
+        <PackagePicker packages={packages} selected={selectedPackage} onSelect={setSelectedPackage} lang={lang} className="plans-picker-row" />
 
         {error && (
           <p style={{ background: '#fdecea', color: '#c0392b', borderRadius: 10, padding: '12px 16px', fontSize: 13.5, marginTop: 20 }}>
