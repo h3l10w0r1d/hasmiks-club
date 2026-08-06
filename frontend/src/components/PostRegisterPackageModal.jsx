@@ -74,7 +74,7 @@ export default function PostRegisterPackageModal({ lang = 'en', user, onSkip, on
     >
       <div
         className="package-modal-row-bleed"
-        style={{ background: '#fff', borderRadius: 20, padding: '36px 32px', maxWidth: 660, width: '100%', boxShadow: '0 24px 70px rgba(0,0,0,.25)', maxHeight: '90vh', overflowY: 'auto' }}
+        style={{ background: '#fff', borderRadius: 20, padding: '36px 32px', maxWidth: 920, width: '100%', boxShadow: '0 24px 70px rgba(0,0,0,.25)', maxHeight: '90vh', overflowY: 'auto' }}
         onClick={(e) => e.stopPropagation()}
       >
         <div style={{ textTransform: 'uppercase', fontSize: 12, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--rose, #7E3434)', marginBottom: 6 }}>

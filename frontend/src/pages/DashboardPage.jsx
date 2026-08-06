@@ -16,7 +16,7 @@ import 'yet-another-react-lightbox/plugins/captions.css'
 import 'yet-another-react-lightbox/plugins/thumbnails.css'
 import { useAuth } from '../context/AuthContext'
 import { getMe, updateMe, uploadPhoto, getMemberDirectory, getGallery, getAlbum, getGalleryNewCount, markGalleryVisited, addProfilePhoto, deleteProfilePhoto, getMemberProfile, unlinkTelegram, exportMyData, deleteMyAccount } from '../api/members'
-import { getEvents, rsvp, cancelRsvp, joinWaitlist, leaveWaitlist, getWaitlistPosition, memberGuestTicketCheckout } from '../api/events'
+import { getEvents, rsvp, cancelRsvp, joinWaitlist, leaveWaitlist, getWaitlistPosition } from '../api/events'
 import { getLibrary, updateLibraryProgress } from '../api/content'
 import { getMemberSettings } from '../api/payments'
 import { getMyPackages, getPublicPackages, checkoutPackage, removeCard } from '../api/packages'
@@ -178,7 +178,6 @@ export default function DashboardPage({ lang, setLang }) {
   const [rsvpError, setRsvpError] = useState('')
   const [confirmDialog, setConfirmDialog] = useState(null)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
-  const [oneTimeTicketLoading, setOneTimeTicketLoading] = useState(null) // eventId currently checking out, or null
   const [telegramUrl, setTelegramUrl] = useState('')
   const [myPackages, setMyPackages] = useState({ packages: [], credits_available: 0 })
   const [buyablePackages, setBuyablePackages] = useState([])
@@ -427,19 +426,6 @@ export default function DashboardPage({ lang, setLang }) {
     } catch (err) {
       const detail = err?.response?.data?.detail
       setRsvpError(detail || (lang === 'hy' ? 'Սխալ տեղի ունեցավ' : 'Something went wrong'))
-    }
-  }
-
-  const handleBuyOneTimeTicket = async (ev) => {
-    setRsvpError('')
-    setOneTimeTicketLoading(ev.id)
-    try {
-      const { url } = await memberGuestTicketCheckout(ev.id, lang)
-      window.location.href = url
-    } catch (err) {
-      const detail = err?.response?.data?.detail
-      setRsvpError(detail || (lang === 'hy' ? 'Սխալ տեղի ունեցավ' : 'Something went wrong'))
-      setOneTimeTicketLoading(null)
     }
   }
 
@@ -752,19 +738,6 @@ export default function DashboardPage({ lang, setLang }) {
       ) : !isActive ? (
         <>
           <button className="plan-btn plan-btn-fill plan-btn-row" onClick={handleSubscribe}>{lang === 'hy' ? 'Գնեք փաթեթ՝ գրանցվելու համար' : 'Buy a package to RSVP'}</button>
-          {ev.ticket_price != null && ev.seats_available > 0 && !(ev.max_guest_tickets != null && ev.guest_seats_taken >= ev.max_guest_tickets) && (
-            <button
-              className="plan-btn plan-btn-outline plan-btn-row"
-              disabled={oneTimeTicketLoading === ev.id}
-              onClick={() => handleBuyOneTimeTicket(ev)}
-            >
-              {oneTimeTicketLoading === ev.id
-                ? (lang === 'hy' ? 'Բեռնվում է…' : 'Loading…')
-                : (lang === 'hy'
-                  ? `Գնել մեկանգամյա տոմս — ֏${Number(ev.ticket_price).toLocaleString()}`
-                  : `Buy a one-time ticket — ֏${Number(ev.ticket_price).toLocaleString()}`)}
-            </button>
-          )}
         </>
       ) : ev.user_has_rsvp ? (
         <button className="plan-btn plan-btn-outline plan-btn-row" onClick={() => handleRsvpClick(ev)}>{t.cancelRsvp}</button>
