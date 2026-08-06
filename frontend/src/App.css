@@ -563,6 +563,17 @@ body{font-family:var(--font-serif);background:#fff;color:var(--mocha);overflow-x
 .plans-picker-row .plan-list{gap:6px;margin-bottom:12px}
 .plans-picker-row .plan-list li{font-size:13px;line-height:1.4}
 .plans-picker-row .plan-validity{margin-bottom:0}
+/* Lets the row escape a narrower text column (WelcomePage's .page-body caps
+   at 720px, but three 260px cards need ~816px) so every package is visible
+   at once instead of scrolling. width:max-content sizes it to exactly the
+   cards it has, then the margin-left/translateX pair re-centers it against
+   the viewport rather than the narrow parent; max-width keeps it on-screen,
+   with the base class's overflow-x:auto still catching the cases that
+   genuinely can't fit (phones, or a long enough package list). */
+.plans-picker-row.plans-picker-wide{
+  width:max-content;max-width:calc(100vw - 40px);
+  margin-left:50%;transform:translateX(-50%);
+}
 /* PostRegisterPackageModal bleeds the row to its own 32px inner padding so
    the peeking next-card sits flush with the modal edge — no other caller
    needs this, so it's scoped to the modal's own wrapper, not the shared class. */
