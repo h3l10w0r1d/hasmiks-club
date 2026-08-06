@@ -1108,7 +1108,18 @@ a.ci-row:hover .ci-value{color:var(--rose)}
   background:rgba(24,12,4,0.5);
   background-image:none;
   animation:auth-modal-fade .15s ease;
+  /* A modal taller than the viewport (the register form on a phone) must stay
+     fully reachable. align-items:center on a fixed, non-scrolling overlay
+     overflows past BOTH edges, and the top half — the close button included —
+     becomes unscrollable; AuthModal also locks body{overflow:hidden}, so there
+     was no page scroll left to rescue it either. overflow-y:auto plus
+     margin:auto on the child is the safe-centering pattern: still centered
+     when it fits, top-aligned and scrollable when it doesn't. */
+  overflow-y:auto;
+  align-items:flex-start;
+  -webkit-overflow-scrolling:touch;
 }
+.auth-modal-overlay--fixed .auth-modal{margin:auto}
 @keyframes auth-modal-fade{from{opacity:0}to{opacity:1}}
 .auth-modal{
   position:relative;
@@ -1158,8 +1169,20 @@ a.ci-row:hover .ci-value{color:var(--rose)}
 .auth-link-btn{background:none;border:0;padding:0;font:inherit;cursor:pointer}
 @media(max-width:780px){
   .auth-modal{flex-direction:column;max-width:460px}
-  .auth-modal-banner{flex:0 0 160px;width:100%}
-  .auth-modal-body{padding:32px 28px 28px;max-height:none}
+  /* Corners follow the layout: stacked vertically, the banner is the top of
+     the card and the body is the bottom — the desktop side-by-side radii
+     (left-rounded banner, right-rounded body) left square corners showing at
+     the card's actual top and bottom edges. */
+  .auth-modal-banner{flex:0 0 130px;width:100%;border-radius:20px 20px 0 0}
+  .auth-modal-body{padding:28px 22px 26px;max-height:none;border-radius:0 0 20px 20px}
+  .auth-modal-overlay{padding:20px 14px}
+  .auth-modal-overlay--fixed{padding:14px}
+}
+/* Landscape phones / short windows: the banner is decorative, and at this
+   height it costs more than the form can spare. */
+@media(max-height:520px){
+  .auth-modal-banner{display:none}
+  .auth-modal-body{border-radius:20px}
 }
 
 /* ═══════════════════════════════════════
