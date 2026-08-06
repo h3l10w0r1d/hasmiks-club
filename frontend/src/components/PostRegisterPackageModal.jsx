@@ -73,6 +73,7 @@ export default function PostRegisterPackageModal({ lang = 'en', user, onSkip, on
       onClick={checkoutLoading ? undefined : onSkip}
     >
       <div
+        className="package-modal-row-bleed"
         style={{ background: '#fff', borderRadius: 20, padding: '36px 32px', maxWidth: 660, width: '100%', boxShadow: '0 24px 70px rgba(0,0,0,.25)', maxHeight: '90vh', overflowY: 'auto' }}
         onClick={(e) => e.stopPropagation()}
       >

@@ -96,7 +96,7 @@ export default function WelcomePage({ lang = 'en', setLang }) {
               {hy ? 'Ընտրեք ձեր փաթեթը' : 'Choose your package'}
             </p>
             <div style={{ marginBottom: 24 }}>
-              <PackagePicker packages={packages} selected={selectedPackage} onSelect={setSelectedPackage} lang={lang} />
+              <PackagePicker packages={packages} selected={selectedPackage} onSelect={setSelectedPackage} lang={lang} className="plans-picker-row" />
             </div>
           </section>
 

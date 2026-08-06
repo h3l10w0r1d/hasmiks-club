@@ -523,14 +523,14 @@ body{font-family:var(--font-serif);background:#fff;color:var(--mocha);overflow-x
 .plans-picker .plan.plan-selected{outline:3px solid var(--rose);outline-offset:2px}
 .plans-picker .plan.plan-selected.gold-plan{outline-color:var(--gold)}
 
-/* PostRegisterPackageModal's variant — the modal has a fixed max-height, and
-   these cards are long (badge, price, savings box, full feature list), so
-   wrapping them into a grid forces the whole modal to scroll vertically just
-   to reach the buy button. A single horizontal row keeps the modal's own
-   height fixed to one card instead — on any screen too narrow to show every
-   card at once (most phones included), the row itself scrolls sideways,
-   which reads as an ordinary swipeable card carousel rather than a popup
-   that traps you mid-scroll. */
+/* Single-row variant used everywhere PackagePicker sits inside a bounded
+   container (PostRegisterPackageModal, WelcomePage, the dashboard's "buy
+   another package" toggle, GiftPage) — these cards are long (badge, price,
+   savings box, full feature list), so wrapping them into a grid forces
+   several stacked rows just to reach the buy button below. A single
+   horizontal row scrolls sideways instead, which reads as an ordinary
+   swipeable card carousel and works the same on any container width down to
+   a phone screen. */
 /* .plans.plans-picker-row (two classes) beats the mobile breakpoint's plain
    .plans{flex-direction:column} below at equal specificity+later-in-file —
    without it, phones would silently fall back to the vertical stack this
@@ -538,9 +538,13 @@ body{font-family:var(--font-serif);background:#fff;color:var(--mocha);overflow-x
 .plans.plans-picker-row{
   flex-direction:row;flex-wrap:nowrap;overflow-x:auto;overscroll-behavior-x:contain;
   -webkit-overflow-scrolling:touch;scroll-snap-type:x proximity;
-  margin:0 -32px;padding:2px 32px 10px;
+  padding:2px 2px 10px;
 }
 .plans-picker-row .plan{flex:0 0 260px;min-width:260px;max-width:260px;scroll-snap-align:start}
+/* PostRegisterPackageModal bleeds the row to its own 32px inner padding so
+   the peeking next-card sits flush with the modal edge — no other caller
+   needs this, so it's scoped to the modal's own wrapper, not the shared class. */
+.package-modal-row-bleed .plans-picker-row{margin:0 -32px;padding:2px 32px 10px}
 .plan{
   background:#fff;
   border:1px solid var(--sand);
