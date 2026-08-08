@@ -1156,7 +1156,7 @@ export default function DashboardPage({ lang, setLang }) {
 
                   {buyPickerOpen && (
                     <div>
-                      <PackagePicker packages={buyablePackages} selected={buyPackageKey} onSelect={setBuyPackageKey} lang={lang} className="plans-picker-row" />
+                      <PackagePicker packages={buyablePackages} selected={buyPackageKey} onSelect={setBuyPackageKey} lang={lang} layout="rows" />
                       <button
                         onClick={() => handleBuyPackage(buyPackageKey)}
                         disabled={checkoutLoading || !buyPackageKey}

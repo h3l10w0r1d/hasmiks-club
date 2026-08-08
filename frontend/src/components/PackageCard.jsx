@@ -8,6 +8,9 @@ import { Star, Crown, Check } from 'lucide-react'
 export const packageCardCopy = {
   en: {
     perOne: (n) => `Single participation cost: ֏${n.toLocaleString()}`,
+    // Same number as perOne, trimmed for the compact row layout, where it
+    // sits in a right-hand price column with no room for the full sentence.
+    perOneShort: (n) => `֏${n.toLocaleString()} / event`,
     savingsLabel: 'Your savings:',
     savings: (n) => `֏${n.toLocaleString()}`,
     includes: 'Package includes:',
@@ -20,6 +23,7 @@ export const packageCardCopy = {
   },
   hy: {
     perOne: (n) => `Մեկ մասնակցության արժեքը՝ ֏${n.toLocaleString()}`,
+    perOneShort: (n) => `֏${n.toLocaleString()} / հանդիպում`,
     savingsLabel: 'Ձեր խնայողությունը՝',
     savings: (n) => `֏${n.toLocaleString()}`,
     includes: 'Փաթեթը ներառում է՝',

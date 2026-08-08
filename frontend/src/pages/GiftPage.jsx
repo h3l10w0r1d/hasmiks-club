@@ -331,7 +331,7 @@ export default function GiftPage({ lang = 'en' }) {
                 {giftType === 'membership' ? (
                   <div style={{ marginTop: 16 }}>
                     <p style={styles.smallLabel}>{t.packageLabel}</p>
-                    <PackagePicker packages={packages} selected={selectedPackageKey} onSelect={setSelectedPackageKey} lang={lang} className="plans-picker-row" />
+                    <PackagePicker packages={packages} selected={selectedPackageKey} onSelect={setSelectedPackageKey} lang={lang} layout="rows" />
                   </div>
                 ) : (
                   <div style={{ marginTop: 16 }}>

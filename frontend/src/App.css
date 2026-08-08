@@ -578,6 +578,69 @@ body{font-family:var(--font-serif);background:#fff;color:var(--mocha);overflow-x
    the peeking next-card sits flush with the modal edge — no other caller
    needs this, so it's scoped to the modal's own wrapper, not the shared class. */
 .package-modal-row-bleed .plans-picker-row{margin:0 -32px;padding:20px 32px 10px}
+
+/* ── Compact row picker (PackagePicker layout="rows" → PackageRow) ──
+   For pickers in a narrow column — GiftPage's 620px form, the dashboard's
+   membership card — where the full .plan cards need ~816px for three and so
+   either scroll sideways or stack many screens tall. One line per package,
+   with the feature list revealed only for the selected one. */
+.plans-picker-list{display:flex;flex-direction:column;gap:10px}
+.pkg-row{
+  display:flex;align-items:flex-start;gap:12px;
+  border:1px solid var(--sand);border-radius:14px;background:#fff;
+  padding:14px 16px;cursor:pointer;text-align:left;
+  transition:border-color .15s, box-shadow .15s;
+}
+.pkg-row:hover{border-color:var(--rose-lt)}
+.pkg-row:focus-visible{outline:2px solid var(--rose);outline-offset:2px}
+.pkg-row-selected{border-color:var(--rose);box-shadow:0 0 0 2px rgba(126,52,52,0.12)}
+.pkg-row-gold.pkg-row-selected{border-color:var(--gold);box-shadow:0 0 0 2px rgba(140,101,48,0.14)}
+.pkg-row-radio{
+  flex:0 0 auto;width:17px;height:17px;margin-top:2px;
+  border-radius:50%;border:2px solid var(--sand);background:#fff;position:relative;
+}
+.pkg-row-selected .pkg-row-radio{border-color:var(--rose)}
+.pkg-row-selected .pkg-row-radio::after{content:'';position:absolute;inset:3px;border-radius:50%;background:var(--rose)}
+.pkg-row-gold.pkg-row-selected .pkg-row-radio{border-color:var(--gold)}
+.pkg-row-gold.pkg-row-selected .pkg-row-radio::after{background:var(--gold)}
+.pkg-row-main{flex:1;min-width:0}
+/* margin-left:auto on the price keeps it right-aligned beside the name on a
+   roomy row, and lets it drop to its own line (still right-aligned) once the
+   name/badge/price no longer fit — which is what keeps the feature list at
+   full width on a phone instead of in a narrow side column. */
+.pkg-row-head{display:flex;align-items:baseline;gap:4px 8px;flex-wrap:wrap}
+.pkg-row-price{
+  margin-left:auto;display:flex;align-items:baseline;
+  gap:2px 8px;flex-wrap:wrap;justify-content:flex-end;
+}
+.pkg-row-name{font-size:15px;font-weight:600;color:var(--deep)}
+.pkg-row-badge{
+  display:inline-flex;align-items:center;gap:4px;white-space:nowrap;
+  background:var(--rose);color:#fff;
+  font-size:11px;font-weight:600;padding:3px 9px;border-radius:999px;
+}
+.pkg-row-gold .pkg-row-badge{background:var(--gold)}
+.pkg-row-list{list-style:none;margin:10px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.pkg-row-list li{display:flex;gap:8px;align-items:flex-start;font-size:13px;line-height:1.45;color:var(--taupe)}
+.pkg-row-list li svg{
+  flex:0 0 auto;margin-top:2px;
+  width:15px;height:15px;padding:2px;box-sizing:border-box;
+  border-radius:50%;background:var(--rose-bg);color:var(--rose);
+}
+.pkg-row-gold .pkg-row-list li svg{background:rgba(140,101,48,0.12);color:var(--gold)}
+.pkg-row-validity{font-size:12px;color:var(--stone);margin-top:8px}
+.pkg-row-amount{
+  font-family:var(--font-serif);font-size:20px;font-weight:700;
+  color:var(--deep);line-height:1.15;
+}
+.pkg-row-regular{font-size:12px;color:var(--stone);text-decoration:line-through}
+.pkg-row-per{font-size:11.5px;color:var(--taupe)}
+/* Each figure stays intact; only the group between them breaks. */
+.pkg-row-amount,.pkg-row-regular,.pkg-row-per{white-space:nowrap}
+@media(max-width:420px){
+  .pkg-row{padding:12px 13px;gap:10px}
+  .pkg-row-amount{font-size:18px}
+}
 .plan{
   background:#fff;
   border:1px solid var(--sand);
@@ -1169,17 +1232,18 @@ a.ci-row:hover .ci-value{color:var(--rose)}
 .auth-link-btn{background:none;border:0;padding:0;font:inherit;cursor:pointer}
 @media(max-width:780px){
   .auth-modal{flex-direction:column;max-width:460px}
-  /* Corners follow the layout: stacked vertically, the banner is the top of
-     the card and the body is the bottom — the desktop side-by-side radii
-     (left-rounded banner, right-rounded body) left square corners showing at
-     the card's actual top and bottom edges. */
-  .auth-modal-banner{flex:0 0 130px;width:100%;border-radius:20px 20px 0 0}
-  .auth-modal-body{padding:28px 22px 26px;max-height:none;border-radius:0 0 20px 20px}
+  /* Banner dropped on phones. It's a fixed-aspect image with the club name
+     and tagline baked into the artwork, so background-size:cover at any
+     phone-friendly height crops it mid-sentence — decorative at best, and
+     it pushed the actual form below the fold. The body carries the full
+     radius on its own now that it's the whole card. */
+  .auth-modal-banner{display:none}
+  .auth-modal-body{padding:28px 22px 26px;max-height:none;border-radius:20px}
   .auth-modal-overlay{padding:20px 14px}
   .auth-modal-overlay--fixed{padding:14px}
 }
-/* Landscape phones / short windows: the banner is decorative, and at this
-   height it costs more than the form can spare. */
+/* Wide but short windows (landscape phones, a short desktop window) miss the
+   width rule above yet have even less vertical room to spare. */
 @media(max-height:520px){
   .auth-modal-banner{display:none}
   .auth-modal-body{border-radius:20px}
