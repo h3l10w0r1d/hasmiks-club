@@ -1,7 +1,9 @@
 import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
-import { useAuthBanner } from '../hooks/useAuthBanner'
+import { useContent } from '../context/SiteContentContext'
+import authBannerHy from '../assets/auth-banner-hy.jpg'
+import authBannerEn from '../assets/auth-banner-en.jpg'
 import LoginForm from './LoginForm'
 import RegisterForm from './RegisterForm'
 
@@ -11,7 +13,11 @@ import RegisterForm from './RegisterForm'
 // navigating, and it closes on Escape or a backdrop click.
 export default function AuthModal({ lang, mode, onModeChange, onClose }) {
   const navigate = useNavigate()
-  const banner = useAuthBanner(lang)
+  // Reads the same Site Editor override as AuthShell — the popup and the
+  // /login,/register routes always show the same artwork. Not an
+  // EditableImage here: the editor previews the routes, not this overlay.
+  const c = useContent().auth
+  const banner = (lang === 'hy' ? c.bannerHy : c.bannerEn) || (lang === 'hy' ? authBannerHy : authBannerEn)
   const t = {
     login: lang === 'hy' ? 'Մուտք' : 'Log in',
     register: lang === 'hy' ? 'Գրանցվել' : 'Sign up',

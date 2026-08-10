@@ -187,6 +187,12 @@ function ProtectedRoute({ children }) {
 function GuestOnlyRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return null
+  // The Site Editor previews /login in an iframe, and the admin doing the
+  // editing is by definition signed in — without this the canvas would
+  // redirect to /dashboard and the page could never be edited. Limited to the
+  // editor's own ?edit=1 canvas, and it only renders a page the visitor could
+  // reach by signing out anyway, so the real guard is unaffected.
+  if (IS_EDIT) return children
   return user ? <Navigate to="/dashboard" replace /> : children
 }
 

@@ -1,6 +1,9 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
-import { useAuthBanner } from '../hooks/useAuthBanner'
+import { useContent } from '../context/SiteContentContext'
+import { EditableImage } from './Editable'
+import authBannerHy from '../assets/auth-banner-hy.jpg'
+import authBannerEn from '../assets/auth-banner-en.jpg'
 
 // Shared two-column popup-style shell for /login and /register — banner
 // image on one side (swapped per language), tabs + the page's own form on
@@ -8,7 +11,11 @@ import { useAuthBanner } from '../hooks/useAuthBanner'
 // app-wide modal — the "close" button just goes home.
 export default function AuthShell({ lang, active, children }) {
   const navigate = useNavigate()
-  const banner = useAuthBanner(lang)
+  const hy = lang === 'hy'
+  // Same shape as Hero's cover image: an admin override from the Site Editor,
+  // falling back to the image bundled at build time when unset.
+  const c = useContent().auth
+  const banner = (hy ? c.bannerHy : c.bannerEn) || (hy ? authBannerHy : authBannerEn)
   const t = {
     login: lang === 'hy' ? 'Մուտք' : 'Log in',
     register: lang === 'hy' ? 'Գրանցվել' : 'Sign up',
@@ -20,7 +27,9 @@ export default function AuthShell({ lang, active, children }) {
         <button type="button" className="auth-modal-close" aria-label="Close" onClick={() => navigate('/')}>
           <X size={18} />
         </button>
-        <div className="auth-modal-banner" style={{ backgroundImage: `url(${banner})` }} aria-hidden="true" />
+        <div className="auth-modal-banner">
+          <EditableImage src={banner} alt="" className="auth-modal-banner-img" path={`auth.banner${hy ? 'Hy' : 'En'}`} />
+        </div>
         <div className="auth-modal-body">
           <div className="auth-tabs">
             <Link to="/login" className={`auth-tab${active === 'login' ? ' auth-tab-active' : ''}`}>{t.login}</Link>

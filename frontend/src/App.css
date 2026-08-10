@@ -1202,11 +1202,19 @@ a.ci-row:hover .ci-value{color:var(--rose)}
 .auth-modal-close:hover{background:#fff}
 .auth-modal-banner{
   flex:0 0 40%;
-  background-size:cover;background-position:center;
   min-height:100%;
   border-radius:20px 0 0 20px;
   overflow:hidden;
+  position:relative;
 }
+/* Was a background-image on the div above; now a real <img> so the Site
+   Editor's EditableImage can hang its hover controls off it (see
+   AuthShell.jsx). object-fit reproduces what background-size:cover did.
+   The wrapper span is EditableImage's own, present only in edit mode. */
+.auth-modal-banner-img{
+  display:block;width:100%;height:100%;object-fit:cover;
+}
+.auth-modal-banner > .hc-img-wrap{display:block;width:100%;height:100%}
 .auth-modal-body{
   flex:1;min-width:0;
   padding:44px 44px 36px;

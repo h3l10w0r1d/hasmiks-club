@@ -36,11 +36,6 @@ def public_settings(db: Session = Depends(get_db)):
         "club_location": _db_setting(db, "club_location", ""),
         "club_email": _db_setting(db, "club_email", ""),
         "club_phone": _db_setting(db, "club_phone", ""),
-        # Login/register popup artwork, per language. Empty string means the
-        # admin hasn't set one, and the frontend falls back to the image
-        # bundled at build time.
-        "auth_banner_hy": _db_setting(db, "auth_banner_hy", ""),
-        "auth_banner_en": _db_setting(db, "auth_banner_en", ""),
         # SUPERSEDED — the old two-fixed-tier subscription pricing a member
         # picked between at Subscribe. No longer read by any live checkout
         # or gift path since the switch to credit packages (see "packages"

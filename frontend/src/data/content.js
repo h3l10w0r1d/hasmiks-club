@@ -345,6 +345,15 @@ Let us live them together.`,
     notFoundEn: `Event not found`, notFoundHy: `Հանդիպումը չի գտնվել`,
   },
 
+  // Side artwork on the sign-in / sign-up screens — the /login and /register
+  // routes (AuthShell) and the app-wide popup (AuthModal) share these. One per
+  // language since the copy in the artwork is language-specific. Empty = the
+  // bundled default. Desktop only; the banner is hidden on phones (App.css).
+  auth: {
+    bannerHy: ``,
+    bannerEn: ``,
+  },
+
   terms: {
     metaTitleEn: `Terms & Conditions — Hasmik's Club`,
     metaTitleHy: `Պայմաններ — Hasmik's Club`,

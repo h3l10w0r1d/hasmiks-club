@@ -38,6 +38,11 @@ const PAGES = [
   { key: 'contact', label: 'Contact', path: '/contact' },
   { key: 'events', label: 'Events', path: '/events' },
   { key: 'terms', label: 'Terms', path: '/terms' },
+  // /login and /register share one shell, so editing either edits both (and
+  // the sign-in popup, which reads the same content). Normally a logged-in
+  // visitor is redirected off /login — GuestOnlyRoute stands down inside the
+  // editor canvas so this page is reachable here. See App.jsx.
+  { key: 'auth', label: 'Login / Sign-up', path: '/login' },
 ]
 
 // Centered dialog (backdrop + card) — used instead of an anchored dropdown
