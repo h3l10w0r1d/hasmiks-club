@@ -153,6 +153,7 @@ const DEFAULT_SETTINGS = {
   telegram_invite_url: '', require_approval: 'false',
   membership_price_display: '', club_description: '',
   club_instagram: '', club_location: '', club_email: '', club_phone: '',
+  auth_banner_hy: '', auth_banner_en: '',
   welcome_email_body: '', event_reminder_body: '', email_footer: '',
   membership_plan1_price: '', membership_plan2_price: '',
 }
@@ -1857,6 +1858,41 @@ export default function AdminPage() {
                         <Field label="Club Description (shown in club tab)">
                           <Textarea rows={3} value={settingsForm.club_description} onChange={e => setSettingsForm(f => ({ ...f, club_description: e.target.value }))} placeholder="A warm, intimate club for women in Yerevan..." />
                         </Field>
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-sm">Login / Register Banner</CardTitle>
+                        <CardDescription>
+                          The side image on the sign-in and sign-up popup, one per language. Leave blank to use the shipped default.
+                          Shown on desktop only — the banner is hidden on phones, where there isn&apos;t room for it beside the form.
+                          A tall portrait image works best (it&apos;s cropped to fill roughly 40% of the popup&apos;s width).
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <ImageUploadField
+                          label="Armenian (Հայ)"
+                          value={settingsForm.auth_banner_hy}
+                          onChange={(url) => setSettingsForm(f => ({ ...f, auth_banner_hy: url }))}
+                          onUpload={adminUploadImage}
+                        />
+                        <ImageUploadField
+                          label="English"
+                          value={settingsForm.auth_banner_en}
+                          onChange={(url) => setSettingsForm(f => ({ ...f, auth_banner_en: url }))}
+                          onUpload={adminUploadImage}
+                        />
+                        <div className="flex gap-3">
+                          {['auth_banner_hy', 'auth_banner_en'].map((k) => settingsForm[k] && (
+                            <img
+                              key={k}
+                              src={settingsForm[k]}
+                              alt=""
+                              className="h-28 w-20 rounded-md border object-cover"
+                            />
+                          ))}
+                        </div>
                       </CardContent>
                     </Card>
 

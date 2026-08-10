@@ -48,6 +48,13 @@ PUBLIC_KEYS = {
     "club_location",
     "club_email",
     "club_phone",
+    # Side image on the login/register popup, one per language (the copy on
+    # those screens is language-specific, so the artwork usually is too).
+    # Empty means "use the bundled default" — see AuthShell.jsx/AuthModal.jsx.
+    # Desktop only; the banner is hidden on phones (App.css), where cropping
+    # it to a phone-friendly height sliced the artwork mid-sentence.
+    "auth_banner_hy",
+    "auth_banner_en",
 }
 
 # SUPERSEDED — the old two-fixed-tier subscription pricing (see

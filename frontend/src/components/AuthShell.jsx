@@ -1,7 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { X } from 'lucide-react'
-import authBannerHy from '../assets/auth-banner-hy.jpg'
-import authBannerEn from '../assets/auth-banner-en.jpg'
+import { useAuthBanner } from '../hooks/useAuthBanner'
 
 // Shared two-column popup-style shell for /login and /register — banner
 // image on one side (swapped per language), tabs + the page's own form on
@@ -9,7 +8,7 @@ import authBannerEn from '../assets/auth-banner-en.jpg'
 // app-wide modal — the "close" button just goes home.
 export default function AuthShell({ lang, active, children }) {
   const navigate = useNavigate()
-  const banner = lang === 'hy' ? authBannerHy : authBannerEn
+  const banner = useAuthBanner(lang)
   const t = {
     login: lang === 'hy' ? 'Մուտք' : 'Log in',
     register: lang === 'hy' ? 'Գրանցվել' : 'Sign up',
