@@ -189,7 +189,13 @@ export function EditableImage({ src, alt, className, style, path }) {
           )}
         </div>
       )}
-      <input ref={inputRef} type="file" accept="image/*" className="hidden" onChange={(e) => onFile(e.target.files?.[0])} />
+      {/* display:none inline, not Tailwind's .hidden — Tailwind is generated
+          only for the admin bundle and scoped under .admin-shell (see
+          tailwind.config.js), and this component renders inside the Site
+          Editor's canvas, which is the public site in an iframe. The class
+          was a no-op there, leaving a raw "Choose File" control visible
+          beside every editable image. */}
+      <input ref={inputRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={(e) => onFile(e.target.files?.[0])} />
     </span>
   )
 }
