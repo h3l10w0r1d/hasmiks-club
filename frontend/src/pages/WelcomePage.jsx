@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Helmet } from 'react-helmet-async'
 import GlobalHeader from '../components/GlobalHeader'
 import PackagePicker from '../components/PackagePicker'
+import PromoCodeField from '../components/PromoCodeField'
 import { useAuth } from '../context/AuthContext'
 import { getPublicPackages, checkoutPackage } from '../api/packages'
 import content from '../data/content'
@@ -31,6 +32,7 @@ export default function WelcomePage({ lang = 'en', setLang }) {
   const [error, setError] = useState('')
   const [packages, setPackages] = useState([])
   const [selectedPackage, setSelectedPackage] = useState(null)
+  const [promo, setPromo] = useState(null)
 
   const hy = lang === 'hy'
   const t = copy[lang] ?? copy.en
@@ -55,7 +57,7 @@ export default function WelcomePage({ lang = 'en', setLang }) {
     setCheckoutLoading(true)
     setError('')
     try {
-      const result = await checkoutPackage(selectedPackage, lang)
+      const result = await checkoutPackage(selectedPackage, lang, promo?.code)
       if (result.mode === 'redirect') {
         window.location.href = result.url
         return
@@ -96,7 +98,27 @@ export default function WelcomePage({ lang = 'en', setLang }) {
               {hy ? 'Ընտրեք ձեր փաթեթը' : 'Choose your package'}
             </p>
             <div style={{ marginBottom: 24 }}>
-              <PackagePicker packages={packages} selected={selectedPackage} onSelect={setSelectedPackage} lang={lang} className="plans-picker-row plans-picker-wide" />
+              <PackagePicker
+                packages={packages}
+                selected={selectedPackage}
+                onSelect={(id) => { setSelectedPackage(id); setPromo(null) }}
+                lang={lang}
+                className="plans-picker-row plans-picker-wide"
+              />
+              {selectedPackage && (
+                <div className="promo-slot promo-slot--center">
+                  <PromoCodeField key={selectedPackage} packageKey={selectedPackage} lang={lang} onApplied={setPromo} />
+                  {promo && (
+                    <div className="promo-total">
+                      <span>{hy ? 'Ընդամենը' : 'Total'}</span>
+                      <span>
+                        <s>֏{Number(promo.original_price).toLocaleString()}</s>
+                        <strong>֏{Number(promo.final_price).toLocaleString()}</strong>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </section>
 

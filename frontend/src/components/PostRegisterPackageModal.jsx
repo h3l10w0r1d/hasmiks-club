@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import PackagePicker from './PackagePicker'
+import PromoCodeField from './PromoCodeField'
 import { getPublicPackages, checkoutPackage } from '../api/packages'
 import content from '../data/content'
 
@@ -35,6 +36,7 @@ export default function PostRegisterPackageModal({ lang = 'en', user, onSkip, on
 
   const [packages, setPackages] = useState([])
   const [selectedPackage, setSelectedPackage] = useState(null)
+  const [promo, setPromo] = useState(null)
   const [checkoutLoading, setCheckoutLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -50,7 +52,7 @@ export default function PostRegisterPackageModal({ lang = 'en', user, onSkip, on
     setCheckoutLoading(true)
     setError('')
     try {
-      const result = await checkoutPackage(selectedPackage, lang)
+      const result = await checkoutPackage(selectedPackage, lang, promo?.code)
       if (result.mode === 'redirect') {
         window.location.href = result.url
         return
@@ -86,7 +88,28 @@ export default function PostRegisterPackageModal({ lang = 'en', user, onSkip, on
         <p style={{ color: 'var(--taupe, #786050)', fontSize: 15, marginBottom: 26 }}>{t.sub}</p>
 
         <p style={{ fontWeight: 600, fontSize: 14, color: 'var(--deep, #180C04)', marginBottom: 14 }}>{t.choose}</p>
-        <PackagePicker packages={packages} selected={selectedPackage} onSelect={setSelectedPackage} lang={lang} className="plans-picker-row" />
+        <PackagePicker
+          packages={packages}
+          selected={selectedPackage}
+          onSelect={(id) => { setSelectedPackage(id); setPromo(null) }}
+          lang={lang}
+          className="plans-picker-row"
+        />
+
+        {selectedPackage && (
+          <div className="promo-slot">
+            <PromoCodeField key={selectedPackage} packageKey={selectedPackage} lang={lang} onApplied={setPromo} />
+          </div>
+        )}
+        {promo && (
+          <div className="promo-total">
+            <span>{hy ? 'Ընդամենը' : 'Total'}</span>
+            <span>
+              <s>֏{Number(promo.original_price).toLocaleString()}</s>
+              <strong>֏{Number(promo.final_price).toLocaleString()}</strong>
+            </span>
+          </div>
+        )}
 
         {error && (
           <p style={{ background: '#fdecea', color: '#c0392b', borderRadius: 10, padding: '12px 16px', fontSize: 13.5, marginTop: 20 }}>

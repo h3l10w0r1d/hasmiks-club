@@ -121,3 +121,12 @@ export const adminGuestTicketCheckin  = (payload)    => client.post('/admin/gues
 // gift cards
 export const adminGetGiftCards        = (params)     => client.get('/admin/gift-cards', { params }).then(r => r.data)
 export const adminResendGiftCard      = (id)         => client.post(`/admin/gift-cards/${id}/resend`).then(r => r.data)
+
+// ── promo codes ──────────────────────────────────────────────────────────────
+export const adminListPromoCodes = () => client.get('/admin/promo-codes').then(r => r.data)
+export const adminGeneratePromoCode = (prefix) =>
+  client.get('/admin/promo-codes/generate', { params: prefix ? { prefix } : {} }).then(r => r.data)
+export const adminCreatePromoCode = (data) => client.post('/admin/promo-codes', data).then(r => r.data)
+export const adminUpdatePromoCode = (id, data) => client.patch(`/admin/promo-codes/${id}`, data).then(r => r.data)
+export const adminDeletePromoCode = (id) => client.delete(`/admin/promo-codes/${id}`)
+export const adminPromoRedemptions = (id) => client.get(`/admin/promo-codes/${id}/redemptions`).then(r => r.data)

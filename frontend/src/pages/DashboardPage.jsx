@@ -21,6 +21,7 @@ import { getLibrary, updateLibraryProgress } from '../api/content'
 import { getMemberSettings } from '../api/payments'
 import { getMyPackages, getPublicPackages, checkoutPackage, removeCard } from '../api/packages'
 import PackagePicker from '../components/PackagePicker'
+import PromoCodeField from '../components/PromoCodeField'
 import { getNotificationPreferences, updateNotificationPreferences } from '../api/notifications'
 import { refreshToken as apiRefresh } from '../api/auth'
 import { sanitizeHtml, stripHtml } from '../utils/sanitizeHtml'
@@ -572,11 +573,12 @@ export default function DashboardPage({ lang, setLang }) {
   const handleSubscribe = () => navigate('/welcome')
 
   const [buyPickerOpen, setBuyPickerOpen] = useState(false)
+  const [buyPromo, setBuyPromo] = useState(null)
   const [buyPackageKey, setBuyPackageKey] = useState(null)
   const handleBuyPackage = async (packageKey) => {
     setCheckoutLoading(true)
     try {
-      const result = await checkoutPackage(packageKey, lang)
+      const result = await checkoutPackage(packageKey, lang, buyPromo?.code)
       if (result.mode === 'redirect') {
         window.location.href = result.url
         return
@@ -586,6 +588,7 @@ export default function DashboardPage({ lang, setLang }) {
         setUser(fresh)
         setMyPackages(await getMyPackages())
         setBuyPickerOpen(false)
+        setBuyPromo(null)
       } else {
         setMsg(result.message || (lang === 'hy' ? 'Վճարումը չհաջողվեց: Փորձե՛ք կրկին:' : 'The payment failed. Please try again.'))
       }
@@ -1156,7 +1159,27 @@ export default function DashboardPage({ lang, setLang }) {
 
                   {buyPickerOpen && (
                     <div>
-                      <PackagePicker packages={buyablePackages} selected={buyPackageKey} onSelect={setBuyPackageKey} lang={lang} layout="rows" />
+                      <PackagePicker
+                        packages={buyablePackages}
+                        selected={buyPackageKey}
+                        onSelect={(id) => { setBuyPackageKey(id); setBuyPromo(null) }}
+                        lang={lang}
+                        layout="rows"
+                      />
+                      {buyPackageKey && (
+                        <div className="promo-slot">
+                          <PromoCodeField key={buyPackageKey} packageKey={buyPackageKey} lang={lang} onApplied={setBuyPromo} />
+                          {buyPromo && (
+                            <div className="promo-total">
+                              <span>{lang === 'hy' ? 'Ընդամենը' : 'Total'}</span>
+                              <span>
+                                <s>֏{Number(buyPromo.original_price).toLocaleString()}</s>
+                                <strong>֏{Number(buyPromo.final_price).toLocaleString()}</strong>
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       <button
                         onClick={() => handleBuyPackage(buyPackageKey)}
                         disabled={checkoutLoading || !buyPackageKey}
