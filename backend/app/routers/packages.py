@@ -16,8 +16,11 @@ from app.database import get_db
 from app.models.member_package import MemberPackage
 from app.models.user import User
 from app.routers.app_settings import get_packages_config
+from app.core import promo as promo_core
+from app.models.promo_code import PromoCode, PromoRedemption
 from app.schemas.package import (
     PackageOut, MemberPackageOut, MyPackagesOut, PackageCheckoutIn, PackageCheckoutOut,
+    PromoPreviewIn, PromoPreviewOut,
 )
 
 router = APIRouter(prefix="/packages", tags=["packages"])
@@ -121,9 +124,58 @@ def _credit_package(row: MemberPackage) -> None:
     validity_days (set at checkout time), never from whatever amount the
     bank echoes back (test-mode amounts are deliberately wrong and must
     never leak into what a member is credited)."""
-    row.credits_remaining = row.event_count
+    # Bonus credits from a promo code ride along with the package's own — they
+    # expire on the same schedule and are spent by the same RSVP flow.
+    row.credits_remaining = row.event_count + (row.bonus_credits or 0)
     row.expires_at = (
         datetime.now(timezone.utc) + timedelta(days=row.validity_days) if row.validity_days else None
+    )
+
+
+def _finalize_promo(db: Session, row: MemberPackage) -> None:
+    """Burn the promo use for a purchase that just became paid. Idempotent:
+    the redirect callback can legitimately fire more than once for one order,
+    and a code must not be consumed twice for the same purchase."""
+    if not row.promo_code_id:
+        return
+    already = (
+        db.query(PromoRedemption)
+        .filter(PromoRedemption.member_package_id == row.id)
+        .first()
+    )
+    if already:
+        return
+    promo = db.query(PromoCode).filter(PromoCode.id == row.promo_code_id).first()
+    if not promo:
+        return
+    promo_core.record_redemption(
+        db, promo, row.user_id, row.id,
+        Decimal(str(row.discount_amount or 0)), int(row.bonus_credits or 0),
+    )
+
+
+@router.post("/promo/preview", response_model=PromoPreviewOut)
+def preview_promo(
+    body: PromoPreviewIn,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """What a code is worth for this member on this package, for showing the
+    new price before they commit. Purely informational — checkout re-runs the
+    same evaluate() rather than trusting anything echoed back from here."""
+    package = _find_package(db, body.package_key)
+    if not package:
+        raise HTTPException(status_code=404, detail="This package is no longer available.")
+    try:
+        promo, original, final, bonus = promo_core.evaluate(db, body.code, package, current_user.id)
+    except promo_core.PromoError as exc:
+        return PromoPreviewOut(valid=False, message=exc.message(body.lang_pref))
+    return PromoPreviewOut(
+        valid=True, code=promo.code,
+        original_price=float(original), final_price=float(final),
+        discount_amount=float(original - final),
+        bonus_credits=bonus,
+        total_credits=int(package["eventCount"]) + bonus,
     )
 
 
@@ -154,6 +206,21 @@ def checkout_package(
     if duplicate:
         raise HTTPException(status_code=409, detail="A purchase for this package is already in progress — please wait a moment.")
 
+    # Re-validate the code here rather than trusting the preview call — the
+    # price charged has to come from the server's own evaluation.
+    promo = None
+    amount = Decimal(str(package["price"]))
+    discount = Decimal("0")
+    bonus_credits = 0
+    if body.promo_code and body.promo_code.strip():
+        try:
+            promo, original, amount, bonus_credits = promo_core.evaluate(
+                db, body.promo_code, package, current_user.id
+            )
+        except promo_core.PromoError as exc:
+            raise HTTPException(status_code=400, detail=exc.message(body.lang_pref))
+        discount = original - amount
+
     row = MemberPackage(
         user_id=current_user.id,
         package_key=package["id"],
@@ -161,9 +228,13 @@ def checkout_package(
         event_count=package["eventCount"],
         credits_remaining=0,
         validity_days=package.get("validityDays"),
-        amount=Decimal(str(package["price"])),
+        amount=amount,
         currency=settings.AMERIABANK_CURRENCY,
         status="started",
+        promo_code_id=promo.id if promo else None,
+        promo_code=promo.code if promo else None,
+        discount_amount=discount,
+        bonus_credits=bonus_credits,
     )
     db.add(row)
     db.commit()
@@ -211,6 +282,7 @@ def checkout_package(
             _credit_package(row)
             current_user.membership_status = "active"
             db.commit()
+            _finalize_promo(db, row)
             mailer.track_event_async(current_user.email, "package_purchased", {"package": package["nameEn"], "amount": float(row.amount)})
             mailer.sync_member_to_brevo(db, current_user)
             return PackageCheckoutOut(mode="instant", success=True)
@@ -290,6 +362,8 @@ async def package_callback(request: Request, db: Session = Depends(get_db)):
             user = db.query(User).filter(User.id == row.user_id).first()
             if is_success and user:
                 _credit_package(row)
+                if not was_already_paid:
+                    _finalize_promo(db, row)
                 user.membership_status = "active"
                 if details.get("BindingID"):
                     user.card_holder_id = _card_holder_id(user.id)

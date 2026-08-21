@@ -46,6 +46,28 @@ class MyPackagesOut(BaseModel):
 class PackageCheckoutIn(BaseModel):
     package_key: str
     lang_pref: Optional[str] = "en"
+    # Optional promo code. Re-validated server-side at checkout rather than
+    # trusting whatever the preview call quoted.
+    promo_code: Optional[str] = None
+
+
+class PromoPreviewIn(BaseModel):
+    code: str
+    package_key: str
+    lang_pref: Optional[str] = "en"
+
+
+class PromoPreviewOut(BaseModel):
+    """What applying this code to this package would do. `valid=False` carries
+    a member-facing `message` in the requested language."""
+    valid: bool
+    message: Optional[str] = None
+    code: Optional[str] = None
+    original_price: Optional[float] = None
+    final_price: Optional[float] = None
+    discount_amount: Optional[float] = None
+    bonus_credits: int = 0
+    total_credits: Optional[int] = None
 
 
 class PackageCheckoutOut(BaseModel):
