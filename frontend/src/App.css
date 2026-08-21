@@ -176,6 +176,12 @@ body{font-family:var(--font-serif);background:#fff;color:var(--mocha);overflow-x
 .hero-img-overlay{
   position:absolute;inset:0;
   background:linear-gradient(to right, rgba(250,247,242,0.18) 0%, transparent 60%);
+  /* Decorative gradient only — it must never take the mouse. It's a later
+     sibling of the image with inset:0, so it painted on top and swallowed
+     hover, which meant the Site Editor's replace/remove controls (shown via
+     .hc-img-wrap:hover) never appeared on the hero image while every other
+     editable image worked. */
+  pointer-events:none;
 }
 /* floating caption pill */
 .hero-img-pill{
