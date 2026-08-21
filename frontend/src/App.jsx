@@ -15,6 +15,7 @@ import { useLandingAnimations } from './hooks/useLandingAnimations'
 import GlobalHeader from './components/GlobalHeader'
 import Hero from './components/Hero'
 import Community from './components/Community'
+import Offerings from './components/Offerings'
 import Story from './components/Story'
 import Pricing from './components/Pricing'
 import FinalCta from './components/FinalCta'
@@ -42,7 +43,7 @@ import NotFoundPage from './pages/NotFoundPage'
 const SITE_URL = 'https://www.hasmiksclub.am'
 const OG_IMAGE = `${SITE_URL}/og-image.jpg`
 
-const SECTION_COMPONENTS = { hero: Hero, band: Band, community: Community, story: Story, pricing: Pricing, finalCta: FinalCta }
+const SECTION_COMPONENTS = { hero: Hero, band: Band, community: Community, offerings: Offerings, story: Story, pricing: Pricing, finalCta: FinalCta }
 
 const IS_EDIT = (() => {
   try { return new URLSearchParams(window.location.search).get('edit') === '1' } catch { return false }

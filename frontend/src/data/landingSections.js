@@ -5,6 +5,7 @@ export const AVAILABLE_SECTIONS = [
   { id: 'hero',      label: 'Hero' },
   { id: 'band',      label: 'Accent bar' },
   { id: 'community', label: 'What You Get' },
+  { id: 'offerings', label: 'What Awaits You' },
   { id: 'story',     label: 'Story' },
   { id: 'pricing',   label: 'Pricing' },
   { id: 'finalCta',  label: 'Final CTA' },

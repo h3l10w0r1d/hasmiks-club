@@ -2429,3 +2429,64 @@ a.ci-row:hover .ci-value{color:var(--rose)}
   .event-row-img-el { height: 220px; min-height: 0; }
   .event-row-body { padding: 24px; }
 }
+
+/* ═══════════════════════════════════════
+   OFFERINGS — "What awaits you at the club"
+   Six themed category cards, each a lucide icon + title and a growable list
+   of activity pills. Icons (not emoji) so they inherit the club's palette and
+   render identically across platforms.
+═══════════════════════════════════════ */
+.offerings{
+  background:var(--linen);
+  padding:88px 80px 96px;
+}
+.offerings-hd{max-width:720px;margin:0 auto 44px;text-align:center}
+.offerings-hd .sec-h{margin-bottom:14px}
+.offerings-sub{
+  font-size:16px;line-height:1.75;color:var(--taupe);
+  max-width:620px;margin:0 auto;
+}
+.offerings-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:22px;
+  max-width:1180px;margin:0 auto;
+  align-items:start;
+}
+.offering-card{
+  background:#fff;
+  border:1px solid var(--sand);
+  border-radius:18px;
+  padding:26px 24px 22px;
+  box-shadow:0 12px 32px -24px rgba(24,12,4,0.18);
+  height:100%;
+}
+.offering-card-hd{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.offering-ico{
+  flex:0 0 auto;
+  width:38px;height:38px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--rose-bg);color:var(--rose);
+}
+.offering-title{
+  font-family:'Cormorant Garamond','Noto Sans Armenian',serif;
+  font-size:21px;font-weight:600;line-height:1.25;color:var(--deep);
+}
+.offering-items{display:flex;flex-direction:column;gap:10px}
+.offering-item{
+  background:var(--cream);
+  border-radius:999px;
+  padding:11px 18px;
+  font-size:14px;line-height:1.5;color:var(--mocha);
+}
+@media(max-width:900px){
+  .offerings{padding:64px 28px 72px}
+  .offerings-grid{grid-template-columns:1fr;gap:16px}
+  /* The pill's generous side padding reads as wasted space once the card is
+     full-width on a phone. */
+  .offering-item{padding:11px 15px}
+}
+@media(min-width:901px) and (max-width:1180px){
+  .offerings{padding:72px 40px 80px}
+  .offerings-grid{grid-template-columns:repeat(2,1fr)}
+}

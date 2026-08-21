@@ -340,6 +340,62 @@ Let us live them together.`,
     noEventsHy: `Առայժմ առաջիկա հանդիպումներ չկան`,
   },
 
+  // "What awaits you at the club" — six themed categories, each a card with a
+  // growable list of activities. `ico` keys into OFFERING_ICONS in
+  // Offerings.jsx (a lucide icon), matching how community.pts.ico works.
+  offerings: {
+    tagEn: `Activities`,
+    tagHy: `ՄԻՋՈՑԱՌՈՒՄՆԵՐ`,
+    hEn: `What awaits you at the club`,
+    hHy: `Ի՞նչ է Ձեզ սպասում ակումբում`,
+    subEn: `Every gathering is a new experience — from wellbeing and the arts to tastings and trips.`,
+    subHy: `Ամեն հանդիպում նոր փորձառություն է՝ առողջությունից ու արվեստից մինչև համտեսներ և ճամփորդություններ`,
+    cats: [
+      {
+        ico: `leaf`,
+        titleEn: `Wellbeing & balance`,
+        titleHy: `Առողջություն և ներդաշնակություն`,
+        itemsEn: [`Health and longevity`, `Physical activity and a healthy lifestyle`, `Psychology, self-discovery and memory training`, `Dance and movement`],
+        itemsHy: [`Առողջություն և երկարակեցություն`, `Ֆիզիկական ակտիվություն և առողջ ապրելակերպ`, `Հոգեբանություն, ինքնաճանաչում և հիշողության զարգացում`, `Պար և շարժում`],
+      },
+      {
+        ico: `palette`,
+        titleEn: `Creativity & crafts`,
+        titleHy: `Ստեղծագործություն և արհեստներ`,
+        itemsEn: [`Art, creativity and art therapy`, `Handicraft workshops and master classes`, `Style, fashion and self-expression`],
+        itemsHy: [`Արվեստ, ստեղծագործություն և արտ-թերապիա`, `Ձեռագործ աշխատանքներ և վարպետության դասեր`, `ՈՃ, նորաձևություն և ինքնարտահայտում`],
+      },
+      {
+        ico: `wine`,
+        titleEn: `Kitchen & tastings`,
+        titleHy: `Խոհանոց և համտես`,
+        itemsEn: [`Cooking master classes`, `Tastings and gastronomic experiences`],
+        itemsHy: [`Խոհարարական վարպետության դասեր`, `Համտեսներ և գաստրոնոմիական փորձառություններ`],
+      },
+      {
+        ico: `drama`,
+        titleEn: `Culture & leisure`,
+        titleHy: `Մշակույթ և ժամանց`,
+        itemsEn: [`Musical evenings and live performances`, `Theatre, cinema and cultural outings`, `Book club and literary meetups`],
+        itemsHy: [`Երաժշտական հանդիպումներ և կենդանի կատարումներ`, `Թատրոն, կինո և մշակութային միջոցառումներ`, `Գրքային ակումբ և գրական հանդիպումներ`],
+      },
+      {
+        ico: `lightbulb`,
+        titleEn: `New knowledge & skills`,
+        titleHy: `Նոր գիտելիքներ և հմտություններ`,
+        itemsEn: [`Digital literacy and modern technology`, `Artificial intelligence and new skills`, `Financial literacy`, `Meetups with specialists and interesting people`],
+        itemsHy: [`Թվային գրագիտություն և ժամանակակից տեխնոլոգիաներ`, `Արհեստական բանականություն և նոր հմտություններ`, `Ֆինանսական գրագիտություն`, `Հանդիպումներ մասնագետների և հետաքրքիր մարդկանց հետ`],
+      },
+      {
+        ico: `bus`,
+        titleEn: `Discovery & connection`,
+        titleHy: `Բացահայտումներ և շփում`,
+        itemsEn: [`Museums and cultural discoveries`, `Guided visits and interesting excursions`, `New experiences, knowledge and good company`],
+        itemsHy: [`Թանգարաններ և մշակութային բացահայտումներ`, `Ճանաչողական այցելություններ և հետաքրքիր շրջայցեր`, `Նոր փորձառություններ, գիտելիքներ և հաճելի շփում`],
+      },
+    ],
+  },
+
   eventDetail: {
     backToEventsEn: `All events`, backToEventsHy: `Բոլոր հանդիպումները`,
     notFoundEn: `Event not found`, notFoundHy: `Հանդիպումը չի գտնվել`,
