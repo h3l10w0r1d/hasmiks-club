@@ -365,7 +365,18 @@ async def upload_image(file: UploadFile = File(...), admin: User = Depends(get_c
         api_secret=settings.CLOUDINARY_API_SECRET,
     )
     data = await file.read()
-    result = cloudinary.uploader.upload(data, folder="hasmiks-club-admin", resource_type="auto")
+    # Downscale + let Cloudinary pick a quality, matching what the profile,
+    # member-gallery and forum uploads already do. Without this, a photo
+    # straight off a phone was stored and served at full size (several MB) —
+    # these images are the landing hero/story/community shots, the login
+    # banner and event covers, so every visitor paid for it.
+    # Guarded on content type rather than applied unconditionally: this
+    # endpoint is resource_type="auto" and also backs the content "File URL"
+    # field, and Cloudinary rejects image transformations on raw uploads.
+    opts = {"folder": "hasmiks-club-admin", "resource_type": "auto"}
+    if (file.content_type or "").startswith("image/"):
+        opts["transformation"] = [{"width": 2000, "height": 2000, "crop": "limit", "quality": "auto"}]
+    result = cloudinary.uploader.upload(data, **opts)
     url = result["secure_url"]
     add_to_media_library(db, url)
     return {"url": url}

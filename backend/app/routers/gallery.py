@@ -299,6 +299,15 @@ def admin_reorder_photos(
     db.commit()
 
 
+# Album photos are shown in a grid and a lightbox, never at print size, so
+# there's no reason to store or serve the multi-megabyte original a phone
+# produces. Mirrors the transform the member-gallery/forum uploads use.
+_GALLERY_UPLOAD_OPTS = {
+    "resource_type": "image",
+    "transformation": [{"width": 1600, "height": 1600, "crop": "limit", "quality": "auto"}],
+}
+
+
 @router.post("/admin/gallery/upload-photo")
 async def admin_upload_photo(
     file: UploadFile = File(...),
@@ -310,7 +319,7 @@ async def admin_upload_photo(
         api_secret=settings.CLOUDINARY_API_SECRET,
     )
     data = await file.read()
-    result = cloudinary.uploader.upload(data, folder="hasmiks-club-gallery", resource_type="image")
+    result = cloudinary.uploader.upload(data, folder="hasmiks-club-gallery", **_GALLERY_UPLOAD_OPTS)
     return {"url": result["secure_url"]}
 
 
@@ -333,7 +342,7 @@ async def admin_add_photos_bulk(
     created = []
     for i, file in enumerate(files):
         data = await file.read()
-        result = cloudinary.uploader.upload(data, folder="hasmiks-club-gallery", resource_type="image")
+        result = cloudinary.uploader.upload(data, folder="hasmiks-club-gallery", **_GALLERY_UPLOAD_OPTS)
         photo = AlbumPhoto(album_id=album_id, url=result["secure_url"], sort_order=next_order + i)
         db.add(photo)
         created.append(photo)
