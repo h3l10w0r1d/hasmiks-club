@@ -43,7 +43,20 @@ export default function AuthModal({ lang, mode, onModeChange, onClose }) {
         <button type="button" className="auth-modal-close" aria-label="Close" onClick={onClose}>
           <X size={18} />
         </button>
-        <div className="auth-modal-banner" style={{ backgroundImage: `url(${banner})` }} aria-hidden="true" />
+        <div className="auth-modal-banner" aria-hidden="true">
+          {/* An <img> rather than a CSS background, matching AuthShell. This
+              used to set background-image on the div, which broke silently
+              when .auth-modal-banner stopped carrying background-size:cover —
+              the artwork reverted to its natural size anchored top-left and
+              looked hugely zoomed in. Sizing is inline so it travels with the
+              markup instead of depending on a class staying in step. */}
+          <img
+            src={banner}
+            alt=""
+            className="auth-modal-banner-img"
+            style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
+          />
+        </div>
         <div className="auth-modal-body">
           <div className="auth-tabs">
             <button type="button" className={`auth-tab${mode === 'login' ? ' auth-tab-active' : ''}`} onClick={() => onModeChange('login')}>{t.login}</button>
