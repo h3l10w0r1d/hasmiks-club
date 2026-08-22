@@ -28,7 +28,22 @@ export default function AuthShell({ lang, active, children }) {
           <X size={18} />
         </button>
         <div className="auth-modal-banner">
-          <EditableImage src={banner} alt="" className="auth-modal-banner-img" path={`auth.banner${hy ? 'Hy' : 'En'}`} />
+          {/* Sizing is inline as well as in CSS on purpose. This app ships a
+              service worker that precaches js/css (see vite.config.js), so a
+              returning visitor can briefly get new JS with the previously
+              cached stylesheet. When that happened, this <img> — which the
+              old CSS knew nothing about — rendered at its natural 900x1600
+              inside the 368px banner and got clipped to its top-left corner,
+              which read as the artwork being wildly zoomed in. Inline styles
+              ship in the same bundle as the markup that needs them, so they
+              can never be out of step with it. */}
+          <EditableImage
+            src={banner}
+            alt=""
+            className="auth-modal-banner-img"
+            style={{ display: 'block', width: '100%', height: '100%', objectFit: 'cover' }}
+            path={`auth.banner${hy ? 'Hy' : 'En'}`}
+          />
         </div>
         <div className="auth-modal-body">
           <div className="auth-tabs">
