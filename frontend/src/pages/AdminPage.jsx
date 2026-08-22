@@ -30,6 +30,7 @@ import SiteEditor from '../components/SiteEditor'
 import GalleryManager from '../components/GalleryManager'
 import CropModal from '../components/CropModal'
 import RichTextEditor from '../components/ui/RichTextEditor'
+import PromoCodesCard from '../components/admin/PromoCodesCard'
 import { stripHtml } from '../utils/sanitizeHtml'
 import {
   initials, fmtDate, fmtDateTime, KpiCard, SectionHeader, Field, TableSkeleton, MemberAvatar,
@@ -2018,6 +2019,8 @@ export default function AdminPage() {
                         </div>
                       </CardContent>
                     </Card>
+
+                    <PromoCodesCard packages={packagesForm} flash={flash} />
 
                     <Card>
                       <CardHeader>
