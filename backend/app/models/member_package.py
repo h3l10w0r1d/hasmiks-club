@@ -48,5 +48,14 @@ class MemberPackage(Base):
     approval_code = Column(String(20), nullable=True)
     rrn = Column(String(64), nullable=True)
 
+    # Promo code applied to this purchase, snapshotted the same way name/
+    # event_count are: the promo row stays editable (and deletable) afterwards,
+    # so what this order actually received has to be recorded here rather than
+    # recomputed from it later. See migration 0032 and app/core/promo.py.
+    promo_code_id = Column(Integer, ForeignKey("promo_codes.id", ondelete="SET NULL"), nullable=True)
+    promo_code = Column(String(32), nullable=True)          # the literal code, kept if the row is deleted
+    discount_amount = Column(Numeric(12, 2), nullable=False, default=0, server_default='0')
+    bonus_credits = Column(Integer, nullable=False, default=0, server_default='0')
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
