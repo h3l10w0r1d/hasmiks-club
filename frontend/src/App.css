@@ -1046,6 +1046,23 @@ a.ci-row:hover .ci-value{color:var(--rose)}
   .story-feature--reverse .page-section--card,.story-feature--reverse .story-feature-media{order:initial}
 }
 
+/* Short laptops: the hero's spacing and type are sized for a roomy desktop,
+   so with a long, admin-edited intro the section ran well past the fold on a
+   768px-tall screen. Everything vertical scales down with the viewport here —
+   padding, headline, body copy and the stats gap — so the hero compresses
+   instead of overflowing. Width-gated to 901px+ so the phone layout, which
+   stacks and is meant to scroll, is untouched. */
+@media(min-width:901px) and (max-height:1000px){
+  .hero-text-side{padding:clamp(28px,4.2vh,64px) 72px clamp(24px,3.4vh,48px) 64px}
+  .eyebrow{margin-bottom:clamp(10px,2vh,24px)}
+  .hero-h1{
+    font-size:clamp(30px,min(4.2vw,5.6vh),60px);
+    margin-bottom:clamp(10px,1.8vh,18px);
+  }
+  .hero-p{font-size:clamp(14px,1.75vh,16px);line-height:1.7;margin-bottom:clamp(14px,2.6vh,32px)}
+  .hero-stats{margin-top:clamp(14px,3vh,40px)}
+}
+
 /* ═══════════════════════════════════════
    MOBILE
 ═══════════════════════════════════════ */
