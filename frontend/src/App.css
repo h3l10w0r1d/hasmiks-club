@@ -1041,7 +1041,13 @@ a.ci-row:hover .ci-value{color:var(--rose)}
 @media(max-width:900px){
   .gh{padding:0 20px}
   .hero{grid-template-columns:1fr}
-  .hero-img-side{height:55vw}
+  /* The hero photo is a portrait shot with the subject around the middle of
+     the frame. A short 55vw band cropped to just the top 37% of it, so on a
+     phone you saw the room behind her and no face at all. A taller box plus a
+     focal point below the top keeps the subject in view; the cap stops it
+     running away on wide tablets, where 88vw would be enormous. */
+  .hero-img-side{height:88vw;max-height:520px}
+  .hero-img-side img{object-position:center 30%}
   .hero-text-side{padding:52px 28px}
   .hero-stats{flex-wrap:wrap}
   .band{padding:18px 24px}
