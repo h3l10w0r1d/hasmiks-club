@@ -5,10 +5,11 @@ import { Gift, Plus, Minus } from 'lucide-react'
 import GlobalHeader from '../components/GlobalHeader'
 import CountryPhoneInput from '../components/CountryPhoneInput'
 import PackagePicker from '../components/PackagePicker'
+import PromoCodeField from '../components/PromoCodeField'
 import { COUNTRIES } from '../data/countries'
 import { getPublicEvents } from '../api/events'
 import { getPublicPackages } from '../api/packages'
-import { giftStart, giftResendCode, giftVerify, giftCheckout } from '../api/gift'
+import { giftStart, giftResendCode, giftVerify, giftCheckout, previewGiftPromo } from '../api/gift'
 
 const copy = {
   en: {
@@ -106,6 +107,7 @@ export default function GiftPage({ lang = 'en' }) {
   const [selectedPackageKey, setSelectedPackageKey] = useState(null)
   const [events, setEvents] = useState([])
   const [cart, setCart] = useState({}) // { [eventId]: quantity }
+  const [promo, setPromo] = useState(null)
 
   const [giftId, setGiftId] = useState(null)
   const [code, setCode] = useState('')
@@ -151,6 +153,9 @@ export default function GiftPage({ lang = 'en' }) {
   const total = giftType === 'membership' ? (selectedPackage?.price ?? 0) : eventsTotal
 
   const setQty = (eventId, delta) => {
+    // Changing the cart changes the total the code was priced against, so a
+    // previously applied discount must not carry over.
+    setPromo(null)
     setCart(c => {
       const next = Math.max(0, (c[eventId] || 0) + delta)
       return { ...c, [eventId]: next }
@@ -175,6 +180,7 @@ export default function GiftPage({ lang = 'en' }) {
     setSubmitting(true)
     try {
       const payload = {
+        promo_code: promo?.code || null,
         giver_name: giverName, giver_email: giverEmail,
         giver_phone: giverPhoneNum ? `${giverCountry.code} ${giverPhoneNum}` : null,
         recipient_name: recipientName, recipient_email: recipientEmail,
@@ -320,10 +326,10 @@ export default function GiftPage({ lang = 'en' }) {
               <div>
                 <p style={styles.sectionTitle}>{t.giftTypeSection}</p>
                 <div style={styles.typeToggle}>
-                  <button type="button" onClick={() => setGiftType('membership')} style={giftType === 'membership' ? styles.typeBtnActive : styles.typeBtn}>
+                  <button type="button" onClick={() => { setGiftType('membership'); setPromo(null) }} style={giftType === 'membership' ? styles.typeBtnActive : styles.typeBtn}>
                     {t.typeMembership}
                   </button>
-                  <button type="button" onClick={() => setGiftType('events')} style={giftType === 'events' ? styles.typeBtnActive : styles.typeBtn}>
+                  <button type="button" onClick={() => { setGiftType('events'); setPromo(null) }} style={giftType === 'events' ? styles.typeBtnActive : styles.typeBtn}>
                     {t.typeEvents}
                   </button>
                 </div>
@@ -331,7 +337,7 @@ export default function GiftPage({ lang = 'en' }) {
                 {giftType === 'membership' ? (
                   <div style={{ marginTop: 16 }}>
                     <p style={styles.smallLabel}>{t.packageLabel}</p>
-                    <PackagePicker packages={packages} selected={selectedPackageKey} onSelect={setSelectedPackageKey} lang={lang} layout="rows" />
+                    <PackagePicker packages={packages} selected={selectedPackageKey} onSelect={(id) => { setSelectedPackageKey(id); setPromo(null) }} lang={lang} layout="rows" />
                   </div>
                 ) : (
                   <div style={{ marginTop: 16 }}>
@@ -364,10 +370,45 @@ export default function GiftPage({ lang = 'en' }) {
               </div>
 
               {total > 0 && (
+                <div className="promo-slot">
+                  {/* Keyed on what's being gifted: a code is priced against a
+                      specific total and can be package-restricted, so the
+                      field resets whenever the gift changes. */}
+                  <PromoCodeField
+                    key={`${giftType}:${selectedPackageKey}:${eventCartLines.map(l => `${l.event.id}x${l.quantity}`).join(',')}`}
+                    lang={lang}
+                    onApplied={setPromo}
+                    validate={(code) => previewGiftPromo({
+                      code,
+                      gift_type: giftType,
+                      giver_email: giverEmail || null,
+                      package_key: giftType === 'membership' ? selectedPackageKey : null,
+                      event_selections: giftType === 'events'
+                        ? eventCartLines.map(l => ({ event_id: l.event.id, quantity: l.quantity }))
+                        : null,
+                      lang_pref: lang,
+                    })}
+                  />
+                </div>
+              )}
+
+              {total > 0 && (
                 <div style={styles.totalRow}>
                   <span>{t.total}</span>
-                  <span style={{ fontWeight: 700, color: '#7E3434', fontSize: 18 }}>֏{Number(total).toLocaleString()}</span>
+                  <span style={{ fontWeight: 700, color: '#7E3434', fontSize: 18 }}>
+                    {promo && (
+                      <s style={{ color: '#A99B8A', fontSize: 14, marginRight: 8, fontWeight: 400 }}>
+                        ֏{Number(promo.original_price ?? total).toLocaleString()}
+                      </s>
+                    )}
+                    ֏{Number(promo ? promo.final_price : total).toLocaleString()}
+                  </span>
                 </div>
+              )}
+              {promo?.bonus_credits > 0 && (
+                <p style={{ margin: '6px 0 0', fontSize: 13, color: '#786050', textAlign: 'right' }}>
+                  {lang === 'hy' ? `+${promo.bonus_credits} անվճար այց` : `+${promo.bonus_credits} free visit${promo.bonus_credits === 1 ? '' : 's'}`}
+                </p>
               )}
 
               {error && <p style={styles.error}>{error}</p>}

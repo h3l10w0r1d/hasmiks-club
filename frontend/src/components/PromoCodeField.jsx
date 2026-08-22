@@ -17,7 +17,7 @@ import { previewPromo } from '../api/packages'
  * remounts it on selection change, and clear their own applied-promo state in
  * the same handler that changes the selection.
  */
-export default function PromoCodeField({ packageKey, lang = 'en', onApplied }) {
+export default function PromoCodeField({ packageKey, lang = 'en', onApplied, validate }) {
   const hy = lang === 'hy'
   const [open, setOpen] = useState(false)
   const [code, setCode] = useState('')
@@ -41,7 +41,9 @@ export default function PromoCodeField({ packageKey, lang = 'en', onApplied }) {
     setBusy(true)
     setError('')
     try {
-      const res = await previewPromo(entered, packageKey, lang)
+      const res = validate
+        ? await validate(entered)
+        : await previewPromo(entered, packageKey, lang)
       if (!res.valid) {
         setApplied(null)
         onApplied?.(null)

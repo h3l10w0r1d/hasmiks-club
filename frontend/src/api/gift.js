@@ -10,6 +10,11 @@ export const giftVerify = (giftId, code) =>
 export const giftCheckout = (giftId, lang_pref) =>
   client.post(`/gift/${giftId}/checkout`, { lang_pref }).then((r) => r.data)
 
+// What a promo code would do to this gift's total. Public — the giver
+// usually has no account yet. Informational only; /gift/start re-validates.
+export const previewGiftPromo = (body) =>
+  client.post('/gift/promo/preview', body).then((r) => r.data)
+
 // redemption (membership gifts only — event-ticket gifts are emailed directly, no claim step)
 export const getGiftClaimInfo = (token) =>
   client.get(`/gift/claim/${token}`).then((r) => r.data)
