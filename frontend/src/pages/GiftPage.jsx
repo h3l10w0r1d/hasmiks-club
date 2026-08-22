@@ -14,7 +14,7 @@ const copy = {
   en: {
     pageTitle: "Gift a Membership or Tickets — Hasmik's Club",
     pageDesc: "Give someone you love a Hasmik's Club membership or event tickets.",
-    heading: 'Give the gift of Hasmik\'s Club',
+    heading: 'Gift a memory',
     sub: 'A membership, or a night out — sent straight to someone you love',
     giverSection: 'Your details',
     yourName: 'Your name',
@@ -51,7 +51,7 @@ const copy = {
   hy: {
     pageTitle: "Նվիրեք անդամակցություն կամ տոմսեր — Hasmik's Club",
     pageDesc: "Նվիրեք ձեր սիրելիին Hasmik's Club-ի անդամակցություն կամ միջոցառման տոմսեր:",
-    heading: "Նվիրեք Hasmik's Club",
+    heading: "Նվիրեք հիշողություն",
     sub: 'Անդամակցություն կամ երեկո՝ ուղարկված ուղիղ ձեր սիրելիին',
     giverSection: 'Ձեր տվյալները',
     yourName: 'Ձեր անունը',
