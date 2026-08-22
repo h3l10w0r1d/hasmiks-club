@@ -11,6 +11,7 @@ import string
 from datetime import datetime, timezone
 from decimal import Decimal
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.models.promo_code import PromoCode, PromoRedemption
@@ -57,10 +58,19 @@ def find_code(db: Session, code: str) -> PromoCode | None:
     return db.query(PromoCode).filter(PromoCode.code == code.strip().upper()).first()
 
 
-def evaluate(db: Session, code_str: str, package: dict, user_id: int) -> tuple[PromoCode, Decimal, Decimal, int]:
-    """Validate `code_str` for this member buying this package.
+def evaluate(db: Session, code_str: str, *, amount: Decimal, package_key: str | None = None,
+             user_id: int | None = None, email: str | None = None) -> tuple[PromoCode, Decimal, Decimal, int]:
+    """Validate `code_str` against a purchase and price it.
 
-    Returns (promo, original_price, final_price, bonus_credits).
+    Deliberately takes a bare amount rather than a package, because the same
+    code has to work for a member buying a package (which has a package_key)
+    and for an anonymous giver buying an event-ticket gift (which has none).
+
+    Identity is likewise either/or: `user_id` for a signed-in member, `email`
+    for an anonymous giver. The per-person limit counts whichever it's given,
+    so a giver can't reuse a one-per-person code by staying logged out.
+
+    Returns (promo, original_amount, final_amount, bonus_credits).
     Raises PromoError with a member-facing reason if it can't be used.
     """
     promo = find_code(db, code_str)
@@ -82,39 +92,50 @@ def evaluate(db: Session, code_str: str, package: dict, user_id: int) -> tuple[P
         raise PromoError("This promo code has been fully claimed.", "Այս պրոմո կոդն արդեն սպառվել է:")
 
     if promo.max_uses_per_user is not None:
-        mine = (
-            db.query(PromoRedemption)
-            .filter(PromoRedemption.promo_code_id == promo.id, PromoRedemption.user_id == user_id)
-            .count()
-        )
-        if mine >= promo.max_uses_per_user:
-            raise PromoError("You've already used this promo code.", "Դուք արդեն օգտագործել եք այս պրոմո կոդը:")
+        q = db.query(PromoRedemption).filter(PromoRedemption.promo_code_id == promo.id)
+        ident = []
+        if user_id is not None:
+            ident.append(PromoRedemption.user_id == user_id)
+        if email:
+            ident.append(PromoRedemption.email == email.strip().lower())
+        # With no identity at all there's nothing to count against, so the
+        # per-person limit simply can't apply — the total-uses cap still does.
+        if ident:
+            mine = q.filter(or_(*ident)).count()
+            if mine >= promo.max_uses_per_user:
+                raise PromoError("You've already used this promo code.", "Դուք արդեն օգտագործել եք այս պրոմո կոդը:")
 
     allowed = parse_package_keys(promo.package_keys)
-    if allowed and package.get("id") not in allowed:
-        raise PromoError("This promo code doesn't apply to that package.", "Այս պրոմո կոդը չի գործում այս փաթեթի համար:")
+    if allowed and package_key not in allowed:
+        # Covers both "wrong package" and an event-ticket gift, which has no
+        # package for a package-restricted code to match.
+        raise PromoError("This promo code doesn't apply to that purchase.", "Այս պրոմո կոդը չի գործում այս գնման համար:")
 
-    original = Decimal(str(package["price"]))
+    original = Decimal(str(amount))
     final = original
     if promo.percent_off:
         final = original * (Decimal(100 - promo.percent_off) / Decimal(100))
     elif promo.amount_off:
         final = original - Decimal(str(promo.amount_off))
-    # A discount can zero a package out but never go negative, and money is
+    # A discount can zero a purchase out but never go negative, and money is
     # charged in whole drams.
     final = max(Decimal("0"), final).quantize(Decimal("1"))
 
     return promo, original, final, int(promo.bonus_credits or 0)
 
 
-def record_redemption(db: Session, promo: PromoCode, user_id: int, member_package_id: int | None,
-                      discount_amount: Decimal, bonus_credits: int) -> None:
+def record_redemption(db: Session, promo: PromoCode, *, user_id: int | None = None,
+                      email: str | None = None, member_package_id: int | None = None,
+                      gift_card_id: int | None = None, discount_amount: Decimal = Decimal("0"),
+                      bonus_credits: int = 0) -> None:
     """Burn one use. Called only once a purchase is actually paid, so an
     abandoned or failed checkout never consumes the code."""
     db.add(PromoRedemption(
         promo_code_id=promo.id,
         user_id=user_id,
+        email=(email or "").strip().lower() or None,
         member_package_id=member_package_id,
+        gift_card_id=gift_card_id,
         discount_amount=discount_amount,
         bonus_credits=bonus_credits,
     ))

@@ -148,9 +148,13 @@ def _finalize_promo(db: Session, row: MemberPackage) -> None:
     promo = db.query(PromoCode).filter(PromoCode.id == row.promo_code_id).first()
     if not promo:
         return
+    user = db.query(User).filter(User.id == row.user_id).first()
     promo_core.record_redemption(
-        db, promo, row.user_id, row.id,
-        Decimal(str(row.discount_amount or 0)), int(row.bonus_credits or 0),
+        db, promo,
+        user_id=row.user_id, email=user.email if user else None,
+        member_package_id=row.id,
+        discount_amount=Decimal(str(row.discount_amount or 0)),
+        bonus_credits=int(row.bonus_credits or 0),
     )
 
 
@@ -167,7 +171,11 @@ def preview_promo(
     if not package:
         raise HTTPException(status_code=404, detail="This package is no longer available.")
     try:
-        promo, original, final, bonus = promo_core.evaluate(db, body.code, package, current_user.id)
+        promo, original, final, bonus = promo_core.evaluate(
+            db, body.code,
+            amount=Decimal(str(package["price"])), package_key=package["id"],
+            user_id=current_user.id, email=current_user.email,
+        )
     except promo_core.PromoError as exc:
         return PromoPreviewOut(valid=False, message=exc.message(body.lang_pref))
     return PromoPreviewOut(
@@ -215,7 +223,9 @@ def checkout_package(
     if body.promo_code and body.promo_code.strip():
         try:
             promo, original, amount, bonus_credits = promo_core.evaluate(
-                db, body.promo_code, package, current_user.id
+                db, body.promo_code,
+                amount=Decimal(str(package["price"])), package_key=package["id"],
+                user_id=current_user.id, email=current_user.email,
             )
         except promo_core.PromoError as exc:
             raise HTTPException(status_code=400, detail=exc.message(body.lang_pref))

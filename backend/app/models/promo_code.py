@@ -61,8 +61,14 @@ class PromoRedemption(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     promo_code_id = Column(Integer, ForeignKey("promo_codes.id", ondelete="CASCADE"), nullable=False, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    # Nullable because gifts are bought by a giver who may have no account —
+    # such a row identifies itself by gift_card_id + email instead.
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=True, index=True)
     member_package_id = Column(Integer, ForeignKey("member_packages.id", ondelete="SET NULL"), nullable=True)
+    gift_card_id = Column(Integer, ForeignKey("gift_cards.id", ondelete="SET NULL"), nullable=True)
+    # The redeemer's email — what the per-person limit is enforced against
+    # when there's no user_id to count.
+    email = Column(String, nullable=True, index=True)
 
     discount_amount = Column(Numeric(12, 2), nullable=False, default=0)
     bonus_credits = Column(Integer, nullable=False, default=0)

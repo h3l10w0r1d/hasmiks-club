@@ -27,6 +27,31 @@ class GiftStartIn(BaseModel):
     package_key: Optional[str] = None  # required when gift_type == membership
     event_selections: Optional[List[GiftEventSelection]] = None  # required when gift_type == events
     lang_pref: Optional[str] = "en"
+    # Optional promo code. Re-validated server-side in gift_start rather than
+    # trusting whatever the preview call quoted.
+    promo_code: Optional[str] = None
+
+
+class GiftPromoPreviewIn(BaseModel):
+    """Same shape gift_start takes, minus the personal details — enough to
+    price the gift the code would apply to. Public: the giver usually has no
+    account at this point."""
+    code: str
+    gift_type: str
+    giver_email: Optional[str] = None
+    package_key: Optional[str] = None
+    event_selections: Optional[List[GiftEventSelection]] = None
+    lang_pref: Optional[str] = "en"
+
+
+class GiftPromoPreviewOut(BaseModel):
+    valid: bool
+    message: Optional[str] = None
+    code: Optional[str] = None
+    original_price: Optional[float] = None
+    final_price: Optional[float] = None
+    discount_amount: Optional[float] = None
+    bonus_credits: int = 0
 
 
 class GiftVerifyIn(BaseModel):

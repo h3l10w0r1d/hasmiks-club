@@ -50,6 +50,15 @@ class GiftCard(Base):
     package_validity_days = Column(Integer, nullable=True)  # NULL = never expires
     event_selections_json = Column(String, nullable=True)  # events only: JSON [{"event_id":1,"quantity":2}, ...]
 
+    # Promo code applied to this gift, snapshotted for the same reason
+    # member_packages snapshots its own: the code stays editable afterwards.
+    promo_code_id = Column(Integer, ForeignKey("promo_codes.id", ondelete="SET NULL"), nullable=True)
+    promo_code = Column(String(32), nullable=True)
+    discount_amount = Column(Numeric(12, 2), nullable=False, default=0, server_default='0')
+    # Extra event credits the code adds on top of the gifted package. Only
+    # meaningful for membership gifts — an events gift has no credit pack.
+    bonus_credits = Column(Integer, nullable=False, default=0, server_default='0')
+
     amount = Column(Numeric(12, 2), nullable=False)
     currency = Column(String(3), nullable=False, default="051")
     order_id = Column(Integer, unique=True, index=True, nullable=True)

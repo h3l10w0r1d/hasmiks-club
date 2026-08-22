@@ -12,16 +12,18 @@ from app.database import get_db
 from app.models.event import Event
 from app.models.user import User
 from app.models.gift_card import GiftCard
+from app.models.promo_code import PromoCode, PromoRedemption
 from app.models.guest_ticket import GuestTicket
 from app.models.member_package import MemberPackage
 from app.schemas.gift import (
     GiftStartIn, GiftVerifyIn, GiftCheckoutIn, GiftStartOut, GiftInfoOut,
-    GiftClaimPasswordIn, GiftCardOut,
+    GiftClaimPasswordIn, GiftCardOut, GiftPromoPreviewIn, GiftPromoPreviewOut,
 )
 from app.schemas.user import TokenOut, UserOut
 from app.core.deps import get_current_user
 from app.core import ameriabank
 from app.core import email as mailer
+from app.core import promo as promo_core
 from app.core.config import settings
 from app.core.payment_log import log_gift_event
 from app.core.security import hash_password, create_access_token
@@ -108,6 +110,40 @@ def _validate_gift_request(db: Session, payload: GiftStartIn) -> tuple[Decimal, 
 
 # ── purchase flow (giver side) ──────────────────────────────────────────────
 
+@router.post("/promo/preview", response_model=GiftPromoPreviewOut)
+def preview_gift_promo(body: GiftPromoPreviewIn, db: Session = Depends(get_db)):
+    """What a code is worth for this gift, for showing the new total before
+    the giver commits. Public, because the giver usually has no account.
+    Informational only — gift_start re-runs the same evaluate() rather than
+    trusting anything echoed back from here.
+
+    Reuses _validate_gift_request so the amount quoted is priced by exactly
+    the same rules the real purchase uses (seat checks included)."""
+    probe = GiftStartIn(
+        giver_name="preview", giver_email=body.giver_email or "preview@example.com",
+        recipient_name="preview", recipient_email="preview@example.com",
+        gift_type=body.gift_type, package_key=body.package_key,
+        event_selections=body.event_selections,
+    )
+    amount, _description = _validate_gift_request(db, probe)
+    try:
+        promo, original, final, bonus = promo_core.evaluate(
+            db, body.code,
+            amount=amount,
+            package_key=body.package_key if body.gift_type == "membership" else None,
+            email=body.giver_email,
+        )
+    except promo_core.PromoError as exc:
+        return GiftPromoPreviewOut(valid=False, message=exc.message(body.lang_pref))
+    return GiftPromoPreviewOut(
+        valid=True, code=promo.code,
+        original_price=float(original), final_price=float(final),
+        discount_amount=float(original - final),
+        # An events gift has no credit pack to add bonus visits to.
+        bonus_credits=bonus if body.gift_type == "membership" else 0,
+    )
+
+
 @router.post("/start", response_model=GiftStartOut, status_code=status.HTTP_201_CREATED)
 def gift_start(payload: GiftStartIn, db: Session = Depends(get_db)):
     """Step 1 of 3: collect giver + recipient info, email the giver a 6-digit
@@ -117,6 +153,27 @@ def gift_start(payload: GiftStartIn, db: Session = Depends(get_db)):
     giver_email = payload.giver_email.strip().lower()
     recipient_email = payload.recipient_email.strip().lower()
     amount, description = _validate_gift_request(db, payload)
+
+    # A promo code applies to the gift's total. The giver is usually not
+    # signed in, so identity for the per-person limit is their email.
+    promo = None
+    discount = Decimal("0")
+    bonus_credits = 0
+    if payload.promo_code and payload.promo_code.strip():
+        try:
+            promo, original, amount, bonus_credits = promo_core.evaluate(
+                db, payload.promo_code,
+                amount=amount,
+                package_key=payload.package_key if payload.gift_type == "membership" else None,
+                email=giver_email,
+            )
+        except promo_core.PromoError as exc:
+            raise HTTPException(status_code=400, detail=exc.message(payload.lang_pref))
+        discount = original - amount
+        # Bonus visits are delivered as part of a gifted credit pack; an
+        # event-ticket gift has no pack to add them to.
+        if payload.gift_type != "membership":
+            bonus_credits = 0
 
     # SUPERSEDED — new gift rows no longer set duration_months/plan (see
     # _validate_gift_request); the columns stay populated only on gift rows
@@ -131,6 +188,9 @@ def gift_start(payload: GiftStartIn, db: Session = Depends(get_db)):
         package_validity_days=package.get("validityDays") if package else None,
         event_selections_json=json.dumps([s.model_dump() for s in payload.event_selections]) if payload.event_selections else None,
         amount=amount, currency=settings.AMERIABANK_CURRENCY, status="unverified",
+        promo_code_id=promo.id if promo else None,
+        promo_code=promo.code if promo else None,
+        discount_amount=discount, bonus_credits=bonus_credits,
         verification_code=_gen_code(), verification_sent_at=datetime.now(timezone.utc),
     )
     db.add(gift)
@@ -249,6 +309,30 @@ def gift_checkout(gift_id: int, payload: GiftCheckoutIn, db: Session = Depends(g
     return {"url": ameriabank.payment_page_url(gift.payment_id, lang)}
 
 
+def _finalize_gift_promo(db: Session, gift: GiftCard) -> None:
+    """Burn the promo use for a gift that just became paid. Idempotent for the
+    same reason the package flow's is: the redirect callback can legitimately
+    fire more than once for one order."""
+    if not gift.promo_code_id:
+        return
+    already = (
+        db.query(PromoRedemption)
+        .filter(PromoRedemption.gift_card_id == gift.id)
+        .first()
+    )
+    if already:
+        return
+    promo = db.query(PromoCode).filter(PromoCode.id == gift.promo_code_id).first()
+    if not promo:
+        return
+    promo_core.record_redemption(
+        db, promo,
+        email=gift.giver_email, gift_card_id=gift.id,
+        discount_amount=Decimal(str(gift.discount_amount or 0)),
+        bonus_credits=int(gift.bonus_credits or 0),
+    )
+
+
 def _create_member_package_for_gift(db: Session, gift: GiftCard, user: User) -> MemberPackage:
     """Credits a recipient with the gifted package. status="deposited" (a
     PAID_STATUSES value) since the gift's own Ameriabank payment already
@@ -261,7 +345,13 @@ def _create_member_package_for_gift(db: Session, gift: GiftCard, user: User) -> 
         name_en=package["nameEn"] if package else "Gift package",
         name_hy=package["nameHy"] if package else "Նվեր փաթեթ",
         event_count=gift.package_event_count or 1,
-        credits_remaining=gift.package_event_count or 1,
+        # Bonus visits from a promo code the giver used are granted on top of
+        # the pack, exactly as they are for a member's own purchase.
+        credits_remaining=(gift.package_event_count or 1) + (gift.bonus_credits or 0),
+        bonus_credits=gift.bonus_credits or 0,
+        promo_code_id=gift.promo_code_id,
+        promo_code=gift.promo_code,
+        discount_amount=gift.discount_amount or 0,
         validity_days=gift.package_validity_days,
         expires_at=(
             datetime.now(timezone.utc) + timedelta(days=gift.package_validity_days)
@@ -387,6 +477,7 @@ async def gift_callback(request: Request, db: Session = Depends(get_db)):
                     else:
                         _deliver_events_gift(db, gift)
                         detail_line = f"Event ticket(s) for {gift.recipient_name}"
+                    _finalize_gift_promo(db, gift)
                     mailer.send_gift_giver_receipt(gift.giver_email, gift.giver_name, gift.recipient_name, detail_line, gift.amount)
                     mailer.track_event_async(gift.giver_email, "gift_purchased", {"gift_type": gift.gift_type, "amount": float(gift.amount)})
                 else:
