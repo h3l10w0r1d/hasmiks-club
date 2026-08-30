@@ -1,7 +1,8 @@
 import { Handshake, MessageCircle, Flower2 } from 'lucide-react'
-import communityImg from '../assets/community.jpg'
+// import communityImg from '../assets/community.jpg'  // restore with the photo block below
 import { useContent } from '../context/SiteContentContext'
-import { E, EditableImage, IS_EDIT, AddItemButton, RemoveItemButton } from './Editable'
+// EditableImage is only used by the temporarily hidden photo block — restore it there too.
+import { E, IS_EDIT, AddItemButton, RemoveItemButton } from './Editable'
 import CardFrame from './CardFrame'
 import { visibleOrder, fullOrder } from '../utils/cardOrder'
 import Reveal from './Reveal'
@@ -45,10 +46,16 @@ export default function Community({ lang }) {
         <AddItemButton paths={[p('p2')]} label={hy ? 'Ավելացնել պարբերություն' : 'Add paragraph'} />
       </Reveal>
 
+      {/* TEMPORARILY HIDDEN — the group photo is coming back with a new
+          shot. Uncomment this block and the two imports at the top of the
+          file to restore it; the .community-photo styles and the
+          community.image content override are both still in place, so a
+          previously uploaded image will reappear as soon as it's back.
       <Reveal as="div" className="community-photo" delay={80}>
         <EditableImage src={c.image || communityImg}
           alt={hy ? "Hasmik's Club-ի անդամները միասին" : "Members of Hasmik's Club together"} path="community.image" />
       </Reveal>
+      */}
 
       <div className="cards community-cards">
         {order.map((i, pos) => {
