@@ -570,7 +570,19 @@ export default function DashboardPage({ lang, setLang }) {
   // gate, forum gate, etc.) send the member to /welcome to pick a package —
   // buying a specific one inline (the package-status card's own picker)
   // uses handleBuyPackage below instead of navigating away.
-  const handleSubscribe = () => navigate('/welcome')
+  const handleSubscribe = () => {
+    // /welcome is the new-member package chooser and deliberately turns away
+    // anyone already active, bouncing them straight back here — so an active
+    // member who has simply run out of credits got a button that did nothing
+    // at all. Send them to the dashboard's own "buy another package" panel,
+    // which is built for exactly this and keeps them on the page.
+    if (user?.membership_status === 'active') {
+      changeTab('profile')
+      setBuyPickerOpen(true)
+      return
+    }
+    navigate('/welcome')
+  }
 
   const [buyPickerOpen, setBuyPickerOpen] = useState(false)
   const [buyPromo, setBuyPromo] = useState(null)
