@@ -21,6 +21,7 @@ class PackageOut(BaseModel):
     badge: Optional[str] = None
     itemsEn: List[str] = []
     itemsHy: List[str] = []
+    comingSoon: bool = False
 
 
 class MemberPackageOut(BaseModel):

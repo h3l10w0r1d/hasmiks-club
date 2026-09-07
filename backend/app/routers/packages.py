@@ -199,6 +199,8 @@ def checkout_package(
     package = _find_package(db, body.package_key)
     if not package:
         raise HTTPException(status_code=404, detail="This package is no longer available — please refresh and try again.")
+    if package.get("comingSoon"):
+        raise HTTPException(status_code=400, detail="This package isn't on sale yet.")
 
     recent_cutoff = datetime.now(timezone.utc) - timedelta(seconds=DOUBLE_SUBMIT_WINDOW_SECONDS)
     duplicate = (

@@ -2575,3 +2575,39 @@ a.ci-row:hover .ci-value{color:var(--rose)}
 }
 .promo-total s{color:var(--stone);margin-right:8px;font-size:13px}
 .promo-total strong{font-size:17px;color:var(--rose)}
+
+/* ═══════════════════════════════════════
+   COMING SOON — a package that's listed but not yet on sale
+   Set per package in Admin → Settings → Packages. The detail is blurred and
+   a label sits on top; selection and both checkout paths are blocked in code,
+   so the blur is presentation only and never the thing preventing a purchase.
+═══════════════════════════════════════ */
+.plan-coming-soon{position:relative}
+/* Blur every child EXCEPT the label, which has to stay legible on top. */
+.plan-coming-soon > *:not(.plan-soon-veil){
+  filter:blur(5px);
+  opacity:0.55;
+  pointer-events:none;
+  user-select:none;
+}
+.plan-soon-veil{
+  position:absolute;inset:0;z-index:6;
+  display:flex;align-items:center;justify-content:center;
+  border-radius:inherit;
+}
+.plan-soon-veil span{
+  background:var(--deep);color:var(--cream);
+  padding:10px 22px;border-radius:999px;
+  font-size:13px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;
+  box-shadow:0 10px 30px -10px rgba(24,12,4,0.5);
+}
+/* Compact row variant (gift page, dashboard) — same idea, smaller. */
+.pkg-row-soon{position:relative;cursor:default}
+.pkg-row-soon > *:not(.pkg-row-soon-label){filter:blur(3.5px);opacity:0.5;pointer-events:none;user-select:none}
+.pkg-row-soon:hover{border-color:var(--sand)}
+.pkg-row-soon-label{
+  position:absolute;inset:0;z-index:3;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--deep);
+}

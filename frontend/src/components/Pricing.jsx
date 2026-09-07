@@ -50,7 +50,14 @@ export default function Pricing({ lang }) {
               pkg={pkg}
               lang={lang}
               footer={
-                <button type="button" className={`plan-btn ${pkg.badge ? 'plan-btn-fill' : 'plan-btn-outline'}`} onClick={() => (user ? navigate('/dashboard') : openRegister())}>
+                // A package that isn't on sale yet still shows its CTA (so the
+                // card keeps its shape behind the blur) but can't be acted on.
+                <button
+                  type="button"
+                  className={`plan-btn ${pkg.badge ? 'plan-btn-fill' : 'plan-btn-outline'}`}
+                  disabled={!!pkg.comingSoon}
+                  onClick={pkg.comingSoon ? undefined : () => (user ? navigate('/dashboard') : openRegister())}
+                >
                   {v('btn')}
                 </button>
               }

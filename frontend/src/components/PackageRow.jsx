@@ -14,16 +14,20 @@ export default function PackageRow({ pkg, lang, selected, onSelect }) {
   const perOne = pkg.eventCount > 0 ? Math.round(pkg.price / pkg.eventCount) : pkg.price
   const items = (hy ? pkg.itemsHy : pkg.itemsEn) || []
   const gold = pkg.badge === 'best_value'
+  // onSelect is withheld by the picker for a package that isn't on sale yet.
+  const soon = !!pkg.comingSoon || !onSelect
 
   return (
     <div
-      role="radio"
-      aria-checked={selected}
-      tabIndex={0}
-      onClick={onSelect}
-      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect() } }}
-      className={`pkg-row${selected ? ' pkg-row-selected' : ''}${gold ? ' pkg-row-gold' : ''}`}
+      role={soon ? undefined : 'radio'}
+      aria-checked={soon ? undefined : selected}
+      aria-disabled={soon || undefined}
+      tabIndex={soon ? undefined : 0}
+      onClick={soon ? undefined : onSelect}
+      onKeyDown={soon ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect() } }}
+      className={`pkg-row${selected && !soon ? ' pkg-row-selected' : ''}${gold ? ' pkg-row-gold' : ''}${soon ? ' pkg-row-soon' : ''}`}
     >
+      {soon && <span className="pkg-row-soon-label">{t.comingSoon}</span>}
       <span className="pkg-row-radio" aria-hidden="true" />
       <div className="pkg-row-main">
         {/* Price lives inside the header rather than in its own column so it

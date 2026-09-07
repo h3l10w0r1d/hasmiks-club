@@ -20,6 +20,7 @@ export const packageCardCopy = {
     telegramIncluded: 'Access to the private Telegram club',
     popular: 'Most popular',
     bestValue: 'Best value',
+    comingSoon: 'Coming soon',
   },
   hy: {
     perOne: (n) => `Մեկ մասնակցության արժեքը՝ ֏${n.toLocaleString()}`,
@@ -33,13 +34,15 @@ export const packageCardCopy = {
     telegramIncluded: 'Telegram ակումբի հասանելիություն փաթեթի գործողության ընթացքում',
     popular: 'Ամենապահանջված',
     bestValue: 'Ամենաշահավետ',
+    comingSoon: 'Շուտով',
   },
 }
 
 export function packageCardClassName(pkg, extra = '') {
   const popular = pkg.badge === 'popular'
   const gold = pkg.badge === 'best_value'
-  return `plan${popular ? ' hero-plan' : ''}${gold ? ' gold-plan' : ''}${extra ? ` ${extra}` : ''}`
+  const soon = !!pkg.comingSoon
+  return `plan${popular ? ' hero-plan' : ''}${gold ? ' gold-plan' : ''}${soon ? ' plan-coming-soon' : ''}${extra ? ` ${extra}` : ''}`
 }
 
 /** The card's inner content — badge pill through validity line. Deliberately
@@ -59,6 +62,10 @@ export default function PackageCard({ pkg, lang, footer }) {
 
   return (
     <>
+      {/* Not yet on sale: the detail below is blurred by .plan-coming-soon and
+          this label sits on top, unblurred. Selection and checkout are blocked
+          separately — see PackagePicker and the checkout guards. */}
+      {pkg.comingSoon && <div className="plan-soon-veil"><span>{t.comingSoon}</span></div>}
       {pkg.badge && (
         <div className="plan-badge-pill">
           {pkg.badge === 'popular' ? <Star size={13} /> : <Crown size={13} />}

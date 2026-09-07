@@ -77,6 +77,8 @@ def _validate_gift_request(db: Session, payload: GiftStartIn) -> tuple[Decimal, 
         package = _find_gift_package(db, payload.package_key)
         if not package:
             raise HTTPException(status_code=404, detail="This package is no longer available — please refresh and try again.")
+        if package.get("comingSoon"):
+            raise HTTPException(status_code=400, detail="This package isn't on sale yet.")
         amount = Decimal(str(package["price"]))
         return amount, f"{package['nameEn']} — Hasmik's Club package gift"
 

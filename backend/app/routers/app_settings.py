@@ -408,6 +408,10 @@ def _validate_packages(value: Any) -> list:
             "itemsEn": [str(v) for v in items_en],
             "itemsHy": [str(v) for v in items_hy],
             "active": bool(item.get("active", True)),
+            # Still listed and described, but not yet buyable — the frontend
+            # blurs it and shows "Coming soon", and both checkout paths refuse
+            # it. Distinct from active=False, which hides it entirely.
+            "comingSoon": bool(item.get("comingSoon", False)),
             "sortOrder": int(item.get("sortOrder", 0)) if isinstance(item.get("sortOrder"), (int, float)) else 0,
         })
     return clean

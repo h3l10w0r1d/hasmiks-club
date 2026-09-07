@@ -30,7 +30,8 @@ export default function PackagePicker({ packages, selected, onSelect, lang = 'en
             pkg={pkg}
             lang={lang}
             selected={selected === pkg.id}
-            onSelect={() => onSelect(pkg.id)}
+            // A package that isn't on sale yet can be read but not chosen.
+            onSelect={pkg.comingSoon ? undefined : () => onSelect(pkg.id)}
           />
         ))}
       </div>
@@ -41,13 +42,17 @@ export default function PackagePicker({ packages, selected, onSelect, lang = 'en
     <div className={`plans plans-picker${className ? ` ${className}` : ''}`}>
       {packages.map((pkg) => {
         const isSelected = selected === pkg.id
+        const soon = !!pkg.comingSoon
         return (
           <div
             key={pkg.id}
-            role="button"
-            tabIndex={0}
-            onClick={() => onSelect(pkg.id)}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(pkg.id) } }}
+            // Not yet on sale: readable, but not a control — no click, no tab
+            // stop, and announced as disabled rather than selectable.
+            role={soon ? undefined : 'button'}
+            tabIndex={soon ? undefined : 0}
+            aria-disabled={soon || undefined}
+            onClick={soon ? undefined : () => onSelect(pkg.id)}
+            onKeyDown={soon ? undefined : (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(pkg.id) } }}
             className={packageCardClassName(pkg, isSelected ? 'plan-selected' : '')}
           >
             <PackageCard pkg={pkg} lang={lang} />

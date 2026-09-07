@@ -1984,6 +1984,11 @@ export default function AdminPage() {
                                   <input type="checkbox" className="h-4 w-4 accent-primary cursor-pointer" checked={pkg.active} onChange={e => updatePackage(pkg.id, { active: e.target.checked })} />
                                   Active (shown publicly)
                                 </label>
+                                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                                  <input type="checkbox" className="h-4 w-4 accent-primary cursor-pointer" checked={!!pkg.comingSoon} onChange={e => updatePackage(pkg.id, { comingSoon: e.target.checked })} />
+                                  Coming soon
+                                  <span className="text-xs text-muted-foreground">(shown blurred, can&apos;t be bought yet)</span>
+                                </label>
                               </div>
                               <div className="grid grid-cols-2 gap-3">
                                 <Field label="Description (EN, optional)">
